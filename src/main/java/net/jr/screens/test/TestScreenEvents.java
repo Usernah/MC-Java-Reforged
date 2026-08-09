@@ -9,13 +9,5 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class TestScreenEvents {
-    private TestScreenEvents() {
-    }
 
-    @SubscribeEvent
-    public static void onScreenOpening(ScreenEvent.Opening event) {
-        if (event.getNewScreen() instanceof TitleScreen && !(event.getCurrentScreen() instanceof TestScreen)) {
-            event.setNewScreen(new TestScreen());
-        }
-    }
 }

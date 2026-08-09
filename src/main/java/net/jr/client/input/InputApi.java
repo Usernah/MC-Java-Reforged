@@ -1,6 +1,9 @@
 package net.jr.client.input;
 
 import javax.annotation.Nullable;
+import net.jr.ClientRuntime.input.InputDeviceRouter;
+import net.jr.ClientRuntime.input.binding.KeyMappingState;
+import net.jr.ClientRuntime.runtime.Client;
 import net.jr.client.input.binding.BindingContext;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
@@ -15,17 +18,10 @@ import net.jr.client.input.simulation.InputSimulation;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import java.util.List;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.Set;
 
 /** Stable input surface for gameplay, UI and external integrations. */
 public final class InputApi {
     public static final float DIGITAL_PRESS_THRESHOLD = 0.2F;
-    private static final Map<KeyMapping, KeyState> KEY_STATES = new IdentityHashMap<>();
-    private static InputMode inputMode = InputMode.KEYBOARD_MOUSE;
     /**
      * When enabled, a Sony-style touchpad exposes two virtual digital inputs
      * selected by the finger position at the start of the physical click. If
@@ -33,18 +29,11 @@ public final class InputApi {
      * the unified TOUCHPAD_BUTTON input instead of being assigned to an arbitrary side.
      */
     private static volatile boolean splitTouchpadButtons = true;
-    private static long lastKeyboardMouseInputNanos;
-    private static long lastGamepadInputNanos;
-    private static int missTime;
-    private static int rightClickDelay;
-    private static final Map<Long, Long> JOIN_STARTED_AT = new HashMap<>();
-    private static final Set<Long> JOIN_LATCHED = new HashSet<>();
-    private static final long JOIN_HOLD_MILLIS = 3_000L;
     private InputApi() {
     }
 
     public static InputMode mode() {
-        return inputMode;
+        return Client.input(currentClientId()).mode();
     }
 
     public static boolean isGamepadMode() {
@@ -55,13 +44,11 @@ public final class InputApi {
         if (InputSimulation.isActive()) {
             return;
         }
-        lastKeyboardMouseInputNanos = System.nanoTime();
-        inputMode = InputMode.KEYBOARD_MOUSE;
+        Client.input(InputDeviceRouter.KEYBOARD_MOUSE_CLIENT).markKeyboardMouseInput();
     }
 
     public static void markGamepadInput() {
-        lastGamepadInputNanos = System.nanoTime();
-        inputMode = InputMode.GAMEPAD;
+        Client.input(currentClientId()).markGamepadInput();
     }
 
     public static void markMouseMove(double rawX, double rawY) {
@@ -69,15 +56,31 @@ public final class InputApi {
     }
 
     public static long lastKeyboardMouseInputNanos() {
-        return lastKeyboardMouseInputNanos;
+        return Client.input(currentClientId()).lastKeyboardMouseInputNanos();
     }
 
     public static long lastGamepadInputNanos() {
-        return lastGamepadInputNanos;
+        return Client.input(currentClientId()).lastGamepadInputNanos();
     }
 
     public static boolean isGamepadConnected() {
         return hasGamepad();
+    }
+
+    public static int keyboardMouseClientId() {
+        return InputDeviceRouter.KEYBOARD_MOUSE_CLIENT;
+    }
+
+    public static boolean canPhysicalMouseDriveClient(int clientId) {
+        return InputDeviceRouter.canPhysicalMouseDriveClient(clientId);
+    }
+
+    public static boolean canPhysicalKeyboardDriveClient(int clientId) {
+        return InputDeviceRouter.canPhysicalKeyboardDriveClient(clientId);
+    }
+
+    public static boolean hasGamepadForClient(int clientId) {
+        return InputDeviceRouter.hasGamepadForClient(clientId);
     }
 
     public static boolean splitTouchpadButtons() {
@@ -90,21 +93,29 @@ public final class InputApi {
     }
 
     public static boolean canPhysicalMouseDrive() {
-        return true;
+        return canPhysicalMouseDriveClient(currentClientId());
     }
 
     public static boolean canPhysicalKeyboardDrive() {
-        return true;
+        return canPhysicalKeyboardDriveClient(currentClientId());
     }
 
     public static boolean hasGamepad() {
-        return InputSimulation.isConnected() || !selectedGamepadIds().isEmpty();
+        return hasGamepadForClient(currentClientId());
     }
 
     public static List<GamepadDevice> gamepads() {
-        return SdlGamepad.deviceIds().stream()
-            .map(deviceId -> new GamepadDevice(deviceId, SdlGamepad.identity(deviceId)))
+        return InputDeviceRouter.devices().stream()
+            .map(device -> new GamepadDevice(device.deviceId(), device.identity()))
             .toList();
+    }
+
+    public static void assignGamepad(long deviceId, int clientId) {
+        InputDeviceRouter.assignGamepad(deviceId, clientId);
+    }
+
+    public static void unassignGamepad(long deviceId) {
+        InputDeviceRouter.unassignGamepad(deviceId);
     }
 
     @Nullable
@@ -135,9 +146,7 @@ public final class InputApi {
      * player slot; the launcher assigns the new JVM its process slot.
      */
     public static void tickGamepadJoin(Minecraft minecraft) {
-        // The old implementation launched split-screen JVMs here. Controller
-        // discovery remains in the input layer; player joining belongs to the
-        // future split-screen integration.
+        InputDeviceRouter.tickGamepadJoin(minecraft);
     }
 
     public static String gamepadDebugStatus() {
@@ -275,78 +284,45 @@ public final class InputApi {
     }
 
     public static int missTime() {
-        return missTime;
+        return Client.input(currentClientId()).missTime();
     }
 
     public static void setMissTime(int value) {
-        missTime = Math.max(0, value);
+        Client.input(currentClientId()).setMissTime(value);
     }
 
     public static int rightClickDelay() {
-        return rightClickDelay;
+        return Client.input(currentClientId()).rightClickDelay();
     }
 
     public static void setRightClickDelay(int value) {
-        rightClickDelay = Math.max(0, value);
+        Client.input(currentClientId()).setRightClickDelay(value);
     }
 
     public static void tickRightClickDelay() {
-        rightClickDelay = Math.max(0, rightClickDelay - 1);
+        Client.input(currentClientId()).tickRightClickDelay();
     }
 
     public static void tickMissTime() {
-        missTime = Math.max(0, missTime - 1);
+        Client.input(currentClientId()).tickMissTime();
     }
 
-    private static KeyState state(KeyMapping keyMapping) {
-        return KEY_STATES.computeIfAbsent(keyMapping, ignored -> new KeyState());
+    private static KeyMappingState state(KeyMapping keyMapping) {
+        return Client.input(currentClientId()).state(keyMapping);
     }
 
     private static List<Long> selectedGamepadIds() {
-        List<Long> devices = SdlGamepad.deviceIds();
-        if (devices.isEmpty()) {
-            return List.of();
-        }
-        int index = processSlot();
-        if (index >= devices.size()) {
-            return List.of();
-        }
-        return List.of(devices.get(index));
+        return InputDeviceRouter.gamepadsForClient(currentClientId());
     }
 
     /** Public read model used by controller-assignment UI and integrations. */
     public record GamepadDevice(long deviceId, @Nullable GamepadIdentity identity) {
     }
 
-    private static int processSlot() {
-        String value = System.getenv("JAVAREFORGED_SPLIT_SLOT");
-        if (value == null || value.isBlank()) {
-            return 0;
-        }
-        try {
-            int slot = Integer.parseInt(value);
-            // Launcher slots are one-based: host/J1=1, child/J2=2, ...
-            return Math.max(0, slot - 1);
-        } catch (NumberFormatException ignored) {
-            return 0;
-        }
-    }
-
-    private static final class KeyState {
-        private boolean down;
-        private int clickCount;
-
-        boolean isDown() { return down; }
-        void setDown(boolean down) { this.down = down; }
-        int clickCount() { return clickCount; }
-        void setClickCount(int value) { clickCount = Math.max(0, value); }
-        void incrementClickCount() { clickCount++; }
-        boolean consumeClick() {
-            if (clickCount <= 0) return false;
-            clickCount--;
-            return true;
-        }
-        void release() { down = false; clickCount = 0; }
+    private static int currentClientId() {
+        return Client.currentOrNull() == null
+            ? InputDeviceRouter.KEYBOARD_MOUSE_CLIENT
+            : Client.slotId();
     }
 }
 

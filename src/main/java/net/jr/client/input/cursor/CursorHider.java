@@ -1,34 +1,74 @@
 package net.jr.client.input.cursor;
 
+import net.jr.ClientRuntime.runtime.Client;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
 public class CursorHider {
 
-    private static boolean controllerHidden;
-    private static boolean replacementHidden;
+    private static final boolean[] controllerHiddenBySlot = new boolean[Client.MAX_CLIENTS];
+    private static final boolean[] replacementHiddenBySlot = new boolean[Client.MAX_CLIENTS];
     private static int appliedCursorMode = -1;
 
     public static void setHidden(boolean hidden) {
-        if (controllerHidden != hidden) {
-            controllerHidden = hidden;
-            applyCursorMode();
+        setHiddenForSlot(currentSlotId(), hidden);
+    }
+
+    public static void setHiddenForSlot(int slotId, boolean hidden) {
+        int normalizedSlotId = normalizeSlotId(slotId);
+        if (controllerHiddenBySlot[normalizedSlotId] == hidden) {
+            return;
         }
+        controllerHiddenBySlot[normalizedSlotId] = hidden;
+        applyCursorMode();
+    }
+
+    public static void clearHiddenForSlot(int slotId) {
+        setHiddenForSlot(slotId, false);
     }
 
     public static void setReplacementHidden(boolean hidden) {
-        if (replacementHidden != hidden) {
-            replacementHidden = hidden;
-            applyCursorMode();
+        setReplacementHiddenForSlot(currentSlotId(), hidden);
+    }
+
+    public static void setReplacementHiddenForSlot(int slotId, boolean hidden) {
+        int normalizedSlotId = normalizeSlotId(slotId);
+        if (replacementHiddenBySlot[normalizedSlotId] == hidden) {
+            return;
         }
+        replacementHiddenBySlot[normalizedSlotId] = hidden;
+        applyCursorMode();
+    }
+
+    public static void clearReplacementHiddenForSlot(int slotId) {
+        setReplacementHiddenForSlot(slotId, false);
     }
 
     public static boolean isHidden() {
-        return controllerHidden || replacementHidden;
+        for (int slotId = 0; slotId < Client.MAX_CLIENTS; slotId++) {
+            if (isHiddenForSlot(slotId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isHiddenForSlot(int slotId) {
+        int normalizedSlotId = normalizeSlotId(slotId);
+        return controllerHiddenBySlot[normalizedSlotId] || replacementHiddenBySlot[normalizedSlotId];
     }
 
     public static boolean isControllerHidden() {
-        return controllerHidden;
+        for (boolean hidden : controllerHiddenBySlot) {
+            if (hidden) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isControllerHiddenForSlot(int slotId) {
+        return controllerHiddenBySlot[normalizeSlotId(slotId)];
     }
 
     public static void sync() {
@@ -56,6 +96,14 @@ public class CursorHider {
 
         GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, desiredMode);
         appliedCursorMode = desiredMode;
+    }
+
+    private static int currentSlotId() {
+        return Client.currentOrNull() == null ? 0 : Client.slotId();
+    }
+
+    private static int normalizeSlotId(int slotId) {
+        return Math.max(0, Math.min(Client.MAX_CLIENTS - 1, slotId));
     }
 
 }

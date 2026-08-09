@@ -126,6 +126,10 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 
 dependencies {
+    // FML 11 replaced ModLauncher's launch plugins with class processors.
+    // The loader is already supplied by NeoForge at runtime; this is API-only.
+    transformServiceCompileOnly "net.neoforged.fancymodloader:loader:11.0.13"
+
     // Video decoder. Kept at the exact versions used by Reforged API.
     def javacpp_ver = "1.5.10"
     def ffmpeg_ver = "6.1.1-${javacpp_ver}"
