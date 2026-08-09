@@ -1,0 +1,26 @@
+@@import asset.local("textures/gui/widgets/button_hover.png") as base_hover_and_focus
+
+@@import asset.local("textures/gui/widgets/button_withe.png") as button_withe
+
+@@blueprint main_button_withe() {
+    renderables {
+        image "base" {
+            texture: @button_withe
+            meta: true
+            x: 0
+            y: 0
+            w: ${this.width}
+            h: ${this.height}
+        }
+        if (${this.hovered} or ${this.focused}) {
+            image "hover_or_focus" {
+                texture: @base_hover_and_focus
+                meta: true
+                x: mat(0 - 1)
+                y: mat(0 - 1)
+                w: mat(${this.width} + 2)
+                h: mat(${this.height} + 2)
+            }
+        }
+    }
+}

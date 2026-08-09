@@ -1,0 +1,37 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.jr.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+  ],
+  "client": [
+    "MixinChannel",
+    "MixinClientPacketListener",
+    "MixinMinecraft",
+    "MixinMusicManager",
+    "MixinSoundEngine",
+    "MixinSoundManager",
+    "GuiGraphicsExtractorScissorMixin",
+    "UILayoutGuiRendererMixin",
+    "WindowMixin",
+    "accesors.GuiGraphicsExtractorAccessor",
+    "accesors.CreativeModeInventoryScreenAccessor",
+    "containers.AbstractContainerScreenHighlightMixin",
+    "controlhints.AbstractContainerScreenAccessor",
+    "controlhints.GuiControlHintsMixin",
+    "controlhints.MouseHandlerInputModeMixin",
+    "controlhints.ScreenMouseCoordinateMixin",
+    "controls.ClientInputAccessor",
+    "controls.ControlsScreenMixin",
+    "controls.KeyboardHandlerInputMixin",
+    "controls.KeyMappingClickAccessor",
+    "uifocus.MouseHandlerAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

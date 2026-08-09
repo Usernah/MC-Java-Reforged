@@ -1,0 +1,12 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "java_reforged:minecraft_sevenv4.ttf",
+      "shift": [0, 0],
+      "size": 10.0,
+      "oversample": 5.0,
+      "point_scale": true
+    }
+  ]
+}

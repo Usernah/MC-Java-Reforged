@@ -1,0 +1,27 @@
+@@def colors = {
+    primary: #55aaff
+    text: #ffffff
+}
+
+@@import asset.local("textures/controller/steam/button_select.png") as steam_select
+
+@@blueprint controller_icon(x, y, width, height) {
+    renderables {
+        image "glyph" {
+            texture: @steam_select
+            x: &x
+            y: &y
+            w: &width
+            h: &height
+            uv: (0, 0)
+            uv_size: (45, 48)
+            atlas_size: (45, 48)
+        }
+    }
+}
+
+@@blueprint controller_badge(x, y, width, height) {
+    renderables {
+        @controller_icon "icon" (&x, &y, &width, &height)
+    }
+}

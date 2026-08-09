@@ -1,0 +1,264 @@
+{
+  "providers": [
+    {
+      "type": "space",
+      "advances": {
+        "\uF801": -1,
+        "\uF802": -5,
+        "\uF80A": -10
+      }
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/button_down.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE000"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/button_right.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE001"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/button_left.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE002"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/button_up.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE003"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/bumper_left.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE004"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/bumper_right.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE005"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/trigger_left.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE006"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/trigger_right.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE007"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/button_select.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE008"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/button_start.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE009"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/dpad_up.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE00A"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/dpad_down.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE00B"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/dpad_left.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE00C"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/dpad_right.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE00D"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_left.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE00E"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_right.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE00F"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_left_button.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE010"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_right_button.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE011"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/dpad.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE012"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_left_move_up.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE013"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_left_move_down.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE014"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_left_move_left.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE015"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_left_move_right.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE016"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_right_move_up.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE017"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_right_move_down.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE018"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_right_move_left.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE019"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/stick_right_move_right.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE01A"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/xbox/touchpad.png",
+      "ascent": 20,
+      "height": 28,
+      "chars": [
+        "\uE01B"
+      ]
+    }
+  ]
+}
