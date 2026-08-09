@@ -7,6 +7,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import net.jr.ClientRuntime.runtime.Client;
+import net.jr.ClientRuntime.runtime.ClientBoundary;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.BindingContext;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
@@ -41,7 +43,7 @@ public final class MappedActionProcessor {
     private static final long UI_NAV_REPEAT_DELAY_MS = 250L;
     private static final long UI_NAV_REPEAT_INTERVAL_MS = 100L;
     private static final long UI_DOUBLE_CLICK_INTERVAL_MS = 250L;
-    private static final ActionState STATE = new ActionState();
+    private static final ActionState[] STATES = createStates();
 
     private MappedActionProcessor() {
     }
@@ -51,7 +53,15 @@ public final class MappedActionProcessor {
         Minecraft minecraft = Minecraft.getInstance();
 
         InputApi.tickGamepadJoin(minecraft);
-        processCurrentClient(minecraft, InputApi.isGamepadConnected());
+        for (int clientId = 0; clientId < Client.MAX_CLIENTS; clientId++) {
+            if (!Client.connected(clientId)) {
+                continue;
+            }
+            int currentClientId = clientId;
+            ClientBoundary.runForClient(currentClientId, () ->
+                processCurrentClient(minecraft, InputApi.isGamepadConnected())
+            );
+        }
     }
 
 
@@ -130,7 +140,7 @@ public final class MappedActionProcessor {
     }
 
     private static void processCurrentClient(Minecraft minecraft, boolean gamepadInput) {
-        ActionState state = STATE;
+        ActionState state = state();
         Screen currentScreen = minecraft.gui.screen();
 
         if (gamepadInput) {
@@ -749,7 +759,16 @@ public final class MappedActionProcessor {
     }
 
     private static ActionState state() {
-        return STATE;
+        int clientId = Client.currentOrNull() == null ? 0 : Client.slotId();
+        return STATES[clientId];
+    }
+
+    private static ActionState[] createStates() {
+        ActionState[] states = new ActionState[Client.MAX_CLIENTS];
+        for (int clientId = 0; clientId < states.length; clientId++) {
+            states[clientId] = new ActionState();
+        }
+        return states;
     }
 
     private enum ScreenTransitionSound {

@@ -88,6 +88,14 @@ public abstract class MinecraftSSMixin {
         this.splitTest$runTickScopes.pop().close();
     }
 
+    @Redirect(
+            method = "renderFrame",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;pick(F)V")
+    )
+    private void splitTest$pickForVisiblePlayers(Minecraft minecraft, float partialTicks) {
+        WorldExtractions.pickVisibleSlots(minecraft, partialTicks);
+    }
+
     @Inject(method = "tick", at = @At("RETURN"))
     private void splitTest$tickSecondarySessions(CallbackInfo ci) {
         Minecraft minecraft = (Minecraft)(Object)this;

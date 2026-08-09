@@ -466,17 +466,16 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
                 continue;
             }
 
-            InsnList discardCapturedConsumer = new InsnList();
-            discardCapturedConsumer.add(new InsnNode(Opcodes.SWAP));
-            discardCapturedConsumer.add(new InsnNode(Opcodes.POP));
-            method.instructions.insertBefore(methodInsn, discardCapturedConsumer);
-            method.instructions.set(methodInsn, new MethodInsnNode(
+            InsnList notifyPlayerGraphs = new InsnList();
+            notifyPlayerGraphs.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            notifyPlayerGraphs.add(new MethodInsnNode(
                 Opcodes.INVOKESTATIC,
                 TERRAIN_COORDINATOR_OWNER,
                 "onSectionCompiled",
                 "(L" + RENDER_SECTION_OWNER + ";)V",
                 false
             ));
+            method.instructions.insert(methodInsn, notifyPlayerGraphs);
             hooks++;
             insn = nextInsn;
         }
@@ -513,14 +512,29 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
         }
 
         if ("doTask".equals(method.name)) {
+            hooks += insertTaskExecutingAtHead(method);
             hooks += rewriteTaskCameraReference(method);
             hooks += insertTaskFinishedBeforeReturns(method, Opcodes.ARETURN);
             return hooks;
         }
         if ("cancel".equals(method.name) && "()V".equals(method.desc)) {
-            return insertTaskFinishedBeforeReturns(method, Opcodes.RETURN);
+            return insertTaskCancelledBeforeReturns(method);
         }
         return 0;
+    }
+
+    private static int insertTaskExecutingAtHead(MethodNode method) {
+        InsnList hook = new InsnList();
+        hook.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        hook.add(new MethodInsnNode(
+            Opcodes.INVOKESTATIC,
+            TERRAIN_SECTION_OWNERS_OWNER,
+            "taskExecuting",
+            "(Ljava/lang/Object;)V",
+            false
+        ));
+        method.instructions.insert(hook);
+        return 1;
     }
 
     private static int rewriteTaskCameraReference(MethodNode method) {
@@ -567,6 +581,27 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
                 Opcodes.INVOKESTATIC,
                 TERRAIN_SECTION_OWNERS_OWNER,
                 "taskFinished",
+                "(Ljava/lang/Object;)V",
+                false
+            ));
+            method.instructions.insertBefore(insn, hook);
+            hooks++;
+        }
+        return hooks;
+    }
+
+    private static int insertTaskCancelledBeforeReturns(MethodNode method) {
+        int hooks = 0;
+        for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
+            if (insn.getOpcode() != Opcodes.RETURN) {
+                continue;
+            }
+            InsnList hook = new InsnList();
+            hook.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            hook.add(new MethodInsnNode(
+                Opcodes.INVOKESTATIC,
+                TERRAIN_SECTION_OWNERS_OWNER,
+                "taskCancelled",
                 "(Ljava/lang/Object;)V",
                 false
             ));

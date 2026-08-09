@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import net.jr.ClientRuntime.runtime.Client;
 import net.jr.client.input.InputJsonFiles;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
@@ -40,8 +41,8 @@ public final class GamepadBindingRegistry {
     private final Map<String, KeyMapping> knownKeyMappings = new LinkedHashMap<>();
     private final Map<String, GamepadInputChord> digitalBindings = new LinkedHashMap<>();
     private final Set<String> explicitlyUnbound = new LinkedHashSet<>();
-    /** One evaluator per JVM. A child split process owns one Minecraft input stream. */
-    private final GamepadBindingEvaluator evaluator = new GamepadBindingEvaluator();
+    /** Evaluator latches belong to the local player whose physical device is being sampled. */
+    private final GamepadBindingEvaluator[] evaluators = createEvaluators();
     private boolean loaded;
     @Nullable
     private Path filePath;
@@ -179,15 +180,15 @@ public final class GamepadBindingRegistry {
     public void applyMappedBindings(BindingContext context) {
         Minecraft minecraft = Minecraft.getInstance();
         ensureLoaded(minecraft);
-        this.evaluator.apply(this, context);
+        this.evaluator().apply(this, context);
     }
 
     public void releaseAppliedBindings() {
-        this.evaluator.release(this);
+        this.evaluator().release(this);
     }
 
     public void suppressHeldInputs() {
-        this.evaluator.suppressHeldInputs();
+        this.evaluator().suppressHeldInputs();
     }
 
     public Map<String, GamepadInputChord> snapshotBindings() {
@@ -311,7 +312,20 @@ public final class GamepadBindingRegistry {
     }
 
     public List<GamepadDigitalInput> currentlyPressedInputs() {
-        return this.evaluator.currentlyPressedInputs();
+        return this.evaluator().currentlyPressedInputs();
+    }
+
+    private GamepadBindingEvaluator evaluator() {
+        int clientId = Client.currentOrNull() == null ? 0 : Client.slotId();
+        return this.evaluators[clientId];
+    }
+
+    private static GamepadBindingEvaluator[] createEvaluators() {
+        GamepadBindingEvaluator[] evaluators = new GamepadBindingEvaluator[Client.MAX_CLIENTS];
+        for (int clientId = 0; clientId < evaluators.length; clientId++) {
+            evaluators[clientId] = new GamepadBindingEvaluator();
+        }
+        return evaluators;
     }
 
     @Nullable

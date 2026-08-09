@@ -107,6 +107,14 @@ public final class PlayerSessions {
         }
     }
 
+    public void onInitialPositionSynchronized(ClientPacketListener listener, LocalPlayers players) {
+        int slotId = players.slotForClientPacketListener(listener);
+        PlayerSession session = this.sessions[slotId];
+        if (session != null) {
+            session.markPositionSynchronized();
+        }
+    }
+
     public void disconnectSecondarySessions(LocalPlayers players) {
         for (int slotId = 1; slotId < PlayerSlots.MAX_SLOTS; slotId++) {
             PlayerSession session = this.sessions[slotId];
@@ -150,6 +158,10 @@ public final class PlayerSessions {
         ClientBoundary.runForSlot(slot, () -> {
             boolean gameplayBound = players.slotGameplayBound(slot);
             if (!gameplayBound) {
+                session.setJoiningInProgress(true);
+                return;
+            }
+            if (!session.hasSynchronizedPosition()) {
                 session.setJoiningInProgress(true);
                 return;
             }

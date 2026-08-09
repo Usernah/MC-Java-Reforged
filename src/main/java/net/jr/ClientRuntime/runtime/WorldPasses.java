@@ -61,7 +61,11 @@ public final class WorldPasses {
                 optionsState.textureFiltering == TextureFilteringMethod.RGSS
             );
             renderer.splitTest$getLightmap().render(slot.renderState().lightmapRenderState());
-            gameRenderer.renderLevel(deltaTracker);
+            RenderTarget globalTarget = gameRenderer.mainRenderTarget();
+            try (SlotRenderTargets.Scope ignoredTargets = SlotRenderTargets.enter(slot.id(), viewport, globalTarget)) {
+                gameRenderer.renderLevel(deltaTracker);
+                ignoredTargets.present();
+            }
         }
     }
 

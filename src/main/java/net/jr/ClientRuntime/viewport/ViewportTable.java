@@ -8,6 +8,7 @@ public final class ViewportTable implements Iterable<ViewportArea> {
     private final ViewportLayout layout;
     private final WindowMetrics metrics;
     private final ViewportArea[] viewports;
+    private static final boolean FORCE_GRID_GUI_SCALE = false;
     private static final int GRID_GUI_SCALE = 2;
 
     public ViewportTable(ViewportLayout layout, WindowMetrics metrics) {
@@ -57,7 +58,7 @@ public final class ViewportTable implements Iterable<ViewportArea> {
     }
 
     private static ViewportArea area(ViewportLayout layout, int id, WindowMetrics metrics, Rect framebuffer, Rect window, Rect gui) {
-        int guiScale = layout == ViewportLayout.FOUR_GRID
+        int guiScale = layout == ViewportLayout.FOUR_GRID && FORCE_GRID_GUI_SCALE
                 ? GRID_GUI_SCALE
                 : calculateGuiScale(
                 framebuffer.width(),
@@ -94,17 +95,7 @@ public final class ViewportTable implements Iterable<ViewportArea> {
             int height,
             int requestedScale
     ) {
-        int scale = 1;
-
-        while (
-                scale < requestedScale
-                        && width / (scale + 1) >= 320
-                        && height / (scale + 1) >= 240
-        ) {
-            scale++;
-        }
-
-        return scale;
+        return requestedScale;
     }
 
     private static Rect[] splitVertical(int width, int height) {

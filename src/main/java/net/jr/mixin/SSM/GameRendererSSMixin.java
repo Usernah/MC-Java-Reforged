@@ -1,8 +1,11 @@
 package net.jr.mixin.SSM;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.jr.ClientRuntime.runtime.Cameras;
 import net.jr.ClientRuntime.runtime.Client;
 import net.jr.ClientRuntime.runtime.Hands;
+import net.jr.ClientRuntime.runtime.SlotRenderTargets;
 import net.jr.ClientRuntime.runtime.WorldExtractions;
 import net.jr.ClientRuntime.runtime.WorldPasses;
 import net.minecraft.client.Camera;
@@ -18,11 +21,35 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 /** Admits every local player through Minecraft's single 26.2 GameRenderer engine. */
 @Mixin(GameRenderer.class)
 public abstract class GameRendererSSMixin {
+    @Inject(method = "mainRenderTarget", at = @At("HEAD"), cancellable = true)
+    private void splitTest$resolveActiveMainTarget(CallbackInfoReturnable<RenderTarget> cir) {
+        RenderTarget activeTarget = SlotRenderTargets.activeMainOrNull();
+        if (activeTarget != null) {
+            cir.setReturnValue(activeTarget);
+        }
+    }
+
+    @ModifyExpressionValue(
+        method = "renderLevel",
+        at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/GameRenderer;mainRenderTarget:Lcom/mojang/blaze3d/pipeline/RenderTarget;")
+    )
+    private RenderTarget splitTest$resolveDirectMainTargetAccess(RenderTarget original) {
+        return SlotRenderTargets.activeMainOr(original);
+    }
+
+    @Inject(method = "close", at = @At("HEAD"))
+    private void splitTest$closeSlotRenderTargets(CallbackInfo ci) {
+        SlotRenderTargets.closeAll();
+    }
+
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;tick()V"))
     private void splitTest$tickCamerasByClient(Camera ignoredVanillaCamera) {
         Cameras.tickConnectedClients();

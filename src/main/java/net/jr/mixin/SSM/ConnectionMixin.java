@@ -2,6 +2,7 @@ package net.jr.mixin.SSM;
 
 import net.jr.ClientRuntime.runtime.LocalPlayers;
 import net.jr.ClientRuntime.runtime.ActiveSlot;
+import net.jr.ClientRuntime.runtime.ClientBoundary;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.Connection;
 import net.minecraft.network.PacketListener;
@@ -27,12 +28,13 @@ public abstract class ConnectionMixin {
             slotId = activeSlotId != null ? activeSlotId : 0;
             LocalPlayers.INSTANCE.connections().bind(connection, slotId);
         }
+        if (minecraft != null && minecraft.isSameThread()) {
+            ClientBoundary.runForConnection(connection, () -> splitTest$handlePacket(packet, listener));
+            return;
+        }
+
         try (ActiveSlot.Scheduling ignored = ActiveSlot.schedule(slotId)) {
-            if (minecraft != null && minecraft.isSameThread()) {
-                ActiveSlot.run(slotId, () -> splitTest$handlePacket(packet, listener));
-            } else {
-                splitTest$handlePacket(packet, listener);
-            }
+            splitTest$handlePacket(packet, listener);
         }
     }
 

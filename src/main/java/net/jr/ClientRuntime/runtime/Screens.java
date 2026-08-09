@@ -153,6 +153,10 @@ public final class Screens {
         return hasRenderableGameplayPass();
     }
 
+    public static boolean hasMultipleLocalViewports() {
+        return slotUiPassOwnsScreens() && Client.connectedCount() > 1;
+    }
+
     static boolean slotUiPassCanRender(PlayerSlot slot) {
         if (!slot.drawable()) {
             return false;

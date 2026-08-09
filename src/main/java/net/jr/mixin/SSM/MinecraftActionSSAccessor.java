@@ -11,4 +11,7 @@ public interface MinecraftActionSSAccessor {
 
     @Invoker("continueAttack")
     void splitTest$continueAttack(boolean leftClick);
+
+    @Invoker("pick")
+    void splitTest$pick(float partialTicks);
 }

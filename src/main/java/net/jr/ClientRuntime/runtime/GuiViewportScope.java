@@ -19,7 +19,7 @@ public final class GuiViewportScope implements AutoCloseable {
 
     private GuiViewportScope(GuiGraphicsExtractor graphics, ViewportArea viewport) {
         this.graphics = graphics;
-        this.viewportScope = ViewportPass.enter(viewport);
+        this.viewportScope = ViewportPass.enterGui(viewport);
         this.screenScaleScope = ScreenScale.enter(viewport);
 
         Minecraft minecraft = Minecraft.getInstance();

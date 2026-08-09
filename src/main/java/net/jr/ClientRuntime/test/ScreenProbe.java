@@ -3,6 +3,7 @@ package net.jr.ClientRuntime.test;
 import javax.annotation.Nullable;
 
 import net.jr.ClientRuntime.runtime.ActiveSlot;
+import net.jr.ClientRuntime.runtime.ClientBoundary;
 import net.jr.ClientRuntime.runtime.LocalPlayers;
 import net.jr.ClientRuntime.slot.PlayerSlot;
 import net.minecraft.client.Minecraft;
@@ -33,7 +34,7 @@ public final class ScreenProbe {
             return;
         }
         if (primaryReady()) {
-            minecraft.gui.setScreen(null);
+            ClientBoundary.runPrimary(minecraft, () -> minecraft.gui.setScreen(null));
         }
     }
 

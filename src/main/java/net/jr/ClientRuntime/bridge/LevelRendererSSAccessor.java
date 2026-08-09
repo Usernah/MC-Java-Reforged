@@ -6,9 +6,11 @@ import net.minecraft.client.renderer.SectionOcclusionGraph;
 import net.minecraft.client.renderer.ViewArea;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 
 /** Bridge implemented by the 26.2 LevelRenderer mixin. */
 public interface LevelRendererSSAccessor {
+    @Nullable
     SectionRenderDispatcher splitTest$getSectionRenderDispatcher();
 
     LevelRenderState splitTest$getLevelRenderState();
@@ -31,4 +33,6 @@ public interface LevelRendererSSAccessor {
     ViewArea splitTest$getViewArea();
 
     void splitTest$setViewArea(@Nullable ViewArea viewArea);
+
+    void splitTest$compileSections(CameraRenderState cameraState);
 }

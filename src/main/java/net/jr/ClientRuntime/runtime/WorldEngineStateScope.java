@@ -22,14 +22,18 @@ import net.minecraft.client.renderer.state.LightmapRenderState;
 public final class WorldEngineStateScope implements AutoCloseable {
     private final Minecraft minecraft;
     private final PlayerSlot slot;
-    private final boolean bindEntityDispatchers;
+    private final boolean bindCompleteState;
     private final LevelRendererSSAccessor renderer;
+    @Nullable
     private final LevelExtractorSSAccessor extractor;
+    @Nullable
     private final GameRenderStateSSAccessor gameState;
     @Nullable private final ClientLevel previousExtractorLevel;
     @Nullable private final ClientLevel previousParticleLevel;
-    private final LevelExtractionState previousExtractionState = new LevelExtractionState();
+    @Nullable private final LevelExtractionState previousExtractionState;
+    @Nullable
     private final LevelRenderState previousGameRenderState;
+    @Nullable
     private final LightmapRenderState previousLightmapRenderState;
     private final LevelRenderState previousLevelRenderState;
     private final SectionOcclusionGraph previousGraph;
@@ -38,18 +42,29 @@ public final class WorldEngineStateScope implements AutoCloseable {
     @Nullable private final ViewArea previousViewArea;
     private boolean closed;
 
-    private WorldEngineStateScope(Minecraft minecraft, PlayerSlot slot, boolean bindEntityDispatchers) {
+    private WorldEngineStateScope(Minecraft minecraft, PlayerSlot slot, boolean bindCompleteState) {
         this.minecraft = minecraft;
         this.slot = slot;
-        this.bindEntityDispatchers = bindEntityDispatchers;
+        this.bindCompleteState = bindCompleteState;
         this.renderer = (LevelRendererSSAccessor)minecraft.levelRenderer;
-        this.extractor = (LevelExtractorSSAccessor)minecraft.levelExtractor;
-        this.gameState = (GameRenderStateSSAccessor)minecraft.gameRenderer.gameRenderState();
-        this.previousExtractorLevel = this.extractor.splitTest$getLevel();
-        this.previousParticleLevel = ((ParticleEngineSSAccessor)minecraft.particleEngine).splitTest$getLevel();
-        this.extractor.splitTest$capture(this.previousExtractionState);
-        this.previousGameRenderState = this.gameState.splitTest$getLevelRenderState();
-        this.previousLightmapRenderState = this.gameState.splitTest$getLightmapRenderState();
+        if (bindCompleteState) {
+            this.extractor = (LevelExtractorSSAccessor)minecraft.levelExtractor;
+            this.gameState = (GameRenderStateSSAccessor)minecraft.gameRenderer.gameRenderState();
+            this.previousExtractorLevel = this.extractor.splitTest$getLevel();
+            this.previousParticleLevel = ((ParticleEngineSSAccessor)minecraft.particleEngine).splitTest$getLevel();
+            this.previousExtractionState = new LevelExtractionState();
+            this.extractor.splitTest$capture(this.previousExtractionState);
+            this.previousGameRenderState = this.gameState.splitTest$getLevelRenderState();
+            this.previousLightmapRenderState = this.gameState.splitTest$getLightmapRenderState();
+        } else {
+            this.extractor = null;
+            this.gameState = null;
+            this.previousExtractorLevel = null;
+            this.previousParticleLevel = null;
+            this.previousExtractionState = null;
+            this.previousGameRenderState = null;
+            this.previousLightmapRenderState = null;
+        }
         this.previousLevelRenderState = this.renderer.splitTest$getLevelRenderState();
         this.previousGraph = this.renderer.splitTest$getSectionOcclusionGraph();
         this.previousVisible = this.renderer.splitTest$getVisibleSections();
@@ -77,15 +92,17 @@ public final class WorldEngineStateScope implements AutoCloseable {
     private void installSlot() {
         RenderState state = this.slot.renderState();
         ClientLevel level = state.level();
-        this.gameState.splitTest$setLevelRenderState(state.levelRenderState());
-        this.gameState.splitTest$setLightmapRenderState(state.lightmapRenderState());
         this.renderer.splitTest$setLevelRenderState(state.levelRenderState());
         this.renderer.splitTest$setSectionOcclusionGraph(state.terrain().sectionOcclusionGraph());
         this.renderer.splitTest$setVisibleSections(state.terrain().visibleSections());
         this.renderer.splitTest$setNearbyVisibleSections(state.terrain().nearbyVisibleSections());
-        this.renderer.splitTest$setViewArea(LevelRendererFields.nullableViewArea());
-        this.extractor.splitTest$install(level, state.levelRenderState(), state.levelExtractionState());
-        ((ParticleEngineSSAccessor)this.minecraft.particleEngine).splitTest$setLevel(level);
+        this.renderer.splitTest$setViewArea(state.terrain().viewArea());
+        if (this.bindCompleteState) {
+            this.gameState.splitTest$setLevelRenderState(state.levelRenderState());
+            this.gameState.splitTest$setLightmapRenderState(state.lightmapRenderState());
+            this.extractor.splitTest$install(level, state.levelRenderState(), state.levelExtractionState());
+            ((ParticleEngineSSAccessor)this.minecraft.particleEngine).splitTest$setLevel(level);
+        }
     }
 
     @Override
@@ -94,16 +111,20 @@ public final class WorldEngineStateScope implements AutoCloseable {
             return;
         }
         this.closed = true;
-        this.extractor.splitTest$capture(this.slot.renderState().levelExtractionState());
-        this.extractor.splitTest$install(this.previousExtractorLevel, this.previousLevelRenderState, this.previousExtractionState);
-        this.gameState.splitTest$setLevelRenderState(this.previousGameRenderState);
-        this.gameState.splitTest$setLightmapRenderState(this.previousLightmapRenderState);
+        if (this.bindCompleteState) {
+            this.extractor.splitTest$capture(this.slot.renderState().levelExtractionState());
+            this.extractor.splitTest$install(this.previousExtractorLevel, this.previousLevelRenderState, this.previousExtractionState);
+            this.gameState.splitTest$setLevelRenderState(this.previousGameRenderState);
+            this.gameState.splitTest$setLightmapRenderState(this.previousLightmapRenderState);
+        }
         this.renderer.splitTest$setLevelRenderState(this.previousLevelRenderState);
         this.renderer.splitTest$setSectionOcclusionGraph(this.previousGraph);
         this.renderer.splitTest$setVisibleSections(this.previousVisible);
         this.renderer.splitTest$setNearbyVisibleSections(this.previousNearby);
         this.renderer.splitTest$setViewArea(this.previousViewArea);
-        ((ParticleEngineSSAccessor)this.minecraft.particleEngine).splitTest$setLevel(this.previousParticleLevel);
+        if (this.bindCompleteState) {
+            ((ParticleEngineSSAccessor)this.minecraft.particleEngine).splitTest$setLevel(this.previousParticleLevel);
+        }
     }
 
     private static int slotIdForLevel(ClientLevel level) {

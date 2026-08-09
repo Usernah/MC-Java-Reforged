@@ -15,7 +15,9 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
+import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -25,13 +27,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerMixin {
+    @WrapMethod(method = "handleLogin")
+    private void splitTest$handleLoginForListenerClient(
+        ClientboundLoginPacket packet,
+        Operation<Void> original
+    ) {
+        this.splitTest$runPacketForListener(() -> original.call(packet));
+    }
+
     @WrapMethod(method = "handleOpenScreen")
     private void splitTest$openScreenForListenerClient(
         ClientboundOpenScreenPacket packet,
         Operation<Void> original
     ) {
-        ClientPacketListener listener = (ClientPacketListener)(Object)this;
-        ClientBoundary.runForListener(listener, () -> original.call(packet));
+        this.splitTest$runPacketForListener(() -> original.call(packet));
     }
 
     @WrapMethod(method = "handlePlayerCombatKill")
@@ -39,8 +48,7 @@ public abstract class ClientPacketListenerMixin {
         ClientboundPlayerCombatKillPacket packet,
         Operation<Void> original
     ) {
-        ClientPacketListener listener = (ClientPacketListener)(Object)this;
-        ClientBoundary.runForListener(listener, () -> original.call(packet));
+        this.splitTest$runPacketForListener(() -> original.call(packet));
     }
 
     @WrapMethod(method = "handleRespawn")
@@ -48,8 +56,7 @@ public abstract class ClientPacketListenerMixin {
         ClientboundRespawnPacket packet,
         Operation<Void> original
     ) {
-        ClientPacketListener listener = (ClientPacketListener)(Object)this;
-        ClientBoundary.runForListener(listener, () -> original.call(packet));
+        this.splitTest$runPacketForListener(() -> original.call(packet));
     }
 
     @Inject(method = "handleLogin", at = @At("HEAD"))
@@ -103,10 +110,30 @@ public abstract class ClientPacketListenerMixin {
         if (connection == null) {
             throw new IllegalStateException("ClientPacketListener has no connection");
         }
+        Integer mappedSlotId = LocalPlayers.INSTANCE.connections().slotOrNull(connection);
         Integer activeSlotId = ActiveSlot.idOrNull();
-        int slotId = activeSlotId != null
-            ? activeSlotId
-            : LocalPlayers.INSTANCE.slotForClientPacketListener((ClientPacketListener)(Object)this);
+        int slotId = mappedSlotId != null
+            ? mappedSlotId
+            : activeSlotId != null
+                ? activeSlotId
+                : LocalPlayers.INSTANCE.slotForClientPacketListener((ClientPacketListener)(Object)this);
         LocalPlayers.INSTANCE.connections().bind(connection, slotId);
+    }
+
+    @Inject(method = "handleMovePlayer", at = @At("TAIL"))
+    private void splitTest$markInitialPositionSynchronized(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
+        LocalPlayers.INSTANCE.sessions().onInitialPositionSynchronized(
+            (ClientPacketListener)(Object)this,
+            LocalPlayers.INSTANCE
+        );
+    }
+
+    private void splitTest$runPacketForListener(Runnable action) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (!minecraft.isSameThread()) {
+            action.run();
+            return;
+        }
+        ClientBoundary.runForListener((ClientPacketListener)(Object)this, action);
     }
 }

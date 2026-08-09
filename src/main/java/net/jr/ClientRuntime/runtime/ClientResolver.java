@@ -69,12 +69,15 @@ final class ClientResolver {
     }
 
     static ClientToken captureScheduledTokenOrNull() {
+        Integer scheduledSlotId = ActiveSlot.scheduledIdOrNull();
+        if (scheduledSlotId != null) {
+            return tokenForSlot(scheduledSlotId);
+        }
         LocalClient current = Client.currentOrNull();
         if (current != null) {
             return tokenForSlot(current.slotId());
         }
-        Integer scheduledSlotId = ActiveSlot.scheduledIdOrNull();
-        return scheduledSlotId == null ? null : tokenForSlot(scheduledSlotId);
+        return null;
     }
 
     static PlayerSlot requireToken(ClientToken token) {

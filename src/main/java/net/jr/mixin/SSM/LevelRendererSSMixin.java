@@ -1,16 +1,18 @@
 package net.jr.mixin.SSM;
 
-import net.jr.ClientRuntime.bridge.LevelRendererSSAccessor;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import javax.annotation.Nullable;
+import net.jr.ClientRuntime.bridge.LevelRendererSSAccessor;
 import net.jr.ClientRuntime.runtime.ActiveSlot;
 import net.jr.ClientRuntime.runtime.Client;
-import net.jr.ClientRuntime.runtime.LevelRendererFields;
 import net.jr.ClientRuntime.runtime.TerrainCoordinator;
 import net.jr.ClientRuntime.runtime.TerrainPhase;
-import net.jr.ClientRuntime.terrain.TerrainViewArea;
+import net.jr.ClientRuntime.runtime.SlotRenderTargets;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SectionOcclusionGraph;
 import net.minecraft.client.renderer.ViewArea;
@@ -21,15 +23,17 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/** Makes vanilla's single LevelRenderer consume the active player's state tree. */
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererSSMixin implements LevelRendererSSAccessor {
     @Shadow @Final @Mutable
-    LevelRenderState levelRenderState;
+    private LevelRenderState levelRenderState;
     @Shadow @Final @Mutable
     private SectionOcclusionGraph sectionOcclusionGraph;
     @Shadow @Final @Mutable
@@ -42,7 +46,7 @@ public abstract class LevelRendererSSMixin implements LevelRendererSSAccessor {
     private SectionRenderDispatcher sectionRenderDispatcher;
 
     @Override
-    public SectionRenderDispatcher splitTest$getSectionRenderDispatcher() {
+    public @Nullable SectionRenderDispatcher splitTest$getSectionRenderDispatcher() {
         return this.sectionRenderDispatcher;
     }
 
@@ -87,7 +91,7 @@ public abstract class LevelRendererSSMixin implements LevelRendererSSAccessor {
     }
 
     @Override
-    public ViewArea splitTest$getViewArea() {
+    public @Nullable ViewArea splitTest$getViewArea() {
         return this.viewArea;
     }
 
@@ -96,26 +100,23 @@ public abstract class LevelRendererSSMixin implements LevelRendererSSAccessor {
         this.viewArea = viewArea;
     }
 
-    @Inject(method = "invalidateCompiledGeometry", at = @At("HEAD"), cancellable = true)
-    private void splitTest$keepSingleTerrainEngine(CallbackInfo ci) {
-        if (!LevelRendererFields.hasTerrainStore()) {
-            return;
-        }
-        int requestedDistance = net.minecraft.client.Minecraft.getInstance().options.getEffectiveRenderDistance();
-        boolean primaryReconfiguration = ActiveSlot.idOrNull() != null
-            && ActiveSlot.idOrNull() == 0
-            && LevelRendererFields.viewArea().getViewDistance() != requestedDistance;
-        if (!primaryReconfiguration) {
-            this.viewArea = LevelRendererFields.nullableViewArea();
-            ci.cancel();
-        }
+    @Override
+    @Invoker("compileSections")
+    public abstract void splitTest$compileSections(CameraRenderState cameraState);
+
+    @ModifyExpressionValue(
+        method = {"render", "doEntityOutline"},
+        at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/LevelRenderer;entityOutlineTarget:Lcom/mojang/blaze3d/pipeline/RenderTarget;")
+    )
+    private RenderTarget splitTest$resolveActiveOutlineTarget(RenderTarget original) {
+        return SlotRenderTargets.activeOutlineOr(original);
     }
 
     @WrapOperation(
         method = "invalidateCompiledGeometry",
         at = @At(value = "NEW", target = "(Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher;IIIIILnet/minecraft/client/renderer/SectionOcclusionGraph;)Lnet/minecraft/client/renderer/ViewArea;")
     )
-    private ViewArea splitTest$createSharedViewArea(
+    private ViewArea splitTest$createLogicalSharedViewArea(
         SectionRenderDispatcher dispatcher,
         int minY,
         int maxY,
@@ -125,43 +126,60 @@ public abstract class LevelRendererSSMixin implements LevelRendererSSAccessor {
         SectionOcclusionGraph graph,
         Operation<ViewArea> original
     ) {
-        return TerrainViewArea.create(dispatcher, TerrainCoordinator.activeLevel(), viewDistance, (LevelRenderer)(Object)this);
+        ClientLevel level = Client.level();
+        if (level == null) {
+            throw new IllegalStateException("Cannot create terrain ViewArea without an active ClientLevel");
+        }
+        return TerrainCoordinator.createViewArea(dispatcher, level, viewDistance, graph);
+    }
+
+    @Redirect(
+        method = "invalidateCompiledGeometry",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher;clearCompileQueue()V")
+    )
+    private void splitTest$clearSharedCompileQueueOnce(SectionRenderDispatcher dispatcher) {
+        if (TerrainCoordinator.isPrimaryTerrainPass()) {
+            dispatcher.clearCompileQueue();
+        }
     }
 
     @Inject(method = "invalidateCompiledGeometry", at = @At("RETURN"))
-    private void splitTest$captureSharedViewArea(CallbackInfo ci) {
-        LevelRendererFields.setViewArea(this.viewArea);
+    private void splitTest$captureLogicalViewArea(CallbackInfo ci) {
+        TerrainCoordinator.captureViewArea(this.viewArea);
     }
 
     @Inject(method = "resetLevelRenderData", at = @At("HEAD"), cancellable = true)
-    private void splitTest$onlyPrimaryResetsTerrain(CallbackInfo ci) {
-        Integer slotId = ActiveSlot.idOrNull();
-        if (slotId != null && slotId != 0) {
-            this.viewArea = LevelRendererFields.nullableViewArea();
-            ci.cancel();
+    private void splitTest$releaseOnlyActivePlayerTerrain(CallbackInfo ci) {
+        if (ActiveSlot.idOrNull() == null) {
+            return;
         }
-    }
-
-    @Inject(method = "resetLevelRenderData", at = @At("RETURN"))
-    private void splitTest$forgetReleasedTerrain(CallbackInfo ci) {
-        if (this.viewArea == null) {
-            LevelRendererFields.setViewArea(null);
-        }
-    }
-
-    @Inject(method = "compileSections", at = @At("HEAD"), cancellable = true)
-    private void splitTest$compileGlobalTerrain(CameraRenderState camera, CallbackInfo ci) {
-        TerrainCoordinator.compileSections(Client.camera());
+        TerrainCoordinator.resetActiveSlotTerrain();
+        this.viewArea = null;
         ci.cancel();
+    }
+
+    @Redirect(
+        method = "render",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;compileSections(Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V")
+    )
+    private void splitTest$compileAllPlayerRequestsFromPrimary(LevelRenderer renderer, CameraRenderState cameraState) {
+        if (TerrainPhase.canUpdateTerrain()) {
+            TerrainCoordinator.compileVisibleSlots(renderer);
+        }
     }
 
     @Redirect(
         method = "render",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher;uploadTerrainBuffersToGpu()V")
     )
-    private void splitTest$uploadTerrainOnce(SectionRenderDispatcher dispatcher) {
+    private void splitTest$uploadSharedTerrainOnce(SectionRenderDispatcher dispatcher) {
         if (TerrainPhase.canUpdateTerrain()) {
             dispatcher.uploadTerrainBuffersToGpu();
         }
+    }
+
+    @Inject(method = "close", at = @At("HEAD"))
+    private void splitTest$closeSharedTerrainBeforeDispatcher(CallbackInfo ci) {
+        TerrainCoordinator.closeSharedTerrain();
     }
 }

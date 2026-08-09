@@ -24,6 +24,7 @@ public final class PlayerSession {
     private Connection connection;
     private boolean joining;
     private boolean joinedWorldOnce;
+    private boolean positionSynchronized;
     private long generation;
 
     public PlayerSession(int slotId, @Nullable GameProfile profile) {
@@ -31,6 +32,7 @@ public final class PlayerSession {
         this.profile = profile;
         this.joining = this.isSecondary();
         this.joinedWorldOnce = !this.isSecondary();
+        this.positionSynchronized = !this.isSecondary();
     }
 
     public static GameProfile createSecondaryProfile(LocalPlayer primaryPlayer, int ordinal) {
@@ -74,6 +76,7 @@ public final class PlayerSession {
         }
         this.joining = this.isSecondary();
         this.joinedWorldOnce = !this.isSecondary();
+        this.positionSynchronized = !this.isSecondary();
     }
 
     private static Connection requirePrimaryConnection(Minecraft minecraft) {
@@ -123,11 +126,20 @@ public final class PlayerSession {
         }
     }
 
+    public boolean hasSynchronizedPosition() {
+        return this.positionSynchronized;
+    }
+
+    public void markPositionSynchronized() {
+        this.positionSynchronized = true;
+    }
+
     public void markWorldCleared() {
         if (this.joinedWorldOnce) {
             this.generation++;
         }
         this.joinedWorldOnce = false;
+        this.positionSynchronized = !this.isSecondary();
         if (this.isSecondary()) {
             this.joining = true;
         }
@@ -137,6 +149,7 @@ public final class PlayerSession {
         if (this.connection != connection) {
             this.connection = connection;
             this.generation++;
+            this.positionSynchronized = !this.isSecondary();
         }
     }
 }

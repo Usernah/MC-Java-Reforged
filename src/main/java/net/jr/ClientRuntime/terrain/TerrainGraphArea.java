@@ -8,11 +8,15 @@ import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 
-/** Per-slot occlusion-graph facade; all actual sections remain global. */
+/**
+ * Lightweight per-player ViewArea facade over the one shared RenderSection pool.
+ * It owns camera-window membership only; it never creates a second terrain engine.
+ */
 public final class TerrainGraphArea extends ViewArea {
     private final GlobalTerrainStore store;
     private final SlotTerrainView view;
     private final ClientLevel level;
+    private final SectionOcclusionGraph graph;
     private final int slotId;
     private SectionPos cameraSectionPos = SectionPos.of(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
 
@@ -51,27 +55,25 @@ public final class TerrainGraphArea extends ViewArea {
         this.store = store;
         this.view = view;
         this.level = level;
+        this.graph = graph;
         this.slotId = slotId;
     }
 
     @Override
-    @Nullable
-    public SectionRenderDispatcher.RenderSection getRenderSectionAt(BlockPos pos) {
-        return this.store.sectionForGraph(this.slotId, this.view, pos);
-    }
-
-    @Override
-    @Nullable
-    protected SectionRenderDispatcher.RenderSection getRenderSection(long sectionNode) {
-        return this.store.sectionForGraph(this.slotId, this.view, SectionPos.of(sectionNode).origin());
-    }
-
-    @Override
-    public boolean repositionCamera(SectionPos cameraSectionPos) {
-        if (cameraSectionPos.equals(this.cameraSectionPos)) {
+    public boolean repositionCamera(SectionPos nextCameraSectionPos) {
+        if (nextCameraSectionPos.equals(this.cameraSectionPos)) {
             return false;
         }
-        this.cameraSectionPos = cameraSectionPos;
+        SlotTerrainView.Update update = this.view.update(
+            this.store,
+            this.level,
+            this.getViewDistance(),
+            nextCameraSectionPos.x(),
+            nextCameraSectionPos.z()
+        );
+        this.store.updateReferences(this.slotId, update);
+        this.cameraSectionPos = nextCameraSectionPos;
+        this.graph.invalidate();
         return true;
     }
 
@@ -81,19 +83,30 @@ public final class TerrainGraphArea extends ViewArea {
     }
 
     @Override
+    public @Nullable SectionRenderDispatcher.RenderSection getRenderSectionAt(BlockPos pos) {
+        return this.store.sectionForGraph(this.slotId, this.view, pos);
+    }
+
+    @Override
+    protected @Nullable SectionRenderDispatcher.RenderSection getRenderSection(long sectionNode) {
+        return this.store.sectionForGraph(this.slotId, this.view, sectionNode);
+    }
+
+    @Override
     public void releaseAllBuffers() {
-        // This facade owns no RenderSection or GPU buffer.
+        this.store.releaseSlot(this.slotId, this.view);
+        this.view.clear();
+        this.cameraSectionPos = SectionPos.of(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE);
     }
 
-    public boolean matches(GlobalTerrainStore store, SlotTerrainView view, ClientLevel level, int viewDistance, int slotId) {
+    public boolean contains(SectionRenderDispatcher.RenderSection section) {
+        return this.store.isReferencedBy(this.slotId, this.view, section);
+    }
+
+    public boolean matches(GlobalTerrainStore store, ClientLevel level, int viewDistance, int slotId) {
         return this.store == store
-            && this.view == view
-            && this.slotId == slotId
             && this.level == level
+            && this.slotId == slotId
             && this.getViewDistance() == viewDistance;
-    }
-
-    public boolean belongsTo(GlobalTerrainStore store) {
-        return this.store == store;
     }
 }

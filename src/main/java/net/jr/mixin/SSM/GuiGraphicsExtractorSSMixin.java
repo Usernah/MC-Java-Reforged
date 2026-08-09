@@ -3,16 +3,25 @@ package net.jr.mixin.SSM;
 import net.jr.ClientRuntime.runtime.HudPass;
 import net.jr.ClientRuntime.runtime.GuiViewportScope;
 import net.jr.ClientRuntime.runtime.ScreenScale;
+import net.jr.ClientRuntime.runtime.Screens;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GuiGraphicsExtractor.class)
 public abstract class GuiGraphicsExtractorSSMixin {
+    @Inject(method = "blurBeforeThisStratum", at = @At("HEAD"), cancellable = true)
+    private void splitTest$keepFrameGlobalBlurOutOfLocalViewports(CallbackInfo callback) {
+        if (Screens.hasMultipleLocalViewports()) {
+            callback.cancel();
+        }
+    }
+
     @ModifyArgs(
         method = "entity",
         at = @At(

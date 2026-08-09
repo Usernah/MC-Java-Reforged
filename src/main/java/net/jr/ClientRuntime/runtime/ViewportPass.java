@@ -1,23 +1,16 @@
 package net.jr.ClientRuntime.runtime;
 
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderPass;
-import com.mojang.blaze3d.systems.RenderPassDescriptor;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import java.util.Objects;
 import net.jr.ClientRuntime.viewport.ViewportArea;
-import net.minecraft.client.Minecraft;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Defines the framebuffer region owned by the local player currently being rendered.
- *
- * <p>The scope itself is backend neutral. Render-pass mixins consume it through
- * {@link #constrain(RenderPassDescriptor)} and Mojang's {@code RenderPassBackend};
- * this class must never manipulate OpenGL or Vulkan state directly.</p>
+ * Exposes the logical dimensions of the local player currently being rendered.
+ * The vanilla passes themselves always use a complete viewport-local target and
+ * are never resized or offset individually.
  */
 public final class ViewportPass {
     private static final ThreadLocal<ViewportArea> ACTIVE_VIEWPORT = new ThreadLocal<>();
@@ -30,6 +23,10 @@ public final class ViewportPass {
         ViewportArea previousViewport = ACTIVE_VIEWPORT.get();
         ACTIVE_VIEWPORT.set(viewport);
         return new Scope(previousViewport);
+    }
+
+    public static Scope enterGui(ViewportArea viewport) {
+        return enter(viewport);
     }
 
     public static void run(ViewportArea viewport, Runnable runnable) {
@@ -79,76 +76,18 @@ public final class ViewportPass {
         return ACTIVE_VIEWPORT.get() != null;
     }
 
-    /** Restricts a newly-created Mojang render pass to the active player's region. */
-    public static void constrain(RenderPassDescriptor descriptor) {
-        ViewportArea viewport = ACTIVE_VIEWPORT.get();
-        if (viewport == null) {
-            return;
-        }
-
-        GpuTextureView attachment = firstAttachment(descriptor);
-        if (attachment == null) {
-            return;
-        }
-
-        RenderPass.RenderArea viewportArea = areaFor(viewport, attachment.getWidth(0), attachment.getHeight(0));
-        RenderPass.RenderArea requestedArea = descriptor.renderArea;
-        descriptor.renderArea = requestedArea == null ? viewportArea : intersection(requestedArea, viewportArea);
-    }
-
-    /**
-     * Computes the viewport used by a pass. Full-window attachments use the slot's
-     * framebuffer coordinates; viewport-local attachments use their own origin.
-     */
+    /** Computes the one destination region used when the completed slot is presented. */
     public static RenderPass.RenderArea areaFor(ViewportArea viewport, int textureWidth, int textureHeight) {
-        RenderTarget mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-        boolean windowSized = mainTarget != null
-            && textureWidth >= mainTarget.width
-            && textureHeight >= mainTarget.height;
-
-        if (!windowSized) {
-            return new RenderPass.RenderArea(
-                0,
-                0,
-                Math.max(1, Math.min(viewport.width(), textureWidth)),
-                Math.max(1, Math.min(viewport.height(), textureHeight))
-            );
-        }
-
-        int x = isVulkanBackend() ? viewport.x() : viewport.glX();
-        int y = isVulkanBackend() ? viewport.y() : viewport.glY();
+        int x = viewport.glX();
+        int y = viewport.glY();
+        x = Math.max(0, Math.min(x, textureWidth - 1));
+        y = Math.max(0, Math.min(y, textureHeight - 1));
         return new RenderPass.RenderArea(
             x,
             y,
-            Math.min(viewport.width(), textureWidth - x),
-            Math.min(viewport.height(), textureHeight - y)
+            Math.max(1, Math.min(viewport.width(), textureWidth - x)),
+            Math.max(1, Math.min(viewport.height(), textureHeight - y))
         );
-    }
-
-    private static boolean isVulkanBackend() {
-        return "Vulkan".equalsIgnoreCase(RenderSystem.getDevice().getDeviceInfo().backendName());
-    }
-
-    private static @Nullable GpuTextureView firstAttachment(RenderPassDescriptor descriptor) {
-        for (RenderPassDescriptor.Attachment<?> attachment : descriptor.colorAttachments) {
-            if (attachment != null) {
-                return attachment.textureView();
-            }
-        }
-        return descriptor.depthAttachment == null ? null : descriptor.depthAttachment.textureView();
-    }
-
-    private static RenderPass.RenderArea intersection(RenderPass.RenderArea first, RenderPass.RenderArea second) {
-        int x = Math.max(first.x(), second.x());
-        int y = Math.max(first.y(), second.y());
-        int right = Math.min(first.x() + first.width(), second.x() + second.width());
-        int bottom = Math.min(first.y() + first.height(), second.y() + second.height());
-        if (right <= x || bottom <= y) {
-            // A pass that intentionally targets a disjoint subregion cannot draw into
-            // this player viewport. Keep a valid one-pixel area inside the viewport.
-            return new RenderPass.RenderArea(second.x(), second.y(), 1, 1);
-        }
-        return new RenderPass.RenderArea(x, y, right - x, bottom - y);
     }
 
     public static final class Scope implements AutoCloseable {
