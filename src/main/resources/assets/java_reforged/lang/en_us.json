@@ -36,5 +36,15 @@
   "key.categories.java_reforged.gameplay": "Java Reforged Gameplay",
   "key.category.java_reforged.general": "Java Reforged",
   "key.category.java_reforged.ui": "Java Reforged UI",
-  "key.category.java_reforged.gameplay": "Java Reforged Gameplay"
+  "key.category.java_reforged.gameplay": "Java Reforged Gameplay",
+  "menu.java_reforged.video.interface_profile": "Interface Profile",
+  "menu.java_reforged.video.interface_profile.standard": "Standard",
+  "menu.java_reforged.video.interface_profile.portable": "Portable",
+  "menu.java_reforged.video.interface_profile.description": "Adjusts interface proportions for the type of screen in use. Split screen always uses the Standard profile.",
+  "menu.java_reforged.video.split_orientation": "Split Screen Orientation",
+  "menu.java_reforged.video.split_orientation.vertical": "Vertical",
+  "menu.java_reforged.video.split_orientation.horizontal": "Horizontal",
+  "menu.java_reforged.video.split_orientation.description": "Changes how the screen is divided when two local players are connected.",
+  "menu.java_reforged.split.loading_world": "Loading world...",
+  "menu.java_reforged.split.loading_player": "Preparing player %s"
 }

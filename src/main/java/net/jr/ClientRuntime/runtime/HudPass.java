@@ -91,8 +91,9 @@ public final class HudPass {
             }
             try (LocalClientScope ignoredClient = LocalClientScope.enter(slot);
                  GuiViewportScope ignoredViewport = GuiViewportScope.enter(graphics)) {
+                boolean loadingSecondaryWorld = SecondaryWorldLoadingScreen.shouldPresent(slot);
                 boolean hideGameplayHud = Client.screen() instanceof AbstractContainerScreen<?>;
-                if (!hideGameplayHud) {
+                if (!loadingSecondaryWorld && !hideGameplayHud) {
                     begin(hud);
                     try {
                         hud.extractRenderState(graphics, deltaTracker);
@@ -103,10 +104,12 @@ public final class HudPass {
                 }
 
                 Screens.extract(minecraft, graphics, deltaTracker.getGameTimeDeltaTicks());
-                hud.extractSavingIndicator(graphics, deltaTracker);
-                hud.extractDebugOverlay(graphics);
-                InputSlotProbe.renderOverlay(graphics, slot);
-                hud.extractDeferredSubtitles();
+                if (!loadingSecondaryWorld) {
+                    hud.extractSavingIndicator(graphics, deltaTracker);
+                    hud.extractDebugOverlay(graphics);
+                    InputSlotProbe.renderOverlay(graphics, slot);
+                    hud.extractDeferredSubtitles();
+                }
             }
         }
     }

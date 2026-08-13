@@ -5,6 +5,7 @@ import net.jr.ClientRuntime.runtime.Client;
 import net.jr.ClientRuntime.runtime.Screens;
 import net.jr.ClientRuntime.test.ScreenProbe;
 import net.jr.client.input.InputApi;
+import net.jr.client.input.runtime.GamepadInputProcessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.gui.Gui;
@@ -67,6 +68,10 @@ public abstract class GuiSSScreenMixin {
             return;
         }
         mouseHandler.releaseMouse();
+        var active = Client.currentOrNull();
+        if (active != null && Screens.hasMultipleLocalViewports()) {
+            GamepadInputProcessor.centerPhysicalCursorForScreen(active.slotId());
+        }
     }
 
     @Redirect(

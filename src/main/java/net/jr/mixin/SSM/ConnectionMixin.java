@@ -21,8 +21,9 @@ public abstract class ConnectionMixin {
         Connection connection = (Connection)(Object)this;
         Minecraft minecraft = Minecraft.getInstance();
         int slotId;
-        if (LocalPlayers.INSTANCE.connections().has(connection)) {
-            slotId = LocalPlayers.INSTANCE.connections().requireSlot(connection);
+        Integer boundSlotId = LocalPlayers.INSTANCE.connections().slotOrNull(connection);
+        if (boundSlotId != null) {
+            slotId = boundSlotId;
         } else {
             Integer activeSlotId = ActiveSlot.idOrNull();
             slotId = activeSlotId != null ? activeSlotId : 0;

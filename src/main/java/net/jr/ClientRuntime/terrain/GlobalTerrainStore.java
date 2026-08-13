@@ -89,6 +89,21 @@ public final class GlobalTerrainStore implements AutoCloseable {
         }
     }
 
+    /**
+     * Drops every compiled mesh while retaining the shared RenderSection pool.
+     * This is the shared equivalent of vanilla ViewArea.releaseAllBuffers(); it
+     * is intentionally distinct from ordinary reference-based retirement.
+     */
+    public void invalidateCompiledGeometry() {
+        this.ensureOpen();
+        for (Entry entry : this.sections.values()) {
+            entry.section().reset();
+        }
+        for (SectionRenderDispatcher.RenderSection section : this.reusable) {
+            section.reset();
+        }
+    }
+
     public void releaseSlot(int slotId, SlotTerrainView view) {
         int slotMask = slotMask(slotId);
         view.forEachKey(key -> {

@@ -7,6 +7,7 @@ import net.jr.api.client.ui.UiFileType;
 import net.jr.api.client.ui.UiRegister;
 import net.jr.api.client.ui.dsl.UiDocument;
 import net.jr.api.client.ui.dsl.UiCompiledDocument;
+import net.jr.client.ui.presentation.UiPresentation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -31,6 +32,7 @@ public final class UiDocumentManager {
 
     private volatile Map<UiFile, UiDocument> registeredDocuments = Map.of();
     private volatile Map<UiFile, UiCompiledDocument> compiledDocuments = Map.of();
+    private volatile Map<Asset, UiCompiledDocument> compiledDocumentsByAsset = Map.of();
     private volatile Map<Asset, UiDocument> loadedDocuments = Map.of();
     private volatile Map<Asset, List<UiDiagnostic>> diagnostics = Map.of();
 
@@ -50,6 +52,13 @@ public final class UiDocumentManager {
     }
 
     public Optional<UiCompiledDocument> getCompiled(UiFile file) {
+        String suffix = UiPresentation.documentVariantSuffix();
+        if (!suffix.isEmpty()) {
+            UiCompiledDocument variant = this.compiledDocumentsByAsset.get(variantAsset(file, suffix));
+            if (variant != null) {
+                return Optional.of(variant);
+            }
+        }
         return Optional.ofNullable(this.compiledDocuments.get(file));
     }
 
@@ -82,6 +91,7 @@ public final class UiDocumentManager {
     private void apply(Snapshot snapshot) {
         this.registeredDocuments = Map.copyOf(snapshot.registeredDocuments());
         this.compiledDocuments = Map.copyOf(snapshot.compiledDocuments());
+        this.compiledDocumentsByAsset = Map.copyOf(snapshot.compiledDocumentsByAsset());
         this.loadedDocuments = Map.copyOf(snapshot.loadedDocuments());
 
         Map<Asset, List<UiDiagnostic>> immutableDiagnostics = new LinkedHashMap<>();
@@ -123,6 +133,7 @@ public final class UiDocumentManager {
         private final ResourceManager resourceManager;
         private final Map<UiFile, UiDocument> registeredDocuments = new LinkedHashMap<>();
         private final Map<UiFile, UiCompiledDocument> compiledDocuments = new LinkedHashMap<>();
+        private final Map<Asset, UiCompiledDocument> compiledDocumentsByAsset = new LinkedHashMap<>();
         private final Map<Asset, UiDocument> loadedDocuments = new LinkedHashMap<>();
         private final Map<Asset, List<UiDiagnostic>> diagnostics = new LinkedHashMap<>();
         private final Set<Asset> loading = new HashSet<>();
@@ -137,6 +148,8 @@ public final class UiDocumentManager {
                 this.load(file.asset(), file.type()).ifPresent(document ->
                     this.registeredDocuments.put(file, document)
                 );
+                this.loadOptionalVariant(file, UiPresentation.PORTABLE_SUFFIX);
+                this.loadOptionalVariant(file, UiPresentation.SPLIT_SCREEN_SUFFIX);
             }
             UiCompiler compiler = new UiCompiler(this.loadedDocuments);
             for (Map.Entry<UiFile, UiDocument> entry : this.registeredDocuments.entrySet()) {
@@ -154,12 +167,30 @@ public final class UiDocumentManager {
                     );
                 }
             }
+            for (Map.Entry<Asset, UiDocument> entry : this.loadedDocuments.entrySet()) {
+                if (entry.getValue().type() == UiFileType.STYLE) {
+                    continue;
+                }
+                try {
+                    this.compiledDocumentsByAsset.put(entry.getKey(), compiler.compile(entry.getValue()));
+                } catch (UiCompileException exception) {
+                    this.error(exception.source(), exception.position().line(), exception.position().column(), exception.getMessage());
+                }
+            }
             return new Snapshot(
                 this.registeredDocuments,
                 this.compiledDocuments,
+                this.compiledDocumentsByAsset,
                 this.loadedDocuments,
                 this.diagnostics
             );
+        }
+
+        private void loadOptionalVariant(UiFile file, String suffix) {
+            Asset source = variantAsset(file, suffix);
+            if (source.find(this.resourceManager).isPresent()) {
+                this.load(source, file.type());
+            }
         }
 
         private Optional<UiDocument> load(Asset source, UiFileType type) {
@@ -297,16 +328,22 @@ public final class UiDocumentManager {
     private record Snapshot(
         Map<UiFile, UiDocument> registeredDocuments,
         Map<UiFile, UiCompiledDocument> compiledDocuments,
+        Map<Asset, UiCompiledDocument> compiledDocumentsByAsset,
         Map<Asset, UiDocument> loadedDocuments,
         Map<Asset, List<UiDiagnostic>> diagnostics
     ) {
         private Snapshot {
             registeredDocuments = new HashMap<>(registeredDocuments);
             compiledDocuments = new HashMap<>(compiledDocuments);
+            compiledDocumentsByAsset = new HashMap<>(compiledDocumentsByAsset);
             loadedDocuments = new HashMap<>(loadedDocuments);
             Map<Asset, List<UiDiagnostic>> diagnosticCopy = new HashMap<>();
             diagnostics.forEach((asset, values) -> diagnosticCopy.put(asset, new ArrayList<>(values)));
             diagnostics = diagnosticCopy;
         }
+    }
+
+    private static Asset variantAsset(UiFile file, String suffix) {
+        return Asset.NamespaceAndPatch(file.modId(), file.type().resourcePath(file.path() + suffix));
     }
 }

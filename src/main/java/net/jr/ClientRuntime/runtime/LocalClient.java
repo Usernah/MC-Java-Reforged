@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 import net.jr.ClientRuntime.slot.PlayerSlot;
 import net.jr.ClientRuntime.state.GameplayState;
 import net.jr.ClientRuntime.state.InputState;
+import net.jr.ClientRuntime.state.OptionsState;
 import net.jr.ClientRuntime.state.RenderState;
 import net.jr.ClientRuntime.state.ScreenState;
 import net.jr.ClientRuntime.viewport.ViewportArea;
@@ -74,6 +75,10 @@ public final class LocalClient {
 
     public InputState input() {
         return this.slot.inputState();
+    }
+
+    public OptionsState options() {
+        return this.slot.optionsState();
     }
 
     public LocalClientCursor cursor() {

@@ -20,14 +20,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Gives only the cloud renderer enough transient buffers for every local
- * viewport rendered inside one GPU submit.
- */
+/** Keeps viewport-specific mapped uniforms alive across the shared GPU submit. */
 @Mixin(MappableRingBuffer.class)
 public abstract class MappableRingBufferSSMixin {
     @Unique
-    private static final int SPLIT_CLOUD_BUFFER_COUNT = PlayerSlots.MAX_SLOTS + 1;
+    private static final int VANILLA_BUFFER_COUNT = 3;
+    @Unique
+    private static final int SPLIT_VIEWPORT_BUFFER_COUNT = VANILLA_BUFFER_COUNT * PlayerSlots.MAX_SLOTS;
 
     @Shadow
     @Final
@@ -40,21 +39,21 @@ public abstract class MappableRingBufferSSMixin {
     private @Nullable GpuFence[] fences;
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void splitTest$expandCloudRings(Supplier<String> label, int usage, int size, CallbackInfo callback) {
+    private void splitTest$expandViewportRings(Supplier<String> label, int usage, int size, CallbackInfo callback) {
         String baseLabel = label.get();
-        if (!"Cloud UBO".equals(baseLabel) && !"Cloud UTB".equals(baseLabel)) {
+        if (!splitTest$isViewportSpecific(baseLabel)) {
             return;
         }
 
         int vanillaCount = this.buffers.length;
-        if (vanillaCount >= SPLIT_CLOUD_BUFFER_COUNT) {
+        if (vanillaCount >= SPLIT_VIEWPORT_BUFFER_COUNT) {
             return;
         }
 
-        GpuBuffer[] expandedBuffers = Arrays.copyOf(this.buffers, SPLIT_CLOUD_BUFFER_COUNT);
-        GpuFence[] expandedFences = Arrays.copyOf(this.fences, SPLIT_CLOUD_BUFFER_COUNT);
+        GpuBuffer[] expandedBuffers = Arrays.copyOf(this.buffers, SPLIT_VIEWPORT_BUFFER_COUNT);
+        GpuFence[] expandedFences = Arrays.copyOf(this.fences, SPLIT_VIEWPORT_BUFFER_COUNT);
         GpuDevice device = RenderSystem.getDevice();
-        for (int index = vanillaCount; index < SPLIT_CLOUD_BUFFER_COUNT; index++) {
+        for (int index = vanillaCount; index < SPLIT_VIEWPORT_BUFFER_COUNT; index++) {
             int bufferIndex = index;
             expandedBuffers[index] = device.createBuffer(() -> baseLabel + " #" + bufferIndex, usage, size);
         }
@@ -66,5 +65,14 @@ public abstract class MappableRingBufferSSMixin {
     @ModifyConstant(method = {"rotate", "close"}, constant = @Constant(intValue = 3))
     private int splitTest$useActualRingCapacity(int vanillaCount) {
         return this.buffers.length;
+    }
+
+    @Unique
+    private static boolean splitTest$isViewportSpecific(String label) {
+        return "Cloud UBO".equals(label)
+            || "Cloud UTB".equals(label)
+            || "Lightmap UBO".equals(label)
+            || "Fog UBO".equals(label)
+            || label.endsWith(" SamplerInfo");
     }
 }

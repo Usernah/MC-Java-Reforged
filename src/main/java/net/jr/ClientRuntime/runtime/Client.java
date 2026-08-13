@@ -3,6 +3,7 @@ package net.jr.ClientRuntime.runtime;
 import javax.annotation.Nullable;
 import net.jr.ClientRuntime.state.GameplayState;
 import net.jr.ClientRuntime.state.InputState;
+import net.jr.ClientRuntime.state.OptionsState;
 import net.jr.ClientRuntime.state.RenderState;
 import net.jr.ClientRuntime.state.ScreenState;
 import net.jr.ClientRuntime.viewport.ViewportArea;
@@ -132,6 +133,14 @@ public final class Client {
 
     public static InputState input(int clientId) {
         return client(clientId).input();
+    }
+
+    public static OptionsState options() {
+        return current().options();
+    }
+
+    public static OptionsState options(int clientId) {
+        return client(clientId).options();
     }
 
     public static LocalClientCursor cursor() {

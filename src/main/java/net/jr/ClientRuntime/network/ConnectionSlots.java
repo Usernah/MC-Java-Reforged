@@ -8,7 +8,7 @@ import net.minecraft.network.Connection;
 public final class ConnectionSlots {
     private final Map<Connection, Integer> slotIdsByConnection = new IdentityHashMap<>();
 
-    public void bind(Connection connection, int slotId) {
+    public synchronized void bind(Connection connection, int slotId) {
         requireSlot(slotId);
         if (connection == null) {
             throw new IllegalArgumentException("connection cannot be null");
@@ -16,14 +16,14 @@ public final class ConnectionSlots {
         this.slotIdsByConnection.put(connection, slotId);
     }
 
-    public void unbind(Connection connection) {
+    public synchronized void unbind(Connection connection) {
         if (connection == null) {
             throw new IllegalArgumentException("connection cannot be null");
         }
         this.slotIdsByConnection.remove(connection);
     }
 
-    public int requireSlot(Connection connection) {
+    public synchronized int requireSlot(Connection connection) {
         if (connection == null) {
             throw new IllegalArgumentException("connection cannot be null");
         }
@@ -34,18 +34,18 @@ public final class ConnectionSlots {
         return slotId;
     }
 
-    public Integer slotOrNull(Connection connection) {
+    public synchronized Integer slotOrNull(Connection connection) {
         if (connection == null) {
             throw new IllegalArgumentException("connection cannot be null");
         }
         return this.slotIdsByConnection.get(connection);
     }
 
-    public boolean has(Connection connection) {
+    public synchronized boolean has(Connection connection) {
         return this.slotIdsByConnection.containsKey(connection);
     }
 
-    public boolean isEmpty() {
+    public synchronized boolean isEmpty() {
         return this.slotIdsByConnection.isEmpty();
     }
 

@@ -2,9 +2,11 @@ package net.jr.ClientRuntime.slot;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.jr.api.client.split.SplitOrientation;
 import net.jr.ClientRuntime.viewport.ViewportLayout;
 import net.jr.ClientRuntime.viewport.ViewportTable;
 import net.jr.ClientRuntime.viewport.WindowMetrics;
+import net.minecraft.client.Minecraft;
 
 public final class PlayerSlots {
     public static final int MAX_SLOTS = 4;
@@ -12,6 +14,7 @@ public final class PlayerSlots {
     private final PlayerSlot[] slots = new PlayerSlot[MAX_SLOTS];
     private ViewportLayout layout;
     private ViewportTable viewportTable;
+    private SplitOrientation twoPlayerOrientation = SplitOrientation.VERTICAL;
 
     public PlayerSlots() {
         this(ViewportLayout.FOUR_GRID);
@@ -52,7 +55,7 @@ public final class PlayerSlots {
     public void setLayout(ViewportLayout layout) {
         this.layout = layout;
         if (this.viewportTable != null) {
-            this.viewportTable = new ViewportTable(layout, this.viewportTable.metrics());
+            this.viewportTable = this.createViewportTable(layout, this.viewportTable.metrics());
             this.bindResolvedViewports();
         }
     }
@@ -61,7 +64,6 @@ public final class PlayerSlots {
         if (playerCount < 1 || playerCount > MAX_SLOTS) {
             throw new IllegalArgumentException("playerCount must be between 1 and " + MAX_SLOTS);
         }
-        this.setLayout(layoutForPlayerCount(playerCount));
         for (int slotId = 0; slotId < MAX_SLOTS; slotId++) {
             PlayerSlot slot = this.slots[slotId];
             boolean active = slotId < playerCount;
@@ -69,13 +71,11 @@ public final class PlayerSlots {
             slot.setVisible(active);
             if (active) {
                 slot.setViewportId(slotId);
-                if (this.viewportTable != null) {
-                    slot.bindViewport(this.viewportTable.viewport(slotId));
-                }
             } else {
                 slot.clearViewport();
             }
         }
+        this.setLayout(this.layoutForPlayerCount(playerCount));
     }
 
     public void setClientConnected(int slotId, boolean connected) {
@@ -87,9 +87,7 @@ public final class PlayerSlots {
         PlayerSlot slot = this.slots[slotId];
         slot.setConnected(connected);
         slot.setVisible(connected);
-        if (connected) {
-            slot.setViewportId(slotId);
-        } else {
+        if (!connected) {
             slot.clearViewport();
         }
         this.rebuildLayoutForConnectedSlots();
@@ -106,20 +104,25 @@ public final class PlayerSlots {
     }
 
     public void rebuildViewports(WindowMetrics metrics) {
-        this.viewportTable = new ViewportTable(this.layout, metrics);
+        this.viewportTable = this.createViewportTable(this.layout, metrics);
         this.bindResolvedViewports();
     }
 
     private void rebuildLayoutForConnectedSlots() {
-        int highestConnectedSlot = 0;
+        int presentSlots = this.presentSlotCount();
+        this.layout = this.layoutForPlayerCount(Math.max(1, presentSlots));
+
+        int viewportId = 0;
         for (PlayerSlot slot : this.slots) {
             if (slot.connected() && slot.visible()) {
-                highestConnectedSlot = Math.max(highestConnectedSlot, slot.id());
+                slot.setViewportId(viewportId++);
+            } else {
+                slot.clearViewport();
             }
         }
-        this.layout = layoutForHighestConnectedSlot(highestConnectedSlot);
+
         if (this.viewportTable != null) {
-            this.viewportTable = new ViewportTable(this.layout, this.viewportTable.metrics());
+            this.viewportTable = this.createViewportTable(this.layout, this.viewportTable.metrics());
             this.bindResolvedViewports();
         }
     }
@@ -151,21 +154,36 @@ public final class PlayerSlots {
         return this.viewportTable;
     }
 
-    private static ViewportLayout layoutForPlayerCount(int playerCount) {
+    private ViewportTable createViewportTable(ViewportLayout layout, WindowMetrics metrics) {
+        int[] requestedScales = new int[MAX_SLOTS];
+        for (PlayerSlot slot : this.slots) {
+            if (slot.connected() && slot.visible() && layout.hasViewport(slot.viewportId())) {
+                requestedScales[slot.viewportId()] = slot.optionsState().requestedGuiScale();
+            }
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        return new ViewportTable(layout, metrics, requestedScales, minecraft.isEnforceUnicode());
+    }
+
+    public void setTwoPlayerOrientation(SplitOrientation orientation) {
+        this.twoPlayerOrientation = orientation;
+        if (this.presentSlotCount() == 2) {
+            this.setLayout(this.twoPlayerLayout());
+        }
+    }
+
+    private ViewportLayout layoutForPlayerCount(int playerCount) {
         return switch (playerCount) {
             case 1 -> ViewportLayout.SINGLE;
-            case 2 -> ViewportLayout.TWO_VERTICAL;
+            case 2 -> this.twoPlayerLayout();
             case 3, 4 -> ViewportLayout.FOUR_GRID;
             default -> throw new IllegalArgumentException("Unsupported player count " + playerCount);
         };
     }
 
-    private static ViewportLayout layoutForHighestConnectedSlot(int highestSlotId) {
-        return switch (highestSlotId) {
-            case 0 -> ViewportLayout.SINGLE;
-            case 1 -> ViewportLayout.TWO_VERTICAL;
-            case 2, 3 -> ViewportLayout.FOUR_GRID;
-            default -> throw new IllegalArgumentException("Unsupported highest slot " + highestSlotId);
-        };
+    private ViewportLayout twoPlayerLayout() {
+        return this.twoPlayerOrientation == SplitOrientation.HORIZONTAL
+            ? ViewportLayout.TWO_HORIZONTAL
+            : ViewportLayout.TWO_VERTICAL;
     }
 }

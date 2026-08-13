@@ -62,6 +62,22 @@ neoForge {
         client {
             client()
 
+            if (project.hasProperty('devUsername')) {
+                programArguments.addAll '--username', project.property('devUsername').toString()
+            }
+
+            if (project.hasProperty('devGraphicsBackend')) {
+                def backend = project.property('devGraphicsBackend').toString().toUpperCase(java.util.Locale.ROOT)
+                if (!(backend in ['OPENGL', 'VULKAN'])) {
+                    throw new GradleException("devGraphicsBackend must be OPENGL or VULKAN, but was: ${backend}")
+                }
+                programArguments.addAll '--graphicsBackend', backend
+            }
+
+            if (project.hasProperty('devRunDirectory')) {
+                gameDirectory = project.file(project.property('devRunDirectory').toString())
+            }
+
             // The runtime field redirect must be visible to ModLauncher before
             // Minecraft classes are transformed and loaded.
             taskBefore tasks.named(sourceSets.transformService.classesTaskName)

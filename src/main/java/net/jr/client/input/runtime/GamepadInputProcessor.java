@@ -3,12 +3,15 @@ package net.jr.client.input.runtime;
 import net.jr.Java_reforged;
 import net.jr.ClientRuntime.runtime.Client;
 import net.jr.ClientRuntime.runtime.ClientBoundary;
+import net.jr.ClientRuntime.runtime.ScreenScale;
+import net.jr.ClientRuntime.viewport.ViewportArea;
 import net.jr.client.input.gamepad.GamepadAxis;
 import net.jr.client.input.InputApi;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.mixin.controls.ClientInputAccessor;
+import net.jr.mixin.uifocus.MouseHandlerAccessor;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.client.input.cursor.CursorHider;
 import net.jr.client.ui.navigation.UiInputModeController;
@@ -25,6 +28,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public class GamepadInputProcessor {
@@ -216,8 +220,8 @@ public class GamepadInputProcessor {
             cursorClock(slotId).sample();
         }
 
-        int width = Math.max(1, screen.width);
-        int height = Math.max(1, screen.height);
+        int width = cursorSpaceWidth(mc, slotId, screen);
+        int height = cursorSpaceHeight(mc, slotId, screen);
         state.virtualCursorX = Math.max(0, Math.min(width, state.virtualCursorX));
         state.virtualCursorY = Math.max(0, Math.min(height, state.virtualCursorY));
     }
@@ -413,6 +417,31 @@ public class GamepadInputProcessor {
         markCursorAsJoystickDriven(slotId);
     }
 
+    /** Places the one physical mouse at the center of the viewport that owns it. */
+    public static void centerPhysicalCursorForScreen(int slotId) {
+        Minecraft minecraft = Minecraft.getInstance();
+        ViewportArea viewport = Client.viewportOrNull(slotId);
+        if (minecraft == null || viewport == null || !InputApi.canPhysicalMouseDriveClient(slotId)) {
+            return;
+        }
+
+        double windowX = viewport.windowX() + viewport.windowWidth() / 2.0D;
+        double windowY = viewport.windowY() + viewport.windowHeight() / 2.0D;
+        GLFW.glfwSetCursorPos(minecraft.getWindow().handle(), windowX, windowY);
+
+        MouseHandlerAccessor mouse = (MouseHandlerAccessor)minecraft.mouseHandler;
+        mouse.javareforged$setXpos(windowX);
+        mouse.javareforged$setYpos(windowY);
+
+        CursorState state = cursorState(slotId);
+        state.lastObservedRawMouseX = windowX;
+        state.lastObservedRawMouseY = windowY;
+        state.hasObservedRawMousePosition = true;
+        if (state.cursorInputSource == CursorInputSource.MOUSE) {
+            syncVirtualCursorWithMouse(minecraft, slotId);
+        }
+    }
+
     static void dispatchFocusNavigation(Screen screen, int keyCode) {
         UiInputModeController.prepareForFocusNavigation(keyCode);
         boolean handled;
@@ -488,8 +517,11 @@ public class GamepadInputProcessor {
 
         CursorState state = cursorState(slotId);
         if (Client.hasViewport(slotId)) {
-            state.virtualCursorX = Client.viewport(slotId).windowMouseToLocalGuiX(mc.mouseHandler.xpos());
-            state.virtualCursorY = Client.viewport(slotId).windowMouseToLocalGuiY(mc.mouseHandler.ypos());
+            ViewportArea viewport = Client.viewport(slotId);
+            state.virtualCursorX = (mc.mouseHandler.xpos() - viewport.windowX())
+                * ScreenScale.logicalWidth(viewport) / viewport.windowWidth();
+            state.virtualCursorY = (mc.mouseHandler.ypos() - viewport.windowY())
+                * ScreenScale.logicalHeight(viewport) / viewport.windowHeight();
         } else {
             state.virtualCursorX = MouseCoordinates.rawMouseToGlobalGuiX(mc, mc.mouseHandler.xpos());
             state.virtualCursorY = MouseCoordinates.rawMouseToGlobalGuiY(mc, mc.mouseHandler.ypos());
@@ -499,20 +531,28 @@ public class GamepadInputProcessor {
 
     private static void centerVirtualCursor(Minecraft mc, int slotId) {
         Screen screen = Client.screen(slotId);
-        int width = Client.hasViewport(slotId)
-            ? Math.max(1, Client.viewport(slotId).guiWidth())
-            : screen != null && screen.width > 1
-            ? screen.width
-            : mc.getWindow().getGuiScaledWidth();
-        int height = Client.hasViewport(slotId)
-            ? Math.max(1, Client.viewport(slotId).guiHeight())
-            : screen != null && screen.height > 1
-            ? screen.height
-            : mc.getWindow().getGuiScaledHeight();
+        int width = cursorSpaceWidth(mc, slotId, screen);
+        int height = cursorSpaceHeight(mc, slotId, screen);
         CursorState state = cursorState(slotId);
         state.virtualCursorX = width / 2.0D;
         state.virtualCursorY = height / 2.0D;
         resetFocusCursorAnimation(slotId, state.virtualCursorX, state.virtualCursorY);
+    }
+
+    private static int cursorSpaceWidth(Minecraft mc, int slotId, Screen screen) {
+        ViewportArea viewport = Client.viewportOrNull(slotId);
+        if (viewport != null) {
+            return ScreenScale.logicalWidth(viewport);
+        }
+        return screen != null && screen.width > 1 ? screen.width : Math.max(1, mc.getWindow().getGuiScaledWidth());
+    }
+
+    private static int cursorSpaceHeight(Minecraft mc, int slotId, Screen screen) {
+        ViewportArea viewport = Client.viewportOrNull(slotId);
+        if (viewport != null) {
+            return ScreenScale.logicalHeight(viewport);
+        }
+        return screen != null && screen.height > 1 ? screen.height : Math.max(1, mc.getWindow().getGuiScaledHeight());
     }
 
     private static void resetMouseSourceObservation(Minecraft mc, CursorState state) {

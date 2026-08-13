@@ -1,7 +1,6 @@
 package net.jr.ClientRuntime.player;
 
 import net.jr.mixin.SSM.MinecraftActionSSAccessor;
-import net.jr.client.input.InputApi;
 import net.jr.ClientRuntime.runtime.ClientBoundary;
 import net.jr.ClientRuntime.runtime.LocalPlayerChunkPressure;
 import net.jr.ClientRuntime.runtime.LocalPlayers;
@@ -98,7 +97,7 @@ public final class PlayerSessions {
             this.session(0).markWorldCleared();
             this.disconnectSecondarySessions(players);
             this.clearAllScreens(players);
-            players.returnToPrimaryOnly();
+            players.returnToPrimaryOnly(Minecraft.getInstance());
         } else {
             PlayerSession session = this.sessions[slotId];
             if (session != null) {
@@ -157,11 +156,16 @@ public final class PlayerSessions {
 
         ClientBoundary.runForSlot(slot, () -> {
             boolean gameplayBound = players.slotGameplayBound(slot);
-            if (!gameplayBound) {
-                session.setJoiningInProgress(true);
-                return;
-            }
-            if (!session.hasSynchronizedPosition()) {
+            LocalPlayer candidatePlayer = slot.gameplayState().player();
+            boolean connectionBound = candidatePlayer != null
+                    && candidatePlayer.connection != null
+                    && candidatePlayer.connection.getConnection() == connection;
+            boolean readyCandidate = gameplayBound
+                    && session.hasSynchronizedPosition()
+                    && connection != null
+                    && connection.isConnected()
+                    && connectionBound;
+            if (!session.validateWorldReadyCandidate(readyCandidate)) {
                 session.setJoiningInProgress(true);
                 return;
             }
@@ -176,10 +180,11 @@ public final class PlayerSessions {
                     return;
                 }
                 level.tickRateManager().tick();
-                InputApi.tickRightClickDelay();
+                if (slot.gameplayState().rightClickDelay() > 0) {
+                    slot.gameplayState().setRightClickDelay(slot.gameplayState().rightClickDelay() - 1);
+                }
                 gameMode.tick();
                 this.handleSecondaryKeybinds(minecraft, slot);
-                this.handleSecondaryContinuousAttack(minecraft);
                 level.pollLightUpdates();
                 level.getChunkSource().getLightEngine().runLightUpdates();
                 level.tickEntities();
@@ -199,15 +204,9 @@ public final class PlayerSessions {
         }
 
         ((MinecraftActionSSAccessor)minecraft).splitTest$handleKeybinds();
-        InputApi.tickMissTime();
-    }
-
-    private void handleSecondaryContinuousAttack(Minecraft minecraft) {
-        if (!minecraft.options.keyAttack.isDown()) {
-            return;
+        if (slot.gameplayState().missTime() > 0) {
+            slot.gameplayState().setMissTime(slot.gameplayState().missTime() - 1);
         }
-
-        ((MinecraftActionSSAccessor)minecraft).splitTest$continueAttack(true);
     }
 
 }

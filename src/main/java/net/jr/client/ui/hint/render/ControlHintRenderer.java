@@ -15,16 +15,16 @@ import net.minecraft.network.chat.Component;
 public final class ControlHintRenderer {
     private static final float DEFAULT_HINT_BOX_SIZE = 23F;
     private static final float BAR_HEIGHT = 28F;
-    private static final float LEFT_PADDING = 6F;
-    private static final float INTER_HINT_PADDING = 8F;
+    private static final float LEFT_PADDING = 4F;
+    private static final float INTER_HINT_PADDING = 6F;
     private static final float VERTICAL_HINT_PADDING = 2F;
     private static final float TEXT_OFFSET_FROM_ICON = 2F;
     private static final int TEXT_BG_PADDING_X = 0;
     private static final int TEXT_BG_PADDING_Y = 1;
     private static final int TEXT_COLOR = 0xFFFFFFFF;
     private static final int TEXT_SHADOW = 0xFF0f0f0f;
-    private static final float MENU_TEXT_SCALE = 0.6F;
-    private static final float HUD_TEXT_SCALE = 0.6F;
+    private static final float MENU_TEXT_SCALE = 0.85F;
+    private static final float HUD_TEXT_SCALE = 0.85F;
 
     private ControlHintRenderer() {}
 
@@ -54,13 +54,12 @@ public final class ControlHintRenderer {
 
             float textX = iconX + visibleRight(hint) + TEXT_OFFSET_FROM_ICON;
             Draw.TextBuilder labelText = Draw.text(hint.label())
-                .font(ModFonts.MINECRAFT_MIN)
                 .scale(MENU_TEXT_SCALE)
                 .shadowColor(TEXT_SHADOW)
                 .color(TEXT_COLOR);
             int textY = Math.round(anchorY - labelText.lineHeight() / 2.0F);
             int textBlockX = Math.round(textX);
-            labelText.position(textBlockX + TEXT_BG_PADDING_X, textY).draw(graphics);
+            labelText.position(textBlockX + TEXT_BG_PADDING_X, textY + TEXT_BG_PADDING_Y).draw(graphics);
             previousTextEnd = textBlockX + labelText.width() + TEXT_BG_PADDING_X * 2;
             firstHint = false;
         }
@@ -84,7 +83,7 @@ public final class ControlHintRenderer {
 
         y = graphics.guiHeight() - BAR_HEIGHT / 2F;
         for (ResolvedControlHint hint : right) {
-            float iconX = graphics.guiWidth() - LEFT_PADDING - visibleRight(hint);
+            float iconX = graphics.guiWidth() - LEFT_PADDING - iconWidth(hint);
             float textRight = iconX + hint.visibleLeft() - TEXT_OFFSET_FROM_ICON;
             drawText(graphics, hint.label(), textRight, y, true, alpha);
             drawIcons(graphics, hint, iconX, y, alpha);
@@ -101,14 +100,13 @@ public final class ControlHintRenderer {
         float alpha
     ) {
         Draw.TextBuilder labelText = Draw.text(label)
-            .font(ModFonts.MINECRAFT_MIN)
             .scale(HUD_TEXT_SCALE)
             .shadowColor(HudTransparency.applyAlpha(TEXT_SHADOW, alpha))
             .color(HudTransparency.applyAlpha(TEXT_COLOR, alpha));
         int textBlockWidth = labelText.width() + TEXT_BG_PADDING_X * 2;
         int textX = rightAligned ? Math.round(anchorX - textBlockWidth) : Math.round(anchorX);
         int textY = Math.round(centerY - labelText.lineHeight() / 2.0F);
-        labelText.position(textX + TEXT_BG_PADDING_X, textY).draw(graphics);
+        labelText.position(textX + TEXT_BG_PADDING_X, textY + TEXT_BG_PADDING_Y).draw(graphics);
     }
 
     private static void drawIcons(
@@ -142,6 +140,10 @@ public final class ControlHintRenderer {
 
     private static float visibleRight(ResolvedControlHint hint) {
         return hint.visibleRight(joinerText(1.0F).width(), ResolvedControlHint.joinerGap());
+    }
+
+    private static float iconWidth(ResolvedControlHint hint) {
+        return hint.iconWidth(joinerText(1.0F).width(), ResolvedControlHint.joinerGap());
     }
 
     private static Draw.TextBuilder joinerText(float alpha) {

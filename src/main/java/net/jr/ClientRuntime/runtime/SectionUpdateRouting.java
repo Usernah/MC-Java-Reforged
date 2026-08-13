@@ -5,7 +5,7 @@ import net.jr.ClientRuntime.slot.PlayerSlot;
 import net.minecraft.client.SectionUpdateTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 
-/** Routes Vanilla dirty-section notifications to the owning player's Vanilla tracker. */
+/** Routes Vanilla dirty-section notifications to every logical view of the changed dimension. */
 public final class SectionUpdateRouting {
     private SectionUpdateRouting() {
     }
@@ -18,19 +18,31 @@ public final class SectionUpdateRouting {
         boolean playerChanged
     ) {
         LocalClient activeClient = Client.currentOrNull();
-        if (activeClient != null) {
-            PlayerSlot slot = activeClient.rawSlot();
-            if (sourceLevel == null || slot.renderState().level() == sourceLevel) {
-                setDirty(slot, sectionX, sectionY, sectionZ, playerChanged);
-            }
-            // A tracker created later starts fully dirty, so the event is still covered.
-            return true;
+        PlayerSlot owner = activeClient != null
+            ? activeClient.rawSlot()
+            : LocalPlayers.INSTANCE.primarySlot();
+        ClientLevel ownerLevel = owner.renderState().level();
+
+        /*
+         * LevelExtractor is one shared vanilla engine. Between extraction passes
+         * its `level` field belongs to the last extracted slot, so sourceLevel is
+         * not authoritative for asynchronous packets handled by vanilla slot 0.
+         * An explicit client scope identifies secondary connections; without one,
+         * vanilla's packet path belongs to the primary client.
+         */
+        if (ownerLevel == null) {
+            return false;
         }
 
         boolean routed = false;
         for (int slotId = 0; slotId < net.jr.ClientRuntime.slot.PlayerSlots.MAX_SLOTS; slotId++) {
             PlayerSlot slot = LocalPlayers.INSTANCE.slots().slot(slotId);
-            if (slot.connected() && (sourceLevel == null || slot.renderState().level() == sourceLevel)) {
+            ClientLevel slotLevel = slot.renderState().level();
+            if (
+                slot.connected()
+                    && slotLevel != null
+                    && slotLevel.dimension().equals(ownerLevel.dimension())
+            ) {
                 routed = true;
                 setDirty(slot, sectionX, sectionY, sectionZ, playerChanged);
             }

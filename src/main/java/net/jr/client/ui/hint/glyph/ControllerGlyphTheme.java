@@ -107,6 +107,10 @@ public enum ControllerGlyphTheme {
         return definitions;
     }
 
+    Asset variantDefinitions(String folder) {
+        return this.textureFolder.child(folder).child("definitions.json");
+    }
+
     public boolean supports(ControllerGlyph glyph) {
         return supportedGlyphs.contains(glyph);
     }
@@ -117,7 +121,7 @@ public enum ControllerGlyphTheme {
 
     @Nullable
     public Asset texture(ControllerGlyph glyph) {
-        return textures.get(glyph);
+        return ControllerGlyphDefinitions.texture(this, glyph, false);
     }
 
     public float hintHeight(ControllerGlyph glyph) {
@@ -126,7 +130,24 @@ public enum ControllerGlyphTheme {
 
     @Nullable
     public Asset pressedTexture(ControllerGlyph glyph) {
-        return pressedTextures.get(glyph);
+        return ControllerGlyphDefinitions.texture(this, glyph, true);
+    }
+
+    @Nullable
+    Asset baseTexture(ControllerGlyph glyph, boolean pressed) {
+        return pressed ? this.pressedTextures.get(glyph) : this.textures.get(glyph);
+    }
+
+    @Nullable
+    Asset variantTexture(String folder, ControllerGlyph glyph, boolean pressed) {
+        if (pressed && !this.pressGlyphs.contains(glyph)) {
+            return null;
+        }
+        if (!this.supportedGlyphs.contains(glyph)) {
+            return null;
+        }
+        String suffix = pressed ? "_press.png" : ".png";
+        return this.textureFolder.child(folder).child(glyph.fileName() + suffix);
     }
 
     private static Set<ControllerGlyph> standardGlyphs(ControllerGlyph... extraGlyphs) {

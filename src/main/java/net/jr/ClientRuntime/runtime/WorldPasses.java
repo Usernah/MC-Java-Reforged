@@ -10,6 +10,9 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.TextureFilteringMethod;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LevelTargetBundle;
+import net.minecraft.client.renderer.PostChain;
+import net.minecraft.resources.Identifier;
 import org.joml.Vector4f;
 
 /** Renders every visible local player through one shared GameRenderer/LevelRenderer pair. */
@@ -21,6 +24,7 @@ public final class WorldPasses {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayers players = LocalPlayers.INSTANCE;
         TerrainCoordinator.prepareFrame();
+        int terrainDriverSlotId = selectTerrainDriver(players);
         for (PlayerSlot slot : players.slots().visibleSlots()) {
             ViewportArea viewport = slot.viewport();
             slot.renderState().setAspectRatio(viewport.aspectRatio());
@@ -28,8 +32,8 @@ public final class WorldPasses {
                 drawWaitingViewport(gameRenderer, slot, viewport);
                 continue;
             }
-            // Only slot 0 may build, compile or upload the one global terrain engine.
-            renderSlot(minecraft, gameRenderer, deltaTracker, slot, viewport, slot.id() == 0);
+            // Exactly one living local player owns terrain scheduling for this frame.
+            renderSlot(minecraft, gameRenderer, deltaTracker, slot, viewport, slot.id() == terrainDriverSlotId);
         }
     }
 
@@ -64,6 +68,14 @@ public final class WorldPasses {
             RenderTarget globalTarget = gameRenderer.mainRenderTarget();
             try (SlotRenderTargets.Scope ignoredTargets = SlotRenderTargets.enter(slot.id(), viewport, globalTarget)) {
                 gameRenderer.renderLevel(deltaTracker);
+                minecraft.levelRenderer.doEntityOutline();
+                Identifier postEffect = gameRenderer.currentPostEffect();
+                if (postEffect != null && renderer.splitTest$isPostEffectActive()) {
+                    PostChain chain = minecraft.getShaderManager().getPostChain(postEffect, LevelTargetBundle.MAIN_TARGETS);
+                    if (chain != null) {
+                        chain.process(gameRenderer.mainRenderTarget(), renderer.splitTest$getResourcePool());
+                    }
+                }
                 ignoredTargets.present();
             }
         }
@@ -75,6 +87,20 @@ public final class WorldPasses {
             && !slot.gameplayState().player().isRemoved()
             && slot.gameplayState().gameMode() != null
             && !LocalPlayers.INSTANCE.sessions().isJoining(slot.id());
+    }
+
+    /**
+     * Chooses the shared terrain driver's permanent player slot at the frame boundary.
+     * Slot priority remains deterministic (J1, J2, J3, J4), while a dead or unavailable
+     * player cannot stall terrain work for every other local player.
+     */
+    private static int selectTerrainDriver(LocalPlayers players) {
+        for (PlayerSlot slot : players.slots().visibleSlots()) {
+            if (canRenderLevel(slot) && slot.gameplayState().player().isAlive()) {
+                return slot.id();
+            }
+        }
+        return -1;
     }
 
     private static void drawWaitingViewport(GameRenderer gameRenderer, PlayerSlot slot, ViewportArea viewport) {

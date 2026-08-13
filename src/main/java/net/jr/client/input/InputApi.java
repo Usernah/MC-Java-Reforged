@@ -161,6 +161,9 @@ public final class InputApi {
             return InputSimulation.isPressed(input);
         }
         for (long deviceId : selectedGamepadIds()) {
+            if (InputDeviceRouter.suppressForJoinChord(deviceId, input)) {
+                continue;
+            }
             if (SdlGamepad.input(deviceId, input, DIGITAL_PRESS_THRESHOLD)) {
                 return true;
             }

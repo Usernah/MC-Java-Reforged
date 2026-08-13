@@ -1,5 +1,6 @@
 package net.jr.ClientRuntime.runtime;
 
+import java.util.List;
 import net.jr.ClientRuntime.slot.PlayerSlot;
 import net.jr.mixin.SSM.GameRendererSSAccessor;
 import net.jr.mixin.SSM.LightmapRenderStateExtractorSSAccessor;
@@ -50,12 +51,12 @@ public final class WorldExtractions {
         Minecraft minecraft = Minecraft.getInstance();
         GameRendererSSAccessor renderer = (GameRendererSSAccessor)(Object)gameRenderer;
         LightmapRenderStateExtractor lightmapExtractor = renderer.splitTest$getLightmapExtractor();
+        List<PlayerSlot> extractionSlots = LocalPlayers.INSTANCE.slots().visibleSlots().stream()
+            .filter(WorldExtractions::canExtract)
+            .toList();
+        TerrainCoordinator.beginExtractionFrame(extractionSlots);
 
-        for (PlayerSlot slot : LocalPlayers.INSTANCE.slots().visibleSlots()) {
-            if (!canExtract(slot)) {
-                continue;
-            }
-
+        for (PlayerSlot slot : extractionSlots) {
             try (
                 ClientBoundary.Scope ignoredClient = ClientBoundary.enterForSlot(minecraft, slot);
                 WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bind(minecraft, slot)

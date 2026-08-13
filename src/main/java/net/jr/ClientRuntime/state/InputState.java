@@ -4,10 +4,12 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import net.jr.ClientRuntime.input.binding.KeyMappingState;
 import net.jr.client.input.mode.InputMode;
+import net.jr.client.ui.navigation.UiNavigationState;
 import net.minecraft.client.KeyMapping;
 
 public final class InputState {
     private final Map<KeyMapping, KeyMappingState> keyMappings = new IdentityHashMap<>();
+    private final UiNavigationState uiNavigation = new UiNavigationState();
     private int missTime;
     private int rightClickDelay;
     private InputMode mode = InputMode.KEYBOARD_MOUSE;
@@ -16,6 +18,10 @@ public final class InputState {
 
     public KeyMappingState state(KeyMapping keyMapping) {
         return this.keyMappings.computeIfAbsent(keyMapping, unused -> new KeyMappingState());
+    }
+
+    public UiNavigationState uiNavigation() {
+        return this.uiNavigation;
     }
 
     public int missTime() {
@@ -75,5 +81,6 @@ public final class InputState {
         this.mode = InputMode.KEYBOARD_MOUSE;
         this.lastKeyboardMouseInputNanos = 0L;
         this.lastGamepadInputNanos = 0L;
+        this.uiNavigation.clear();
     }
 }

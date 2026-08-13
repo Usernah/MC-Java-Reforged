@@ -17,17 +17,16 @@ import net.minecraft.network.chat.Component;
  * Central device-to-client registry.
  *
  * <p>An unassigned gamepad is deliberately routed to client 0. Assignment is
- * only created after that physical device holds Start + Select for three
- * seconds. This is also the API the future controller-selection screen will
- * use to reassign devices without teaching UI code about slots or scopes.</p>
+ * created when that physical device presses Start + Select. The chord consumes
+ * both buttons until they are released so neither individual action can run.
+ * This is also the API the future controller-selection screen will use to
+ * reassign devices without teaching UI code about slots or scopes.</p>
  */
 public final class InputDeviceRouter {
     public static final int UNASSIGNED_CLIENT = -1;
     public static final int KEYBOARD_MOUSE_CLIENT = 0;
-    public static final long JOIN_HOLD_MILLIS = 3_000L;
 
     private static final Map<Long, Integer> ASSIGNED_CLIENTS = new HashMap<>();
-    private static final Map<Long, Long> JOIN_STARTED_AT = new HashMap<>();
     private static final Map<Long, Boolean> JOIN_LATCHED = new HashMap<>();
 
     private InputDeviceRouter() {
@@ -95,18 +94,15 @@ public final class InputDeviceRouter {
         }
         ASSIGNED_CLIENTS.put(deviceId, clientId);
         Client.input(clientId).markGamepadInput();
-        JOIN_STARTED_AT.remove(deviceId);
-        JOIN_LATCHED.put(deviceId, true);
     }
 
     public static void unassignGamepad(long deviceId) {
         ASSIGNED_CLIENTS.remove(deviceId);
-        JOIN_STARTED_AT.remove(deviceId);
         JOIN_LATCHED.remove(deviceId);
     }
 
     public static boolean suppressForJoinChord(long deviceId, GamepadDigitalInput input) {
-        return (JOIN_STARTED_AT.containsKey(deviceId) || Boolean.TRUE.equals(JOIN_LATCHED.get(deviceId)))
+        return Boolean.TRUE.equals(JOIN_LATCHED.get(deviceId))
             && (input == GamepadDigitalInput.BUTTON_START
                 || input == GamepadDigitalInput.BUTTON_SELECT);
     }
@@ -115,34 +111,28 @@ public final class InputDeviceRouter {
         List<Long> connected = SdlGamepad.deviceIds();
         ASSIGNED_CLIENTS.keySet().removeIf(deviceId -> !connected.contains(deviceId));
         ASSIGNED_CLIENTS.entrySet().removeIf(entry -> !Client.connected(entry.getValue()));
-        JOIN_STARTED_AT.keySet().removeIf(deviceId -> !connected.contains(deviceId));
         JOIN_LATCHED.keySet().removeIf(deviceId -> !connected.contains(deviceId));
 
-        long now = System.currentTimeMillis();
         for (long deviceId : connected) {
-            boolean chordDown = SdlGamepad.input(deviceId, GamepadDigitalInput.BUTTON_START, 0.2F)
-                && SdlGamepad.input(deviceId, GamepadDigitalInput.BUTTON_SELECT, 0.2F);
+            boolean startDown = SdlGamepad.input(deviceId, GamepadDigitalInput.BUTTON_START, 0.2F);
+            boolean selectDown = SdlGamepad.input(deviceId, GamepadDigitalInput.BUTTON_SELECT, 0.2F);
 
-            if (!chordDown) {
-                JOIN_STARTED_AT.remove(deviceId);
+            if (!startDown && !selectDown) {
                 JOIN_LATCHED.put(deviceId, false);
                 continue;
             }
-            if (Boolean.TRUE.equals(JOIN_LATCHED.get(deviceId)) || ASSIGNED_CLIENTS.containsKey(deviceId)) {
+            if (Boolean.TRUE.equals(JOIN_LATCHED.get(deviceId))) {
+                continue;
+            }
+            if (ASSIGNED_CLIENTS.containsKey(deviceId) || !startDown || !selectDown) {
                 continue;
             }
 
-            Long startedAt = JOIN_STARTED_AT.putIfAbsent(deviceId, now);
-            if (startedAt == null) {
-                show(minecraft, "Mantén Start + Select 3 segundos para unir otro jugador");
-                continue;
-            }
-            if (now - startedAt < JOIN_HOLD_MILLIS) {
-                continue;
-            }
+            // Consume the complete chord before joining. The latch remains active
+            // until both buttons are up, including after the device changes slots.
+            JOIN_LATCHED.put(deviceId, true);
 
             if (Client.connectedCount() >= Client.MAX_CLIENTS) {
-                JOIN_LATCHED.put(deviceId, true);
                 show(minecraft, "Ya hay 4 jugadores locales");
                 continue;
             }
@@ -152,7 +142,6 @@ public final class InputDeviceRouter {
                 assignGamepad(deviceId, newClientId);
                 show(minecraft, "Mando asignado al jugador " + (newClientId + 1));
             } catch (RuntimeException exception) {
-                JOIN_LATCHED.put(deviceId, true);
                 show(minecraft, "No se pudo unir jugador local: " + exception.getMessage());
             }
         }
@@ -160,7 +149,6 @@ public final class InputDeviceRouter {
 
     public static void resetGamepadAssignment() {
         ASSIGNED_CLIENTS.clear();
-        JOIN_STARTED_AT.clear();
         JOIN_LATCHED.clear();
     }
 

@@ -4,6 +4,7 @@ import net.jr.ClientRuntime.runtime.*;
 import net.jr.client.input.InputApi;
 import net.jr.ClientRuntime.test.ScreenProbe;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.InputType;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.screens.Screen;
@@ -30,6 +31,23 @@ public abstract class MinecraftSSMixin {
 
     @Shadow
     private boolean pause;
+
+    @Inject(method = "getLastInputType", at = @At("HEAD"), cancellable = true)
+    private void splitTest$getSlotLastInputType(CallbackInfoReturnable<InputType> cir) {
+        LocalClient client = Client.currentOrNull();
+        if (client != null) {
+            cir.setReturnValue(client.input().uiNavigation().lastInputType());
+        }
+    }
+
+    @Inject(method = "setLastInputType", at = @At("HEAD"), cancellable = true)
+    private void splitTest$setSlotLastInputType(InputType inputType, CallbackInfo ci) {
+        LocalClient client = Client.currentOrNull();
+        if (client != null) {
+            client.input().uiNavigation().setLastInputType(inputType);
+            ci.cancel();
+        }
+    }
 
     @Redirect(
             method = {"tick", "handleKeybinds", "continueAttack", "startAttack"},
@@ -107,6 +125,21 @@ public abstract class MinecraftSSMixin {
         if (!Client.gameplayReady()) {
             ci.cancel();
         }
+    }
+
+    @Redirect(
+            method = "handleKeybinds",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/MouseHandler;isMouseGrabbed()Z"
+            )
+    )
+    private boolean splitTest$usePerClientGameplayCapture(MouseHandler mouseHandler) {
+        LocalClient client = Client.currentOrNull();
+        if (client != null && client.slotId() > 0 && Client.connectedCount() > 1) {
+            return ((Minecraft)(Object)this).isWindowActive();
+        }
+        return mouseHandler.isMouseGrabbed();
     }
 
     @Inject(method = "wrapRunnable", at = @At("HEAD"), cancellable = true)

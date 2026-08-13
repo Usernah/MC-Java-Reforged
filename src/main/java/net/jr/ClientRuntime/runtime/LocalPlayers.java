@@ -2,12 +2,14 @@ package net.jr.ClientRuntime.runtime;
 
 import com.mojang.blaze3d.platform.Window;
 import java.util.Objects;
+import net.jr.ClientConfig;
 import net.jr.ClientRuntime.input.InputFocus;
 import net.jr.ClientRuntime.network.ConnectionSlots;
 import net.jr.ClientRuntime.player.PlayerSessions;
 import net.jr.ClientRuntime.slot.PlayerSlot;
 import net.jr.ClientRuntime.slot.PlayerSlots;
 import net.jr.ClientRuntime.viewport.WindowMetrics;
+import net.jr.api.client.split.SplitOrientation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -26,6 +28,7 @@ public final class LocalPlayers {
     private int testPlayerCount = 1;
 
     private LocalPlayers() {
+        this.slots.setTwoPlayerOrientation(ClientConfig.splitOrientation());
         this.slots.setVisiblePlayerCount(this.testPlayerCount);
     }
 
@@ -90,10 +93,9 @@ public final class LocalPlayers {
         this.testPlayerCount = playerCount;
         this.refreshWindow(minecraft);
         this.slots.setVisiblePlayerCount(playerCount);
-        this.refreshWindow(minecraft);
+        this.applyLayoutTransition(minecraft);
         this.inputFocus.clampToSlotCount(playerCount);
         this.sessions.ensurePlayerCount(minecraft, this, playerCount);
-        Screens.resizeAll(minecraft);
     }
 
     public int joinNextClient(Minecraft minecraft) {
@@ -105,10 +107,9 @@ public final class LocalPlayers {
             }
             this.refreshWindow(minecraft);
             this.slots.setClientConnected(slotId, true);
-            this.refreshWindow(minecraft);
+            this.applyLayoutTransition(minecraft);
             this.inputFocus.clampToSlotCount(this.slots.presentSlotCount());
             this.sessions.ensureClient(minecraft, this, slotId);
-            Screens.resizeAll(minecraft);
             return slotId;
         }
         throw new IllegalStateException("All local clients are already connected");
@@ -124,8 +125,7 @@ public final class LocalPlayers {
         slot.clearWorldBinding();
         this.slots.setClientConnected(slotId, false);
         this.inputFocus.clampToSlotCount(this.slots.presentSlotCount());
-        this.refreshWindow(minecraft);
-        Screens.resizeAll(minecraft);
+        this.applyLayoutTransition(minecraft);
     }
 
     public void cycleTestInputFocus(Minecraft minecraft) {
@@ -133,10 +133,37 @@ public final class LocalPlayers {
         this.inputFocus.focusNext(this.slots.presentSlotCount());
     }
 
-    public void returnToPrimaryOnly() {
+    public void returnToPrimaryOnly(Minecraft minecraft) {
+        Objects.requireNonNull(minecraft, "minecraft");
         this.testPlayerCount = 1;
         this.slots.setVisiblePlayerCount(1);
         this.inputFocus.clampToSlotCount(1);
+        this.applyLayoutTransition(minecraft);
+    }
+
+    public void refreshViewportOptions(Minecraft minecraft) {
+        Objects.requireNonNull(minecraft, "minecraft");
+        if (this.windowMetrics == null) {
+            this.refreshWindow(minecraft);
+            return;
+        }
+        this.slots.rebuildViewports(this.windowMetrics);
+        Screens.resizeAll(minecraft);
+    }
+
+    public void setTwoPlayerOrientation(Minecraft minecraft, SplitOrientation orientation) {
+        Objects.requireNonNull(minecraft, "minecraft");
+        Objects.requireNonNull(orientation, "orientation");
+        this.slots.setTwoPlayerOrientation(orientation);
+        if (this.windowMetrics != null) {
+            this.applyLayoutTransition(minecraft);
+        }
+    }
+
+    private void applyLayoutTransition(Minecraft minecraft) {
+        minecraft.resizeGui();
+        this.refreshWindow(minecraft);
+        Screens.resizeAll(minecraft, true);
     }
 
     public PlayerSlot activeSlot() {

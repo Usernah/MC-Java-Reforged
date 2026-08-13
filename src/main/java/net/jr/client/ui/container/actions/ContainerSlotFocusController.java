@@ -5,6 +5,8 @@ import net.jr.client.ui.container.slots.SlotGrid;
 import net.jr.client.ui.container.slots.SlotPos;
 import net.jr.client.ui.container.slots.VanillaSlotLayer;
 import net.jr.client.ui.navigation.UiInputModeController;
+import net.jr.client.ui.navigation.UiNavigationState;
+import net.jr.ClientRuntime.runtime.Client;
 import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -17,12 +19,9 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 /** Controller focus for vanilla container slots and custom JR slot grids. */
 public final class ContainerSlotFocusController {
-    private static final Map<AbstractContainerScreen<?>, Integer> FOCUS = new WeakHashMap<>();
     private ContainerSlotFocusController() {}
 
     public static boolean moveFocus(AbstractContainerScreen<?> screen, int keyCode) {
@@ -132,7 +131,7 @@ public final class ContainerSlotFocusController {
     }
 
     public static void clearFocusedSlot(AbstractContainerScreen<?> screen) {
-        FOCUS.remove(screen);
+        state().containerSlotFocus().remove(screen);
     }
 
     public static boolean pickupFocusedOrHoveredSlot(AbstractContainerScreen<?> screen, int mouseButton) {
@@ -234,11 +233,11 @@ public final class ContainerSlotFocusController {
     }
 
     private static Slot focused(AbstractContainerScreen<?> screen) {
-        Integer index = FOCUS.get(screen);
+        Integer index = state().containerSlotFocus().get(screen);
         if (index == null || index < 0 || index >= screen.getMenu().slots.size()) return null;
         Slot slot = screen.getMenu().slots.get(index);
         if (!activeSlots(screen).contains(slot)) {
-            FOCUS.remove(screen);
+            state().containerSlotFocus().remove(screen);
             return null;
         }
         return slot;
@@ -269,13 +268,19 @@ public final class ContainerSlotFocusController {
     }
 
     private static void setFocus(AbstractContainerScreen<?> screen, Slot slot) {
-        FOCUS.put(screen, slot.index);
+        state().containerSlotFocus().put(screen, slot.index);
         FocusedSlotCenter center = getFocusedSlotCenter(screen);
         if (center != null) GamepadInputProcessor.moveVirtualCursorToFocusedSlot(center.guiX, center.guiY);
     }
 
     private static AbstractContainerScreenAccessor accessor(AbstractContainerScreen<?> screen) {
         return (AbstractContainerScreenAccessor) screen;
+    }
+
+    private static UiNavigationState state() {
+        return Client.currentOrNull() == null
+            ? Client.input(0).uiNavigation()
+            : Client.input().uiNavigation();
     }
 
     private static boolean moveSlotToPlayerInOrder(

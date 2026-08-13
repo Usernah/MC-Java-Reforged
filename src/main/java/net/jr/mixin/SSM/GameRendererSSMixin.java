@@ -13,6 +13,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.Lightmap;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightmapRenderStateExtractor;
 import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.extract.LevelExtractor;
@@ -103,6 +104,25 @@ public abstract class GameRendererSSMixin {
     )
     private void splitTest$renderLevelForVisibleSlots(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
         WorldPasses.renderLevelForVisibleSlots(gameRenderer, deltaTracker);
+    }
+
+    @Redirect(
+        method = "render",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;doEntityOutline()V")
+    )
+    private void splitTest$deferEntityOutlineToEachSlot(LevelRenderer levelRenderer) {
+        // WorldPasses composites the outline while the matching slot targets are active.
+    }
+
+    @ModifyExpressionValue(
+        method = "render",
+        at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/GameRenderer;postEffectId:Lnet/minecraft/resources/Identifier;")
+    )
+    private net.minecraft.resources.Identifier splitTest$deferPostEffectToEachSlot(
+        net.minecraft.resources.Identifier original
+    ) {
+        // WorldPasses processes it before that slot is copied into the shared window target.
+        return null;
     }
 
     @ModifyArgs(

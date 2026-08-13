@@ -39,16 +39,7 @@ import java.util.List;
  */
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class UiInputModeController {
-    private static final class UiInputState {
-        UiInputMode inputMode = UiInputMode.POINTER;
-        Screen observedScreen;
-        boolean hasObservedRawMousePosition;
-        double lastObservedRawMouseX;
-        double lastObservedRawMouseY;
-    }
-
     private static final double RAW_MOUSE_MOVE_EPSILON = 0.25D;
-    private static final UiInputState STATE = new UiInputState();
 
     private UiInputModeController() {
     }
@@ -56,16 +47,16 @@ public final class UiInputModeController {
     /** Called once per frame for this JVM's vanilla client. */
     public static void updateCurrentClientFrame(Minecraft minecraft) {
         Screen screen = minecraft.gui.screen();
-        UiInputState state = STATE;
+        UiNavigationState state = state();
         if (screen == null) {
-            state.inputMode = UiInputMode.POINTER;
-            state.observedScreen = null;
+            state.setFocusNavigationActive(false);
+            state.setObservedScreen(null);
             observeCurrentRawMouse(minecraft);
             return;
         }
 
-        if (screen != state.observedScreen) {
-            state.observedScreen = screen;
+        if (screen != state.observedScreen()) {
+            state.setObservedScreen(screen);
             observeCurrentRawMouse(minecraft);
             if (isFocusNavigationActive()) {
                 initializeFocusForNavigation(screen, minecraft);
@@ -151,7 +142,7 @@ public final class UiInputModeController {
     }
 
     public static boolean isFocusNavigationActive() {
-        return hasCurrentClient() && STATE.inputMode == UiInputMode.FOCUS;
+        return hasCurrentClient() && state().focusNavigationActive();
     }
 
     public static boolean shouldShowCursorDuringFocus() {
@@ -171,6 +162,31 @@ public final class UiInputModeController {
         Minecraft minecraft = Minecraft.getInstance();
         applyKeyboardNavigationInputType(minecraft, keyCode);
         activateFocusNavigation();
+        completeFocusedContainerPath(minecraft.gui.screen());
+    }
+
+    /**
+     * Vanilla object lists require a focused entry to also own a focused child
+     * before processing directional navigation. Mouse-seeded focus can legally
+     * stop at the entry, so finish that path before passing the arrow event to
+     * vanilla.
+     */
+    private static void completeFocusedContainerPath(@Nullable GuiEventListener listener) {
+        GuiEventListener current = listener;
+        while (current instanceof ContainerEventHandler container) {
+            GuiEventListener focused = container.getFocused();
+            if (focused == null) {
+                if (container.children().isEmpty()) {
+                    return;
+                }
+                ComponentPath initialPath = container.nextFocusPath(new FocusNavigationEvent.InitialFocus());
+                if (initialPath != null) {
+                    initialPath.applyFocus(true);
+                }
+                return;
+            }
+            current = focused;
+        }
     }
 
     public static void notifyJoystickPointerActivity() {
@@ -222,7 +238,7 @@ public final class UiInputModeController {
         }
 
         initializeContainerFocusFromPointer(screen, minecraft);
-        STATE.inputMode = UiInputMode.FOCUS;
+        state().setFocusNavigationActive(true);
         CursorHider.setHidden(true);
         CursorHider.setReplacementHidden(true);
         CursorHider.sync();
@@ -235,7 +251,7 @@ public final class UiInputModeController {
         }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.gui.screen() == null) {
-            STATE.inputMode = UiInputMode.POINTER;
+            state().setFocusNavigationActive(false);
             return;
         }
         if (!isFocusNavigationActive()) {
@@ -243,10 +259,11 @@ public final class UiInputModeController {
             return;
         }
 
-        STATE.inputMode = UiInputMode.POINTER;
-        STATE.lastObservedRawMouseX = getRawMouseX(minecraft);
-        STATE.lastObservedRawMouseY = getRawMouseY(minecraft);
-        STATE.hasObservedRawMousePosition = true;
+        UiNavigationState state = state();
+        state.setFocusNavigationActive(false);
+        state.setLastObservedRawMouseX(getRawMouseX(minecraft));
+        state.setLastObservedRawMouseY(getRawMouseY(minecraft));
+        state.setHasObservedRawMousePosition(true);
         applyPointerInputTypeAndClearFocus(minecraft);
     }
 
@@ -254,10 +271,11 @@ public final class UiInputModeController {
         if (!canPhysicalMouseDriveCurrentClient()) {
             return;
         }
-        STATE.inputMode = UiInputMode.POINTER;
-        STATE.lastObservedRawMouseX = getRawMouseX(minecraft);
-        STATE.lastObservedRawMouseY = getRawMouseY(minecraft);
-        STATE.hasObservedRawMousePosition = true;
+        UiNavigationState state = state();
+        state.setFocusNavigationActive(false);
+        state.setLastObservedRawMouseX(getRawMouseX(minecraft));
+        state.setLastObservedRawMouseY(getRawMouseY(minecraft));
+        state.setHasObservedRawMousePosition(true);
         GamepadInputProcessor.activatePhysicalMouseCursor(minecraft);
         applyPointerInputTypeAndClearFocus(minecraft);
     }
@@ -268,7 +286,7 @@ public final class UiInputModeController {
         }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.gui.screen() == null) {
-            STATE.inputMode = UiInputMode.POINTER;
+            state().setFocusNavigationActive(false);
             return;
         }
         activatePointerModeFromPhysicalMouse(minecraft);
@@ -280,24 +298,32 @@ public final class UiInputModeController {
         }
         double rawMouseX = getRawMouseX(minecraft);
         double rawMouseY = getRawMouseY(minecraft);
-        if (!STATE.hasObservedRawMousePosition) {
-            STATE.lastObservedRawMouseX = rawMouseX;
-            STATE.lastObservedRawMouseY = rawMouseY;
-            STATE.hasObservedRawMousePosition = true;
+        UiNavigationState state = state();
+        if (!state.hasObservedRawMousePosition()) {
+            state.setLastObservedRawMouseX(rawMouseX);
+            state.setLastObservedRawMouseY(rawMouseY);
+            state.setHasObservedRawMousePosition(true);
             return false;
         }
 
-        boolean moved = Math.abs(rawMouseX - STATE.lastObservedRawMouseX) >= RAW_MOUSE_MOVE_EPSILON
-            || Math.abs(rawMouseY - STATE.lastObservedRawMouseY) >= RAW_MOUSE_MOVE_EPSILON;
-        STATE.lastObservedRawMouseX = rawMouseX;
-        STATE.lastObservedRawMouseY = rawMouseY;
+        boolean moved = Math.abs(rawMouseX - state.lastObservedRawMouseX()) >= RAW_MOUSE_MOVE_EPSILON
+            || Math.abs(rawMouseY - state.lastObservedRawMouseY()) >= RAW_MOUSE_MOVE_EPSILON;
+        state.setLastObservedRawMouseX(rawMouseX);
+        state.setLastObservedRawMouseY(rawMouseY);
         return moved;
     }
 
     private static void observeCurrentRawMouse(Minecraft minecraft) {
-        STATE.lastObservedRawMouseX = getRawMouseX(minecraft);
-        STATE.lastObservedRawMouseY = getRawMouseY(minecraft);
-        STATE.hasObservedRawMousePosition = true;
+        UiNavigationState state = state();
+        state.setLastObservedRawMouseX(getRawMouseX(minecraft));
+        state.setLastObservedRawMouseY(getRawMouseY(minecraft));
+        state.setHasObservedRawMousePosition(true);
+    }
+
+    private static UiNavigationState state() {
+        return net.jr.ClientRuntime.runtime.Client.currentOrNull() == null
+            ? net.jr.ClientRuntime.runtime.Client.input(0).uiNavigation()
+            : net.jr.ClientRuntime.runtime.Client.input().uiNavigation();
     }
 
     private static double getRawMouseX(Minecraft minecraft) {
@@ -544,8 +570,4 @@ public final class UiInputModeController {
         return dx * dx + dy * dy;
     }
 
-    private enum UiInputMode {
-        POINTER,
-        FOCUS
-    }
 }

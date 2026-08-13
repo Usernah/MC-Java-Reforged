@@ -3,6 +3,7 @@ package net.jr.mixin.SSM;
 import net.jr.ClientRuntime.bridge.LevelExtractorSSAccessor;
 import javax.annotation.Nullable;
 import net.jr.ClientRuntime.runtime.SectionUpdateRouting;
+import net.jr.ClientRuntime.runtime.TerrainCoordinator;
 import net.jr.ClientRuntime.state.LevelExtractionState;
 import net.minecraft.client.SectionUpdateTracker;
 import net.minecraft.client.multiplayer.ClientChunkCache;
@@ -70,6 +71,13 @@ public abstract class LevelExtractorSSMixin implements LevelExtractorSSAccessor 
         state.setShouldResetLevelRenderData(this.shouldResetLevelRenderData);
         state.setShouldResetChunkLayerSampler(this.shouldResetChunkLayerSampler);
         state.setShouldResetSkyRenderer(this.shouldResetSkyRenderer);
+    }
+
+    @Inject(method = "allChanged", at = @At("HEAD"), cancellable = true)
+    private void splitTest$routeGlobalGeometryInvalidation(CallbackInfo ci) {
+        if (TerrainCoordinator.routeGlobalAllChanged()) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "setSectionDirty(IIIZ)V", at = @At("HEAD"), cancellable = true)

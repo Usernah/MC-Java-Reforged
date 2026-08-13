@@ -1,5 +1,6 @@
 package net.jr.mixin.SSM;
 
+import com.mojang.blaze3d.resource.CrossFrameResourcePool;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.GlobalSettingsUniform;
@@ -19,6 +20,12 @@ public interface GameRendererSSAccessor {
 
     @Accessor("globalSettingsUniform")
     GlobalSettingsUniform splitTest$getGlobalSettingsUniform();
+
+    @Accessor("effectActive")
+    boolean splitTest$isPostEffectActive();
+
+    @Accessor("resourcePool")
+    CrossFrameResourcePool splitTest$getResourcePool();
 
     @Invoker("extractCamera")
     void splitTest$extractCamera(DeltaTracker deltaTracker, float worldPartialTicks, float cameraEntityPartialTicks);

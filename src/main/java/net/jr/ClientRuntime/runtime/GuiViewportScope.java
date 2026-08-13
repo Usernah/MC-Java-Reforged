@@ -22,19 +22,13 @@ public final class GuiViewportScope implements AutoCloseable {
         this.viewportScope = ViewportPass.enterGui(viewport);
         this.screenScaleScope = ScreenScale.enter(viewport);
 
-        Minecraft minecraft = Minecraft.getInstance();
-        float destinationX = viewport.windowX()
-            * minecraft.getWindow().getGuiScaledWidth()
-            / (float)minecraft.getWindow().getScreenWidth();
-        float destinationY = viewport.windowY()
-            * minecraft.getWindow().getGuiScaledHeight()
-            / (float)minecraft.getWindow().getScreenHeight();
-        float destinationWidth = viewport.windowWidth()
-            * minecraft.getWindow().getGuiScaledWidth()
-            / (float)minecraft.getWindow().getScreenWidth();
-        float destinationHeight = viewport.windowHeight()
-            * minecraft.getWindow().getGuiScaledHeight()
-            / (float)minecraft.getWindow().getScreenHeight();
+        float sharedGuiScale = (float)Minecraft.getInstance().getWindow().getGuiScale();
+        float destinationX = viewport.x() / sharedGuiScale;
+        float destinationY = viewport.y() / sharedGuiScale;
+        float destinationRight = (viewport.x() + viewport.width()) / sharedGuiScale;
+        float destinationBottom = (viewport.y() + viewport.height()) / sharedGuiScale;
+        float destinationWidth = destinationRight - destinationX;
+        float destinationHeight = destinationBottom - destinationY;
         int logicalWidth = ScreenScale.logicalWidth(viewport);
         int logicalHeight = ScreenScale.logicalHeight(viewport);
         this.coordinateMapping = new CoordinateMapping(
@@ -68,6 +62,18 @@ public final class GuiViewportScope implements AutoCloseable {
     public static float mapPictureInPictureScale(float scale) {
         CoordinateMapping mapping = currentMappingOrNull();
         return mapping == null ? scale : scale * Math.min(mapping.scaleX(), mapping.scaleY());
+    }
+
+    /** Maps a point expressed in the active screen's local coordinates to the
+     * shared GUI coordinate space used by GuiGraphicsExtractor's scissor stack. */
+    public static int mapScissorTestX(int x) {
+        CoordinateMapping mapping = currentMappingOrNull();
+        return mapping == null ? x : Math.round(mapping.x() + x * mapping.scaleX());
+    }
+
+    public static int mapScissorTestY(int y) {
+        CoordinateMapping mapping = currentMappingOrNull();
+        return mapping == null ? y : Math.round(mapping.y() + y * mapping.scaleY());
     }
 
     private static CoordinateMapping currentMappingOrNull() {

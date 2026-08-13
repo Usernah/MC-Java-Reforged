@@ -2,6 +2,7 @@ package net.jr.ClientRuntime.slot;
 
 import net.jr.ClientRuntime.state.GameplayState;
 import net.jr.ClientRuntime.state.InputState;
+import net.jr.ClientRuntime.state.OptionsState;
 import net.jr.ClientRuntime.state.RenderState;
 import net.jr.ClientRuntime.state.ScreenState;
 import net.jr.ClientRuntime.viewport.ViewportArea;
@@ -12,6 +13,7 @@ public final class PlayerSlot {
     private final GameplayState gameplayState = new GameplayState();
     private final ScreenState screenState = new ScreenState();
     private final InputState inputState = new InputState();
+    private final OptionsState optionsState;
     private boolean connected;
     private boolean visible;
     private int viewportId;
@@ -19,6 +21,7 @@ public final class PlayerSlot {
 
     PlayerSlot(int id) {
         this.id = id;
+        this.optionsState = new OptionsState(id);
         this.connected = true;
         this.visible = true;
         this.viewportId = id;
@@ -50,6 +53,10 @@ public final class PlayerSlot {
 
     public InputState inputState() {
         return this.inputState;
+    }
+
+    public OptionsState optionsState() {
+        return this.optionsState;
     }
 
     public boolean connected() {

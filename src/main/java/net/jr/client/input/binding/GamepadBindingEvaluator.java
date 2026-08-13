@@ -1,5 +1,6 @@
 package net.jr.client.input.binding;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ final class GamepadBindingEvaluator {
     void apply(GamepadBindingRegistry bindings, BindingContext context) {
         Map<String, Boolean> nextStates = new HashMap<>();
         this.suppressedInputs.removeIf(input -> !InputApi.isPressed(input));
+        List<BindingSample> samples = new ArrayList<>();
 
         for (Map.Entry<String, GamepadInputChord> entry : bindings.bindings().entrySet()) {
             KeyMapping keyMapping = bindings.keyMapping(entry.getKey());
@@ -27,16 +29,21 @@ final class GamepadBindingEvaluator {
             if (physicallyDown) {
                 InputApi.markGamepadInput();
             }
+            samples.add(new BindingSample(entry.getKey(), keyMapping, chord, physicallyDown));
+        }
 
-            boolean down = physicallyDown && !isSuppressed(chord);
-            boolean previous = this.appliedStates.getOrDefault(entry.getKey(), false);
+        for (BindingSample sample : samples) {
+            boolean down = sample.physicallyDown()
+                && !isSuppressed(sample.chord())
+                && !isShadowedByPressedSuperset(sample, samples);
+            boolean previous = this.appliedStates.getOrDefault(sample.keyName(), false);
             if (down && !previous) {
-                KeyMappingClickBridge.increment(keyMapping);
+                KeyMappingClickBridge.increment(sample.keyMapping());
             }
             if (down != previous) {
-                keyMapping.setDown(down);
+                sample.keyMapping().setDown(down);
             }
-            nextStates.put(entry.getKey(), down);
+            nextStates.put(sample.keyName(), down);
         }
 
         for (String keyName : this.appliedStates.keySet()) {
@@ -86,6 +93,23 @@ final class GamepadBindingEvaluator {
 
     private static boolean isChordPressed(GamepadInputChord chord) {
         return chord.inputs().stream().allMatch(InputApi::isPressed);
+    }
+
+    private static boolean isShadowedByPressedSuperset(BindingSample candidate, List<BindingSample> samples) {
+        if (!candidate.physicallyDown()) {
+            return false;
+        }
+        return samples.stream().anyMatch(other -> other.physicallyDown()
+            && other.chord().inputs().size() > candidate.chord().inputs().size()
+            && other.chord().inputs().containsAll(candidate.chord().inputs()));
+    }
+
+    private record BindingSample(
+        String keyName,
+        KeyMapping keyMapping,
+        GamepadInputChord chord,
+        boolean physicallyDown
+    ) {
     }
 }
 

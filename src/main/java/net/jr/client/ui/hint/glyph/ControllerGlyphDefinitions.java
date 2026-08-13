@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import net.jr.Java_reforged;
 import net.jr.api.client.resource.Asset;
 import net.jr.client.ui.hint.render.GlyphTextureBoundsCache;
+import net.jr.client.ui.presentation.UiPresentation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -21,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
  * Reloadable metric store for controller glyph themes.
@@ -39,6 +42,8 @@ public final class ControllerGlyphDefinitions {
 
     /** Immutable snapshot currently visible to the render thread. */
     private static volatile Map<ControllerGlyphTheme, Definition> definitions = Map.of();
+    private static volatile Map<String, Map<ControllerGlyphTheme, Definition>> variantDefinitions = Map.of();
+    private static volatile Set<Asset> availableVariantTextures = Set.of();
 
     private ControllerGlyphDefinitions() {
     }
@@ -52,13 +57,37 @@ public final class ControllerGlyphDefinitions {
      * Returns a specific glyph height or the theme's default height.
      */
     public static float height(ControllerGlyphTheme theme, ControllerGlyph glyph) {
-        Definition definition = definitions.get(theme);
+        Definition definition = activeDefinition(theme);
         if (definition == null) {
             throw new IllegalStateException(
                 "Glyph definitions have not been loaded for theme " + theme
             );
         }
         return definition.heights().getOrDefault(glyph, definition.defaultHeight());
+    }
+
+    static Asset texture(ControllerGlyphTheme theme, ControllerGlyph glyph, boolean pressed) {
+        Asset base = theme.baseTexture(glyph, pressed);
+        if (base == null) {
+            return null;
+        }
+        String folder = UiPresentation.resourceVariantFolder();
+        if (folder.isEmpty()) {
+            return base;
+        }
+        Asset variant = theme.variantTexture(folder, glyph, pressed);
+        return availableVariantTextures.contains(variant) ? variant : base;
+    }
+
+    private static Definition activeDefinition(ControllerGlyphTheme theme) {
+        String folder = UiPresentation.resourceVariantFolder();
+        if (!folder.isEmpty()) {
+            Definition variant = variantDefinitions.getOrDefault(folder, Map.of()).get(theme);
+            if (variant != null) {
+                return variant;
+            }
+        }
+        return definitions.get(theme);
     }
 
     /**
@@ -129,6 +158,42 @@ public final class ControllerGlyphDefinitions {
         }
     }
 
+    private static Definition loadVariantDefinition(ResourceManager manager, ControllerGlyphTheme theme, String folder, Definition base) {
+        Asset source = theme.variantDefinitions(folder);
+        try {
+            if (source.find(manager).isEmpty()) {
+                return base;
+            }
+            try (InputStream stream = source.open(manager); Reader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+                boolean replacesDefaultHeight = root.has("default_height");
+                float defaultHeight = replacesDefaultHeight
+                    ? positiveHeight(root.get("default_height"), theme + "." + folder + ".default_height")
+                    : base.defaultHeight();
+                EnumMap<ControllerGlyph, Float> heights = new EnumMap<>(ControllerGlyph.class);
+                // A contextual default defines a complete new sizing baseline. In that
+                // case base per-glyph exceptions must not mask it. Without a contextual
+                // default, the file behaves as a genuinely partial overlay.
+                if (!replacesDefaultHeight) {
+                    heights.putAll(base.heights());
+                }
+                JsonObject heightObject = root.getAsJsonObject("heights");
+                if (heightObject != null) {
+                    for (Map.Entry<String, JsonElement> entry : heightObject.entrySet()) {
+                        ControllerGlyph glyph = GLYPHS_BY_NAME.get(entry.getKey());
+                        if (glyph != null && theme.supports(glyph)) {
+                            heights.put(glyph, positiveHeight(entry.getValue(), theme + "." + folder + "." + entry.getKey()));
+                        }
+                    }
+                }
+                return new Definition(defaultHeight, Map.copyOf(heights));
+            }
+        } catch (Exception exception) {
+            Java_reforged.LOGGER.error("Invalid optional glyph definitions {}; using base values", source, exception);
+            return base;
+        }
+    }
+
     /** Validates that a JSON element is a usable positive render height. */
     private static float positiveHeight(JsonElement element, String field) {
         if (element == null || !element.isJsonPrimitive()) {
@@ -165,29 +230,54 @@ public final class ControllerGlyphDefinitions {
      * the complete immutable snapshot atomically.
      */
     private static final class ReloadListener
-        extends SimplePreparableReloadListener<Map<ControllerGlyphTheme, Definition>> {
+        extends SimplePreparableReloadListener<ReloadSnapshot> {
 
         @Override
-        protected Map<ControllerGlyphTheme, Definition> prepare(
+        protected ReloadSnapshot prepare(
             ResourceManager manager,
             ProfilerFiller profiler
         ) {
             EnumMap<ControllerGlyphTheme, Definition> loaded =
                 new EnumMap<>(ControllerGlyphTheme.class);
             for (ControllerGlyphTheme theme : ControllerGlyphTheme.values()) {
-                loaded.put(theme, loadDefinition(manager, theme));
+                Definition base = loadDefinition(manager, theme);
+                loaded.put(theme, base);
             }
-            return Map.copyOf(loaded);
+            Map<String, Map<ControllerGlyphTheme, Definition>> variants = new HashMap<>();
+            Set<Asset> textures = new HashSet<>();
+            for (String folder : new String[]{"portable", "split_screen"}) {
+                EnumMap<ControllerGlyphTheme, Definition> byTheme = new EnumMap<>(ControllerGlyphTheme.class);
+                for (ControllerGlyphTheme theme : ControllerGlyphTheme.values()) {
+                    byTheme.put(theme, loadVariantDefinition(manager, theme, folder, loaded.get(theme)));
+                    for (ControllerGlyph glyph : theme.supportedGlyphs()) {
+                        Asset normal = theme.variantTexture(folder, glyph, false);
+                        if (normal != null && normal.find(manager).isPresent()) textures.add(normal);
+                        Asset pressed = theme.variantTexture(folder, glyph, true);
+                        if (pressed != null && pressed.find(manager).isPresent()) textures.add(pressed);
+                    }
+                }
+                variants.put(folder, Map.copyOf(byTheme));
+            }
+            return new ReloadSnapshot(Map.copyOf(loaded), Map.copyOf(variants), Set.copyOf(textures));
         }
 
         @Override
         protected void apply(
-            Map<ControllerGlyphTheme, Definition> loaded,
+            ReloadSnapshot loaded,
             ResourceManager manager,
             ProfilerFiller profiler
         ) {
-            definitions = loaded;
+            definitions = loaded.base();
+            variantDefinitions = loaded.variants();
+            availableVariantTextures = loaded.availableTextures();
             GlyphTextureBoundsCache.clear();
         }
+    }
+
+    private record ReloadSnapshot(
+        Map<ControllerGlyphTheme, Definition> base,
+        Map<String, Map<ControllerGlyphTheme, Definition>> variants,
+        Set<Asset> availableTextures
+    ) {
     }
 }

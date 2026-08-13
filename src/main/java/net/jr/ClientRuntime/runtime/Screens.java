@@ -38,6 +38,10 @@ public final class Screens {
 
 
     public static void resizeAll(Minecraft minecraft) {
+        resizeAll(minecraft, false);
+    }
+
+    public static void resizeAll(Minecraft minecraft, boolean layoutChanged) {
         if (!LocalPlayers.INSTANCE.hasWindowMetrics()) {
             return;
         }
@@ -52,7 +56,7 @@ public final class Screens {
             ViewportArea viewport = slot.viewport();
             int width = ScreenScale.logicalWidth(viewport);
             int height = ScreenScale.logicalHeight(viewport);
-            if (screen.width == width && screen.height == height) {
+            if (!layoutChanged && screen.width == width && screen.height == height) {
                 continue;
             }
 
@@ -97,15 +101,23 @@ public final class Screens {
             return;
         }
 
-        Screen screen = client.screen();
         ViewportArea viewport = client.viewport();
-
+        Screen screen = client.screen();
+        if (screen == null && SecondaryWorldLoadingScreen.shouldPresent(slot)) {
+            screen = SecondaryWorldLoadingScreen.forSlot(slot.id());
+            int width = ScreenScale.logicalWidth(viewport);
+            int height = ScreenScale.logicalHeight(viewport);
+            if (screen.width != width || screen.height != height) {
+                screen.init(width, height);
+            }
+        }
         if (screen != null) {
+            Screen renderScreen = screen;
             int mouseX = logicalMouseX(minecraft, slot, viewport);
             int mouseY = logicalMouseY(minecraft, slot, viewport);
             ScreenInput.runEvent(
                     () -> ClientHooks.extractScreen(
-                            screen,
+                            renderScreen,
                             new Stack<>(),
                             graphics,
                             mouseX,
@@ -113,9 +125,9 @@ public final class Screens {
                             partialTick
                     ),
                     "Extracting slot screen render state",
-                    screen.getClass().getCanonicalName()
+                    renderScreen.getClass().getCanonicalName()
             );
-            ControlHintPipeline.renderScreen(screen, graphics);
+            ControlHintPipeline.renderScreen(renderScreen, graphics);
             CursorRenderer.renderForCurrentClient(graphics, minecraft);
             return;
         }
@@ -164,6 +176,9 @@ public final class Screens {
         if (slot.screenState().screen() != null) {
             return true;
         }
+        if (SecondaryWorldLoadingScreen.shouldPresent(slot)) {
+            return true;
+        }
         return LocalPlayers.INSTANCE.slotGameplayReady(slot);
     }
 
@@ -201,8 +216,10 @@ public final class Screens {
 
     private static int logicalMouseX(Minecraft minecraft, PlayerSlot slot, ViewportArea viewport) {
         if (GamepadInputProcessor.isControllerCursorActive(slot.id())) {
-            int localGuiX = GamepadInputProcessor.resolveScreenMouseX(slot.id(), (int)Math.round(GamepadInputProcessor.cursorX(slot.id())));
-            return ScreenScale.logicalMouseX(viewport, localGuiX);
+            return GamepadInputProcessor.resolveScreenMouseX(
+                    slot.id(),
+                    (int)Math.round(GamepadInputProcessor.cursorX(slot.id()))
+            );
         }
         if (!InputApi.canPhysicalMouseDriveClient(slot.id())) {
             return Integer.MIN_VALUE;
@@ -216,8 +233,10 @@ public final class Screens {
 
     private static int logicalMouseY(Minecraft minecraft, PlayerSlot slot, ViewportArea viewport) {
         if (GamepadInputProcessor.isControllerCursorActive(slot.id())) {
-            int localGuiY = GamepadInputProcessor.resolveScreenMouseY(slot.id(), (int)Math.round(GamepadInputProcessor.cursorY(slot.id())));
-            return ScreenScale.logicalMouseY(viewport, localGuiY);
+            return GamepadInputProcessor.resolveScreenMouseY(
+                    slot.id(),
+                    (int)Math.round(GamepadInputProcessor.cursorY(slot.id()))
+            );
         }
         if (!InputApi.canPhysicalMouseDriveClient(slot.id())) {
             return Integer.MIN_VALUE;

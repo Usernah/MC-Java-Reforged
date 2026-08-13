@@ -4,10 +4,8 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import javax.annotation.Nullable;
 import net.jr.ClientRuntime.viewport.ViewportArea;
-import net.jr.ClientRuntime.viewport.ViewportLayout;
 
 public final class ScreenScale {
-    private static final float SPLIT_SCREEN_SCALE = 1.5F;
     private static final ThreadLocal<Deque<Context>> CONTEXTS = ThreadLocal.withInitial(ArrayDeque::new);
 
     private ScreenScale() {
@@ -20,7 +18,7 @@ public final class ScreenScale {
     }
 
     public static float scale(ViewportArea viewport) {
-        return viewport.layout() == ViewportLayout.FOUR_GRID ? SPLIT_SCREEN_SCALE : 1.0F;
+        return 1.0F;
     }
 
     public static double effectiveGuiScale(ViewportArea viewport) {

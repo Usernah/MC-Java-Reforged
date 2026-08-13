@@ -31,5 +31,15 @@
   "key.categories.java_reforged.gameplay": "Juego de Java Reforged",
   "key.category.java_reforged.general": "Java Reforged",
   "key.category.java_reforged.ui": "Interfaz de Java Reforged",
-  "key.category.java_reforged.gameplay": "Juego de Java Reforged"
+  "key.category.java_reforged.gameplay": "Juego de Java Reforged",
+  "menu.java_reforged.video.interface_profile": "Perfil de interfaz",
+  "menu.java_reforged.video.interface_profile.standard": "Estándar",
+  "menu.java_reforged.video.interface_profile.portable": "Portátil",
+  "menu.java_reforged.video.interface_profile.description": "Ajusta las proporciones de la interfaz al tipo de pantalla. La pantalla dividida siempre usa el perfil Estándar.",
+  "menu.java_reforged.video.split_orientation": "Orientación de pantalla dividida",
+  "menu.java_reforged.video.split_orientation.vertical": "Vertical",
+  "menu.java_reforged.video.split_orientation.horizontal": "Horizontal",
+  "menu.java_reforged.video.split_orientation.description": "Cambia cómo se divide la pantalla cuando hay dos jugadores locales conectados.",
+  "menu.java_reforged.split.loading_world": "Cargando mundo...",
+  "menu.java_reforged.split.loading_player": "Preparando jugador %s"
 }

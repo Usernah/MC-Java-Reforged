@@ -9,12 +9,23 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GuiGraphicsExtractor.class)
 public abstract class GuiGraphicsExtractorSSMixin {
+    @ModifyVariable(method = "containsPointInScissor", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private int splitTest$mapScissorTestXToSharedGui(int x) {
+        return GuiViewportScope.mapScissorTestX(x);
+    }
+
+    @ModifyVariable(method = "containsPointInScissor", at = @At("HEAD"), argsOnly = true, ordinal = 1)
+    private int splitTest$mapScissorTestYToSharedGui(int y) {
+        return GuiViewportScope.mapScissorTestY(y);
+    }
+
     @Inject(method = "blurBeforeThisStratum", at = @At("HEAD"), cancellable = true)
     private void splitTest$keepFrameGlobalBlurOutOfLocalViewports(CallbackInfo callback) {
         if (Screens.hasMultipleLocalViewports()) {

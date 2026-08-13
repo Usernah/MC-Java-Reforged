@@ -19,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 public final class SlotRenderTargets {
     private static final Map<Integer, Targets> TARGETS = new HashMap<>();
     private static final ThreadLocal<Targets> ACTIVE = new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> PRESENTING = ThreadLocal.withInitial(() -> false);
 
     private SlotRenderTargets() {
     }
@@ -48,6 +49,10 @@ public final class SlotRenderTargets {
     public static @Nullable RenderTarget activeMainOrNull() {
         Targets targets = ACTIVE.get();
         return targets == null ? null : targets.main;
+    }
+
+    public static boolean isPresenting() {
+        return PRESENTING.get();
     }
 
     public static void closeAll() {
@@ -120,21 +125,26 @@ public final class SlotRenderTargets {
         /** Copies the completed slot frame once, after every vanilla pass has finished. */
         public void present() {
             RenderPass.RenderArea area = ViewportPass.areaFor(this.viewport, this.globalTarget.width, this.globalTarget.height);
-            int width = Math.min(this.targets.main.width, area.width());
+            int width = Math.min(Objects.requireNonNull(this.targets.main).width, area.width());
             int height = Math.min(this.targets.main.height, area.height());
-            RenderSystem.getDevice()
-                .createCommandEncoder()
-                .copyTextureToTexture(
-                    Objects.requireNonNull(this.targets.main.getColorTexture()),
-                    Objects.requireNonNull(this.globalTarget.getColorTexture()),
-                    0,
-                    area.x(),
-                    area.y(),
-                    0,
-                    0,
-                    width,
-                    height
-                );
+            PRESENTING.set(true);
+            try {
+                RenderSystem.getDevice()
+                    .createCommandEncoder()
+                    .copyTextureToTexture(
+                        Objects.requireNonNull(this.targets.main.getColorTexture()),
+                        Objects.requireNonNull(this.globalTarget.getColorTexture()),
+                        0,
+                        area.x(),
+                        area.y(),
+                        0,
+                        0,
+                        width,
+                        height
+                    );
+            } finally {
+                PRESENTING.set(false);
+            }
         }
 
         @Override
@@ -150,4 +160,5 @@ public final class SlotRenderTargets {
             }
         }
     }
+
 }

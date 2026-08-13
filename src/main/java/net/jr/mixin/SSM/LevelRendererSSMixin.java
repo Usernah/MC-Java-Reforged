@@ -4,6 +4,8 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.util.function.Consumer;
+import net.minecraft.TracingExecutor;
 import javax.annotation.Nullable;
 import net.jr.ClientRuntime.bridge.LevelRendererSSAccessor;
 import net.jr.ClientRuntime.runtime.ActiveSlot;
@@ -14,8 +16,10 @@ import net.jr.ClientRuntime.runtime.SlotRenderTargets;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.SectionOcclusionGraph;
 import net.minecraft.client.renderer.ViewArea;
+import net.minecraft.client.renderer.chunk.SectionCompiler;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
@@ -114,6 +118,23 @@ public abstract class LevelRendererSSMixin implements LevelRendererSSAccessor {
 
     @WrapOperation(
         method = "invalidateCompiledGeometry",
+        at = @At(
+            value = "NEW",
+            target = "(Lnet/minecraft/TracingExecutor;Lnet/minecraft/client/renderer/RenderBuffers;Lnet/minecraft/client/renderer/chunk/SectionCompiler;Ljava/util/function/Consumer;)Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher;"
+        )
+    )
+    private SectionRenderDispatcher splitTest$createSharedSectionDispatcher(
+        TracingExecutor executor,
+        RenderBuffers renderBuffers,
+        SectionCompiler compiler,
+        Consumer<SectionRenderDispatcher.RenderSection> originalMeshUpdate,
+        Operation<SectionRenderDispatcher> original
+    ) {
+        return original.call(executor, renderBuffers, compiler, (Consumer<SectionRenderDispatcher.RenderSection>)TerrainCoordinator::onSectionCompiled);
+    }
+
+    @WrapOperation(
+        method = "invalidateCompiledGeometry",
         at = @At(value = "NEW", target = "(Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher;IIIIILnet/minecraft/client/renderer/SectionOcclusionGraph;)Lnet/minecraft/client/renderer/ViewArea;")
     )
     private ViewArea splitTest$createLogicalSharedViewArea(
@@ -138,14 +159,24 @@ public abstract class LevelRendererSSMixin implements LevelRendererSSAccessor {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher;clearCompileQueue()V")
     )
     private void splitTest$clearSharedCompileQueueOnce(SectionRenderDispatcher dispatcher) {
-        if (TerrainCoordinator.isPrimaryTerrainPass()) {
-            dispatcher.clearCompileQueue();
-        }
+        TerrainCoordinator.clearSharedCompileQueueOnce(dispatcher);
     }
 
     @Inject(method = "invalidateCompiledGeometry", at = @At("RETURN"))
     private void splitTest$captureLogicalViewArea(CallbackInfo ci) {
         TerrainCoordinator.captureViewArea(this.viewArea);
+    }
+
+    @Inject(
+        method = "invalidateCompiledGeometry",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher;clearCompileQueue()V",
+            shift = At.Shift.BEFORE
+        )
+    )
+    private void splitTest$invalidateSharedCompiledGeometry(CallbackInfo ci) {
+        TerrainCoordinator.invalidateSharedCompiledGeometry();
     }
 
     @Inject(method = "resetLevelRenderData", at = @At("HEAD"), cancellable = true)
