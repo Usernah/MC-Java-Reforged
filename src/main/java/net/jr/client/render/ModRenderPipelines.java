@@ -19,6 +19,13 @@ public final class ModRenderPipelines {
         .addAttribute("LineWidth", GpuFormat.R32_FLOAT)
         .build();
 
+    public static final VertexFormat PIXEL_ART_COMPOSITE_FORMAT = VertexFormat.builder(0)
+        .addAttribute("Position", GpuFormat.RGB32_FLOAT)
+        .addAttribute("UV0", GpuFormat.RG32_FLOAT)
+        .addAttribute("Color", GpuFormat.RGBA8_UNORM)
+        .addAttribute("LineWidth", GpuFormat.R32_FLOAT)
+        .build();
+
     public static final RenderPipeline ANIMATED_TEXTURE = RenderPipeline.builder()
         .withBindGroupLayout(BindGroupLayouts.GLOBALS)
         .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
@@ -31,10 +38,23 @@ public final class ModRenderPipelines {
         .withPrimitiveTopology(PrimitiveTopology.QUADS)
         .build();
 
+    public static final RenderPipeline PIXEL_ART_COMPOSITE = RenderPipeline.builder()
+        .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+        .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+        .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+        .withLocation(Asset.MOD("pipeline/pixel_art_composite").res())
+        .withVertexShader(Asset.MOD("core/pixel_art_composite").res())
+        .withFragmentShader(Asset.MOD("core/pixel_art_composite").res())
+        .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
+        .withVertexBinding(0, PIXEL_ART_COMPOSITE_FORMAT)
+        .withPrimitiveTopology(PrimitiveTopology.QUADS)
+        .build();
+
     private ModRenderPipelines() {
     }
 
     public static void register(RegisterRenderPipelinesEvent event) {
         event.registerPipeline(ANIMATED_TEXTURE);
+        event.registerPipeline(PIXEL_ART_COMPOSITE);
     }
 }

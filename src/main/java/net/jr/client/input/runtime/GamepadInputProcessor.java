@@ -1,10 +1,10 @@
 package net.jr.client.input.runtime;
 
 import net.jr.Java_reforged;
-import net.jr.ClientRuntime.runtime.Client;
-import net.jr.ClientRuntime.runtime.ClientBoundary;
-import net.jr.ClientRuntime.runtime.ScreenScale;
-import net.jr.ClientRuntime.viewport.ViewportArea;
+import net.jr.client.runtime.context.LocalClientAcces;
+import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.input.gamepad.GamepadAxis;
 import net.jr.client.input.InputApi;
 import net.jr.client.sound.action.InputActionSounds;
@@ -50,12 +50,12 @@ public class GamepadInputProcessor {
     private static final String FOCUS_CURSOR_ANIMATION_X = "java_reforged.focus_slot_cursor_x";
     private static final String FOCUS_CURSOR_ANIMATION_Y = "java_reforged.focus_slot_cursor_y";
 
-    private static final FrameClock[] CAMERA_CLOCKS = new FrameClock[Client.MAX_CLIENTS];
-    private static final FrameClock[] CURSOR_CLOCKS = new FrameClock[Client.MAX_CLIENTS];
-    private static final CursorState[] CURSOR_STATES = new CursorState[Client.MAX_CLIENTS];
+    private static final FrameClock[] CAMERA_CLOCKS = new FrameClock[LocalClientAcces.MAX_CLIENTS];
+    private static final FrameClock[] CURSOR_CLOCKS = new FrameClock[LocalClientAcces.MAX_CLIENTS];
+    private static final CursorState[] CURSOR_STATES = new CursorState[LocalClientAcces.MAX_CLIENTS];
 
     static {
-        for (int slotId = 0; slotId < Client.MAX_CLIENTS; slotId++) {
+        for (int slotId = 0; slotId < LocalClientAcces.MAX_CLIENTS; slotId++) {
             CAMERA_CLOCKS[slotId] = new FrameClock(CAMERA_TARGET_FPS, 0.0D, CAMERA_FRAME_SCALE_MAX, 0.0D);
             CURSOR_CLOCKS[slotId] = new FrameClock(CURSOR_TARGET_FPS, CURSOR_FRAME_SCALE_MIN, CURSOR_FRAME_SCALE_MAX, 1.0D);
             CURSOR_STATES[slotId] = new CursorState();
@@ -63,17 +63,17 @@ public class GamepadInputProcessor {
     }
     @SubscribeEvent
     public static void onMovementInput(MovementInputUpdateEvent event) {
-        for (int clientId = 0; clientId < Client.MAX_CLIENTS; clientId++) {
-            if (event.getEntity() != Client.player(clientId) || !InputApi.hasGamepadForClient(clientId)) {
+        for (int clientId = 0; clientId < LocalClientAcces.MAX_CLIENTS; clientId++) {
+            if (event.getEntity() != LocalClientAcces.player(clientId) || !InputApi.hasGamepadForClient(clientId)) {
                 continue;
             }
-            ClientBoundary.runForClient(clientId, () -> applyMovementInput(event));
+            LocalClientExecution.runForClient(clientId, () -> applyMovementInput(event));
             return;
         }
     }
 
     private static void applyMovementInput(MovementInputUpdateEvent event) {
-        if (Client.screen() != null) {
+        if (LocalClientAcces.screen() != null) {
             return;
         }
         float leftStickX = InputApi.axis(GamepadAxis.LEFT_STICK_X, DEADZONE);
@@ -98,11 +98,11 @@ public class GamepadInputProcessor {
         InputApi.updateGamepads();
         Minecraft minecraft = Minecraft.getInstance();
         if (!hasAnyGamepadConnected()) {
-            for (int slotId = 0; slotId < Client.MAX_CLIENTS; slotId++) {
+            for (int slotId = 0; slotId < LocalClientAcces.MAX_CLIENTS; slotId++) {
                 CursorHider.setHiddenForSlot(slotId, false);
                 CursorState state = cursorState(slotId);
                 state.cursorInputSource = CursorInputSource.MOUSE;
-                state.lastScreen = Client.screen(slotId);
+                state.lastScreen = LocalClientAcces.screen(slotId);
                 resetMouseSourceObservation(minecraft, state);
                 resetCameraTiming(slotId);
                 cursorClock(slotId).reset();
@@ -110,14 +110,14 @@ public class GamepadInputProcessor {
             return;
         }
 
-        for (int clientId = 0; clientId < Client.MAX_CLIENTS; clientId++) {
-            if (!Client.connected(clientId) || !InputApi.hasGamepadForClient(clientId)) {
+        for (int clientId = 0; clientId < LocalClientAcces.MAX_CLIENTS; clientId++) {
+            if (!LocalClientAcces.connected(clientId) || !InputApi.hasGamepadForClient(clientId)) {
                 CursorHider.setHiddenForSlot(clientId, false);
                 resetCameraTiming(clientId);
                 cursorClock(clientId).reset();
                 continue;
             }
-            ClientBoundary.runForClient(clientId, () -> {
+            LocalClientExecution.runForClient(clientId, () -> {
                 UiInputModeController.updateCurrentClientFrame(minecraft);
                 processCurrentClientFrame(minecraft);
             });
@@ -125,9 +125,9 @@ public class GamepadInputProcessor {
     }
 
     private static void processCurrentClientFrame(Minecraft minecraft) {
-        int clientId = Client.slotId();
+        int clientId = LocalClientAcces.slotId();
         CursorState state = cursorState(clientId);
-        Screen screen = Client.screen();
+        Screen screen = LocalClientAcces.screen();
         if (screen != null) {
             resetCameraTiming(clientId);
             CursorHider.setHiddenForSlot(clientId, true);
@@ -143,7 +143,7 @@ public class GamepadInputProcessor {
         resetFocusCursorAnimation(clientId, state.virtualCursorX, state.virtualCursorY);
         state.lastScreen = null;
         cursorClock(clientId).reset();
-        LocalPlayer player = Client.player();
+        LocalPlayer player = LocalClientAcces.player();
         if (!minecraft.isPaused() && player != null) {
             handleCameraMovement(player, clientId);
         } else {
@@ -369,7 +369,7 @@ public class GamepadInputProcessor {
         CursorState state = cursorState(slotId);
         markCursorAsMouseDriven(slotId);
         resetMouseSourceObservation(minecraft, state);
-        if (Client.screen(slotId) != null) {
+        if (LocalClientAcces.screen(slotId) != null) {
             syncVirtualCursorWithMouse(minecraft, slotId);
         }
     }
@@ -382,7 +382,7 @@ public class GamepadInputProcessor {
         }
 
         CursorState state = cursorState(slotId);
-        Screen screen = Client.screen(slotId);
+        Screen screen = LocalClientAcces.screen(slotId);
         if (screen != state.lastScreen || !state.hasObservedRawMousePosition) {
             state.lastObservedRawMouseX = rawMouseX;
             state.lastObservedRawMouseY = rawMouseY;
@@ -420,7 +420,7 @@ public class GamepadInputProcessor {
     /** Places the one physical mouse at the center of the viewport that owns it. */
     public static void centerPhysicalCursorForScreen(int slotId) {
         Minecraft minecraft = Minecraft.getInstance();
-        ViewportArea viewport = Client.viewportOrNull(slotId);
+        ViewportArea viewport = LocalClientAcces.viewportOrNull(slotId);
         if (minecraft == null || viewport == null || !InputApi.canPhysicalMouseDriveClient(slotId)) {
             return;
         }
@@ -516,12 +516,12 @@ public class GamepadInputProcessor {
         }
 
         CursorState state = cursorState(slotId);
-        if (Client.hasViewport(slotId)) {
-            ViewportArea viewport = Client.viewport(slotId);
+        if (LocalClientAcces.hasViewport(slotId)) {
+            ViewportArea viewport = LocalClientAcces.viewport(slotId);
             state.virtualCursorX = (mc.mouseHandler.xpos() - viewport.windowX())
-                * ScreenScale.logicalWidth(viewport) / viewport.windowWidth();
+                * ViewportGuiScale.logicalWidth(viewport) / viewport.windowWidth();
             state.virtualCursorY = (mc.mouseHandler.ypos() - viewport.windowY())
-                * ScreenScale.logicalHeight(viewport) / viewport.windowHeight();
+                * ViewportGuiScale.logicalHeight(viewport) / viewport.windowHeight();
         } else {
             state.virtualCursorX = MouseCoordinates.rawMouseToGlobalGuiX(mc, mc.mouseHandler.xpos());
             state.virtualCursorY = MouseCoordinates.rawMouseToGlobalGuiY(mc, mc.mouseHandler.ypos());
@@ -530,7 +530,7 @@ public class GamepadInputProcessor {
     }
 
     private static void centerVirtualCursor(Minecraft mc, int slotId) {
-        Screen screen = Client.screen(slotId);
+        Screen screen = LocalClientAcces.screen(slotId);
         int width = cursorSpaceWidth(mc, slotId, screen);
         int height = cursorSpaceHeight(mc, slotId, screen);
         CursorState state = cursorState(slotId);
@@ -540,17 +540,17 @@ public class GamepadInputProcessor {
     }
 
     private static int cursorSpaceWidth(Minecraft mc, int slotId, Screen screen) {
-        ViewportArea viewport = Client.viewportOrNull(slotId);
+        ViewportArea viewport = LocalClientAcces.viewportOrNull(slotId);
         if (viewport != null) {
-            return ScreenScale.logicalWidth(viewport);
+            return ViewportGuiScale.logicalWidth(viewport);
         }
         return screen != null && screen.width > 1 ? screen.width : Math.max(1, mc.getWindow().getGuiScaledWidth());
     }
 
     private static int cursorSpaceHeight(Minecraft mc, int slotId, Screen screen) {
-        ViewportArea viewport = Client.viewportOrNull(slotId);
+        ViewportArea viewport = LocalClientAcces.viewportOrNull(slotId);
         if (viewport != null) {
-            return ScreenScale.logicalHeight(viewport);
+            return ViewportGuiScale.logicalHeight(viewport);
         }
         return screen != null && screen.height > 1 ? screen.height : Math.max(1, mc.getWindow().getGuiScaledHeight());
     }
@@ -562,7 +562,7 @@ public class GamepadInputProcessor {
     }
 
     private static void markCursorAsJoystickDriven(int slotId) {
-        Client.input(slotId).markGamepadInput();
+        LocalClientAcces.input(slotId).markGamepadInput();
         CursorState state = cursorState(slotId);
         state.cursorInputSource = CursorInputSource.JOYSTICK;
         resetFocusCursorAnimation(slotId, state.virtualCursorX, state.virtualCursorY);
@@ -614,7 +614,7 @@ public class GamepadInputProcessor {
     }
 
     private static int currentCursorSlotId() {
-        return Client.currentOrNull() == null ? 0 : Client.slotId();
+        return LocalClientAcces.currentOrNull() == null ? 0 : LocalClientAcces.slotId();
     }
 
     private static CursorState cursorState(int slotId) {
@@ -634,11 +634,11 @@ public class GamepadInputProcessor {
     }
 
     private static int normalizedSlotId(int slotId) {
-        return Math.max(0, Math.min(Client.MAX_CLIENTS - 1, slotId));
+        return Math.max(0, Math.min(LocalClientAcces.MAX_CLIENTS - 1, slotId));
     }
 
     private static boolean hasAnyGamepadConnected() {
-        for (int slotId = 0; slotId < Client.MAX_CLIENTS; slotId++) {
+        for (int slotId = 0; slotId < LocalClientAcces.MAX_CLIENTS; slotId++) {
             if (InputApi.hasGamepadForClient(slotId)) {
                 return true;
             }

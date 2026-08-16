@@ -2,8 +2,8 @@ package net.jr.client.input.cursor;
 
 import net.jr.Java_reforged;
 import net.jr.client.input.InputApi;
-import net.jr.ClientRuntime.input.ScreenInput;
-import net.jr.ClientRuntime.runtime.Screens;
+import net.jr.client.runtime.input.LocalScreenInput;
+import net.jr.client.runtime.ui.LocalScreenManager;
 import net.jr.client.input.runtime.GamepadInputProcessor;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.api.client.render.Draw;
@@ -56,7 +56,7 @@ public final class CursorRenderer {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onScreenRender(ScreenEvent.Render.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (Screens.slotUiPassOwnsScreens()) {
+        if (LocalScreenManager.slotUiPassOwnsScreens()) {
             return;
         }
         if (!shouldDrawReplacementCursor(minecraft)) {
@@ -134,8 +134,8 @@ public final class CursorRenderer {
         }
 
         return new CursorPosition(
-            ScreenInput.localGuiX(minecraft.mouseHandler),
-            ScreenInput.localGuiY(minecraft.mouseHandler)
+            LocalScreenInput.localGuiX(minecraft.mouseHandler),
+            LocalScreenInput.localGuiY(minecraft.mouseHandler)
         );
     }
 

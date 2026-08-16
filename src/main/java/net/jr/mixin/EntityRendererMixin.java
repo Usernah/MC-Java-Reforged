@@ -1,7 +1,11 @@
 package net.jr.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.jr.client.runtime.context.LocalClientAcces;
+import net.jr.client.runtime.context.LocalClient;
+import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.render.LegacyNameTagRenderState;
+import net.jr.client.ui.presentation.UiPresentation;
 import net.jr.mixin.accessors.FontProviderAccessor;
 import net.jr.playerdata.PlayerProfileDataManager;
 import net.minecraft.client.Minecraft;
@@ -32,11 +36,11 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
     @Unique
     private static final float JAVA_REFORGED$PADDING = 1.5F;
     @Unique
-    private static final float JAVA_REFORGED$MIN_BORDER = 0.03F;
+    private static final float JAVA_REFORGED$LEGACY_BORDER_PIXELS = 1.0F;
     @Unique
-    private static final float JAVA_REFORGED$MAX_BORDER = 6.0F;
+    private static final int JAVA_REFORGED$READABLE_FULLSCREEN = 16;
     @Unique
-    private static final float JAVA_REFORGED$BORDER_PER_BLOCK = 0.1F;
+    private static final int JAVA_REFORGED$READABLE_SPLIT_OR_PORTABLE = 8;
 
     @Shadow
     @Final
@@ -87,27 +91,40 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
 
         Font font = this.getFont();
         float textX = -font.width(state.nameTag) / 2.0F;
-        float border = javaReforged$resolveBorderThickness(state.distanceToCameraSq);
+        float distance = (float)Math.sqrt(state.distanceToCameraSq);
+        int readableDistance = javaReforged$readableDistance();
+        float textOpacity = javaReforged$legacyTextOpacity(distance, readableDistance);
+        float border = javaReforged$legacyBorderThickness(distance, camera);
         int backgroundAlpha = Mth.clamp(
                 (int) (Minecraft.getInstance().gameRenderer.gameRenderState().optionsRenderState.getBackgroundOpacity(0.25F) * 255.0F),
                 0,
                 255
         );
 
-        if (!state.isDiscrete) {
+        if (textOpacity < 1.0F) {
+            javaReforged$submitSolidTag(collector, poseStack, font, textX, offset, state.nameTag, playerColor,
+                    state.isDiscrete ? Font.DisplayMode.NORMAL : Font.DisplayMode.SEE_THROUGH, state.lightCoords);
+        }
+
+        if (textOpacity > 0.0F && !state.isDiscrete && textOpacity >= 1.0F) {
             javaReforged$submitFrame(collector, poseStack, font, textX, offset, state.nameTag, border, playerColor, backgroundAlpha,
                     Font.DisplayMode.SEE_THROUGH, state.lightCoords, 0x70);
             javaReforged$submitBorder(collector, poseStack, font, textX, offset, state.nameTag, border, playerColor,
                     Font.DisplayMode.NORMAL, LightCoordsUtil.lightCoordsWithEmission(state.lightCoords, 2), 0xD0);
-            collector.submitText(poseStack, textX, offset, state.nameTag.getVisualOrderText(), false, Font.DisplayMode.NORMAL,
-                    LightCoordsUtil.lightCoordsWithEmission(state.lightCoords, 2), -1, 0, 0);
-            collector.submitText(poseStack, textX, offset, state.nameTag.getVisualOrderText(), false, Font.DisplayMode.SEE_THROUGH,
-                    state.lightCoords, 0x7FFFFFFF, 0, 0);
-        } else {
+        } else if (textOpacity > 0.0F && state.isDiscrete && textOpacity >= 1.0F) {
             javaReforged$submitFrame(collector, poseStack, font, textX, offset, state.nameTag, border, playerColor, backgroundAlpha,
                     Font.DisplayMode.NORMAL, state.lightCoords, 0x58);
+        }
+
+        if (textOpacity > 0.0F) {
+            int normalTextColor = ARGB.color(Mth.clamp((int)(255.0F * textOpacity), 0, 255), 0xFFFFFF);
+            int seeThroughTextColor = ARGB.color(Mth.clamp((int)(127.0F * textOpacity), 0, 127), 0xFFFFFF);
             collector.submitText(poseStack, textX, offset, state.nameTag.getVisualOrderText(), false, Font.DisplayMode.NORMAL,
-                    state.lightCoords, 0x7FFFFFFF, 0, 0);
+                    LightCoordsUtil.lightCoordsWithEmission(state.lightCoords, 2), normalTextColor, 0, 0);
+            if (!state.isDiscrete) {
+                collector.submitText(poseStack, textX, offset, state.nameTag.getVisualOrderText(), false, Font.DisplayMode.SEE_THROUGH,
+                        state.lightCoords, seeThroughTextColor, 0, 0);
+            }
         }
 
         poseStack.popPose();
@@ -116,9 +133,55 @@ public abstract class EntityRendererMixin<T extends Entity, S extends EntityRend
     }
 
     @Unique
-    private static float javaReforged$resolveBorderThickness(double distanceSq) {
-        float distance = (float) Math.sqrt(distanceSq);
-        return Mth.clamp(distance * JAVA_REFORGED$BORDER_PER_BLOCK, JAVA_REFORGED$MIN_BORDER, JAVA_REFORGED$MAX_BORDER);
+    private static int javaReforged$readableDistance() {
+        if (UiPresentation.isPortable() || LocalClientAcces.connectedCount() > 2) {
+            return JAVA_REFORGED$READABLE_SPLIT_OR_PORTABLE;
+        }
+        return JAVA_REFORGED$READABLE_FULLSCREEN;
+    }
+
+    @Unique
+    private static float javaReforged$legacyTextOpacity(float distance, int readableDistance) {
+        if (distance < readableDistance) {
+            return 1.0F;
+        }
+
+        int difference = (int)(distance - readableDistance);
+        if (difference > readableDistance) {
+            return 0.0F;
+        }
+
+        int divisor = difference / 2;
+        return divisor <= 1 ? 1.0F : 1.0F / divisor;
+    }
+
+    @Unique
+    private static float javaReforged$legacyBorderThickness(float distance, CameraRenderState camera) {
+        LocalClient client = LocalClientAcces.currentOrNull();
+        ViewportArea viewport = client != null ? client.viewportOrNull() : null;
+        int viewportHeight = viewport != null
+                ? viewport.glHeight()
+                : Minecraft.getInstance().getWindow().getHeight();
+        float projectionScaleY = camera.projectionMatrix != null ? Math.abs(camera.projectionMatrix.m11()) : 0.0F;
+
+        if (distance <= 0.0F || viewportHeight <= 0 || projectionScaleY <= 0.0F || !Float.isFinite(projectionScaleY)) {
+            return 1.0F;
+        }
+
+        return JAVA_REFORGED$LEGACY_BORDER_PIXELS * 2.0F * distance
+                / (projectionScaleY * viewportHeight * JAVA_REFORGED$TAG_SCALE);
+    }
+
+    @Unique
+    private static void javaReforged$submitSolidTag(
+            SubmitNodeCollector collector, PoseStack poseStack, Font font, float textX, float lineY,
+            net.minecraft.network.chat.Component text, int rgb, Font.DisplayMode mode, int light
+    ) {
+        float left = textX - JAVA_REFORGED$PADDING;
+        float right = textX + font.width(text) + JAVA_REFORGED$PADDING;
+        float top = lineY - 2.0F;
+        float bottom = lineY + 10.0F;
+        javaReforged$submitRect(collector, poseStack, font, left, top, right, bottom, ARGB.color(255, rgb), mode, light);
     }
 
     @Unique

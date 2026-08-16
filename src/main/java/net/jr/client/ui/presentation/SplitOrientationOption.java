@@ -3,7 +3,7 @@ package net.jr.client.ui.presentation;
 import com.mojang.serialization.Codec;
 import java.util.List;
 import net.jr.ClientConfig;
-import net.jr.ClientRuntime.runtime.LocalPlayers;
+import net.jr.client.runtime.ClientRuntime;
 import net.jr.api.client.split.SplitOrientation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
@@ -25,7 +25,7 @@ public final class SplitOrientationOption {
             ClientConfig.setSplitOrientation(orientation);
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.isRunning()) {
-                LocalPlayers.INSTANCE.setTwoPlayerOrientation(minecraft, orientation);
+                ClientRuntime.INSTANCE.setTwoPlayerOrientation(minecraft, orientation);
             }
         }
     );

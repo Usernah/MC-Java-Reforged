@@ -6,7 +6,7 @@ import net.jr.client.ui.container.slots.SlotPos;
 import net.jr.client.ui.container.slots.VanillaSlotLayer;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.navigation.UiNavigationState;
-import net.jr.ClientRuntime.runtime.Client;
+import net.jr.client.runtime.context.LocalClientAcces;
 import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -278,9 +278,9 @@ public final class ContainerSlotFocusController {
     }
 
     private static UiNavigationState state() {
-        return Client.currentOrNull() == null
-            ? Client.input(0).uiNavigation()
-            : Client.input().uiNavigation();
+        return LocalClientAcces.currentOrNull() == null
+            ? LocalClientAcces.input(0).uiNavigation()
+            : LocalClientAcces.input().uiNavigation();
     }
 
     private static boolean moveSlotToPlayerInOrder(

@@ -10,7 +10,8 @@ import net.jr.api.client.video.VideoHolder;
 import net.jr.client.meta.MetaManager;
 import net.jr.client.render.AnimatedTextureRenderState;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
-import net.jr.mixin.accesors.GuiGraphicsExtractorAccessor;
+import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.mixin.accessors.GuiGraphicsExtractorAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -109,6 +110,8 @@ public final class Draw {
         private boolean blur;
         private boolean antialiasing;
         private boolean activeLinearFiltering;
+        private boolean pixelSnap;
+        private boolean pixelCenterCorrection;
 
         public ImageBuilder(Asset texture, float x, float y, float width, float height) {
             this.texture = Objects.requireNonNull(texture, "texture");
@@ -229,6 +232,24 @@ public final class Draw {
             return this;
         }
 
+        public ImageBuilder pixelSnap() {
+            return this.pixelSnap(true);
+        }
+
+        public ImageBuilder pixelSnap(boolean enabled) {
+            this.pixelSnap = enabled;
+            return this;
+        }
+
+        public ImageBuilder pixelCenterCorrection() {
+            return this.pixelCenterCorrection(true);
+        }
+
+        public ImageBuilder pixelCenterCorrection(boolean enabled) {
+            this.pixelCenterCorrection = enabled;
+            return this;
+        }
+
         public void draw(GuiGraphicsExtractor graphics) {
             ResolvedImageState state = this.resolveState();
 
@@ -269,6 +290,8 @@ public final class Draw {
                 : finalVHeight;
             this.activeLinearFiltering = state.blur
                 || state.antialiasing && this.needsAdaptiveFiltering(state, sourceWidth, sourceHeight, textureSize);
+
+            boolean pixelSnapApplied = this.applyPixelGeometry(graphics);
 
             if (this.rotation != 0.0F) {
                 graphics.pose().pushMatrix();
@@ -315,8 +338,68 @@ public final class Draw {
                 if (this.rotation != 0.0F) {
                     graphics.pose().popMatrix();
                 }
+                if (pixelSnapApplied) {
+                    graphics.pose().popMatrix();
+                }
                 this.activeLinearFiltering = false;
             }
+        }
+
+        private boolean applyPixelGeometry(GuiGraphicsExtractor graphics) {
+            if ((!this.pixelSnap && !this.pixelCenterCorrection)
+                || this.width == 0.0F || this.height == 0.0F) {
+                return false;
+            }
+
+            double scaleX;
+            double scaleY;
+            ViewportGuiScale.Context viewportContext = ViewportGuiScale.activeOrNull();
+            if (viewportContext != null) {
+                scaleX = viewportContext.viewport().glWidth() / (double)viewportContext.logicalWidth();
+                scaleY = viewportContext.viewport().glHeight() / (double)viewportContext.logicalHeight();
+            } else {
+                scaleX = Minecraft.getInstance().getWindow().getGuiScale();
+                scaleY = scaleX;
+            }
+            if (!(scaleX > 0.0) || !(scaleY > 0.0)) {
+                return false;
+            }
+
+            float sourceX = Math.round(this.x);
+            float sourceY = Math.round(this.y);
+            float sourceWidth = Math.round(this.width);
+            float sourceHeight = Math.round(this.height);
+            if (sourceWidth == 0.0F || sourceHeight == 0.0F) {
+                return false;
+            }
+
+            float snappedX = this.pixelSnap ? snapToPhysicalPixel(this.x, scaleX) : sourceX;
+            float snappedY = this.pixelSnap ? snapToPhysicalPixel(this.y, scaleY) : sourceY;
+            float snappedWidth = this.pixelSnap ? snapToPhysicalPixel(this.width, scaleX) : sourceWidth;
+            float snappedHeight = this.pixelSnap ? snapToPhysicalPixel(this.height, scaleY) : sourceHeight;
+            if (this.pixelCenterCorrection) {
+                snappedWidth -= 0.75F / (float)scaleX;
+                snappedHeight -= 0.75F / (float)scaleY;
+            }
+            if (snappedWidth <= 0.0F || snappedHeight <= 0.0F) {
+                return false;
+            }
+            if (nearlyEqual(sourceX, snappedX)
+                && nearlyEqual(sourceY, snappedY)
+                && nearlyEqual(sourceWidth, snappedWidth)
+                && nearlyEqual(sourceHeight, snappedHeight)) {
+                return false;
+            }
+
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(snappedX, snappedY);
+            graphics.pose().scale(snappedWidth / sourceWidth, snappedHeight / sourceHeight);
+            graphics.pose().translate(-sourceX, -sourceY);
+            return true;
+        }
+
+        private static float snapToPhysicalPixel(float value, double physicalScale) {
+            return (float)(Math.floor(value * physicalScale) / physicalScale);
         }
 
         private boolean needsAdaptiveFiltering(

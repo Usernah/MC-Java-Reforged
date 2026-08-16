@@ -1,9 +1,9 @@
 package net.jr.client.input;
 
 import javax.annotation.Nullable;
-import net.jr.ClientRuntime.input.InputDeviceRouter;
-import net.jr.ClientRuntime.input.binding.KeyMappingState;
-import net.jr.ClientRuntime.runtime.Client;
+import net.jr.client.runtime.input.InputDeviceRouter;
+import net.jr.client.runtime.input.binding.KeyMappingState;
+import net.jr.client.runtime.context.LocalClientAcces;
 import net.jr.client.input.binding.BindingContext;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
@@ -33,7 +33,7 @@ public final class InputApi {
     }
 
     public static InputMode mode() {
-        return Client.input(currentClientId()).mode();
+        return LocalClientAcces.input(currentClientId()).mode();
     }
 
     public static boolean isGamepadMode() {
@@ -44,11 +44,11 @@ public final class InputApi {
         if (InputSimulation.isActive()) {
             return;
         }
-        Client.input(InputDeviceRouter.KEYBOARD_MOUSE_CLIENT).markKeyboardMouseInput();
+        LocalClientAcces.input(InputDeviceRouter.KEYBOARD_MOUSE_CLIENT).markKeyboardMouseInput();
     }
 
     public static void markGamepadInput() {
-        Client.input(currentClientId()).markGamepadInput();
+        LocalClientAcces.input(currentClientId()).markGamepadInput();
     }
 
     public static void markMouseMove(double rawX, double rawY) {
@@ -56,11 +56,11 @@ public final class InputApi {
     }
 
     public static long lastKeyboardMouseInputNanos() {
-        return Client.input(currentClientId()).lastKeyboardMouseInputNanos();
+        return LocalClientAcces.input(currentClientId()).lastKeyboardMouseInputNanos();
     }
 
     public static long lastGamepadInputNanos() {
-        return Client.input(currentClientId()).lastGamepadInputNanos();
+        return LocalClientAcces.input(currentClientId()).lastGamepadInputNanos();
     }
 
     public static boolean isGamepadConnected() {
@@ -287,31 +287,31 @@ public final class InputApi {
     }
 
     public static int missTime() {
-        return Client.input(currentClientId()).missTime();
+        return LocalClientAcces.input(currentClientId()).missTime();
     }
 
     public static void setMissTime(int value) {
-        Client.input(currentClientId()).setMissTime(value);
+        LocalClientAcces.input(currentClientId()).setMissTime(value);
     }
 
     public static int rightClickDelay() {
-        return Client.input(currentClientId()).rightClickDelay();
+        return LocalClientAcces.input(currentClientId()).rightClickDelay();
     }
 
     public static void setRightClickDelay(int value) {
-        Client.input(currentClientId()).setRightClickDelay(value);
+        LocalClientAcces.input(currentClientId()).setRightClickDelay(value);
     }
 
     public static void tickRightClickDelay() {
-        Client.input(currentClientId()).tickRightClickDelay();
+        LocalClientAcces.input(currentClientId()).tickRightClickDelay();
     }
 
     public static void tickMissTime() {
-        Client.input(currentClientId()).tickMissTime();
+        LocalClientAcces.input(currentClientId()).tickMissTime();
     }
 
     private static KeyMappingState state(KeyMapping keyMapping) {
-        return Client.input(currentClientId()).state(keyMapping);
+        return LocalClientAcces.input(currentClientId()).state(keyMapping);
     }
 
     private static List<Long> selectedGamepadIds() {
@@ -323,9 +323,9 @@ public final class InputApi {
     }
 
     private static int currentClientId() {
-        return Client.currentOrNull() == null
+        return LocalClientAcces.currentOrNull() == null
             ? InputDeviceRouter.KEYBOARD_MOUSE_CLIENT
-            : Client.slotId();
+            : LocalClientAcces.slotId();
     }
 }
 

@@ -7,8 +7,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
-import net.jr.ClientRuntime.runtime.Client;
-import net.jr.ClientRuntime.runtime.ClientBoundary;
+import net.jr.client.runtime.context.LocalClientAcces;
+import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.BindingContext;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
@@ -53,12 +53,12 @@ public final class MappedActionProcessor {
         Minecraft minecraft = Minecraft.getInstance();
 
         InputApi.tickGamepadJoin(minecraft);
-        for (int clientId = 0; clientId < Client.MAX_CLIENTS; clientId++) {
-            if (!Client.connected(clientId)) {
+        for (int clientId = 0; clientId < LocalClientAcces.MAX_CLIENTS; clientId++) {
+            if (!LocalClientAcces.connected(clientId)) {
                 continue;
             }
             int currentClientId = clientId;
-            ClientBoundary.runForClient(currentClientId, () ->
+            LocalClientExecution.runForClient(currentClientId, () ->
                 processCurrentClient(minecraft, InputApi.isGamepadConnected())
             );
         }
@@ -759,12 +759,12 @@ public final class MappedActionProcessor {
     }
 
     private static ActionState state() {
-        int clientId = Client.currentOrNull() == null ? 0 : Client.slotId();
+        int clientId = LocalClientAcces.currentOrNull() == null ? 0 : LocalClientAcces.slotId();
         return STATES[clientId];
     }
 
     private static ActionState[] createStates() {
-        ActionState[] states = new ActionState[Client.MAX_CLIENTS];
+        ActionState[] states = new ActionState[LocalClientAcces.MAX_CLIENTS];
         for (int clientId = 0; clientId < states.length; clientId++) {
             states[clientId] = new ActionState();
         }

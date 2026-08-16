@@ -24,14 +24,14 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeFieldRedirectLaunchPlugin.class);
     private static final boolean LOG_REWRITES = Boolean.getBoolean("split.runtimeRedirectLog");
     private static final boolean BROAD_COMPATIBILITY_SCAN = Boolean.getBoolean("split.runtimeRedirectBroad");
-    private static final String CLIENT_ACCESS_OWNER = "net/jr/ClientRuntime/runtime/Client";
+    private static final String CLIENT_ACCESS_OWNER = "net/jr/client/runtime/context/LocalClientAcces";
     private static final String MINECRAFT_OWNER = "net/minecraft/client/Minecraft";
     private static final String GUI_OWNER = "net/minecraft/client/gui/Gui";
     private static final String GAME_RENDERER_OWNER = "net/minecraft/client/renderer/GameRenderer";
     private static final String LEVEL_RENDERER_OWNER = "net/minecraft/client/renderer/LevelRenderer";
     private static final String PARTICLE_ENGINE_OWNER = "net/minecraft/client/particle/ParticleEngine";
     private static final String PARTICLE_ENGINE_FIELDS_OWNER =
-        "net/jr/ClientRuntime/runtime/ParticleEngineFields";
+        "net/jr/client/runtime/bridge/ParticleEngineStateAccess";
     private static final String RENDER_SECTION_OWNER =
         "net/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection";
     private static final String COMPILE_TASK_OWNER = RENDER_SECTION_OWNER + "$CompileTask";
@@ -39,9 +39,9 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
     private static final String SECTION_DISPATCHER_OWNER =
         "net/minecraft/client/renderer/chunk/SectionRenderDispatcher";
     private static final String TERRAIN_SECTION_OWNERS_OWNER =
-        "net/jr/ClientRuntime/runtime/TerrainSectionOwners";
+        "net/jr/client/runtime/terrain/TerrainTaskOwnership";
     private static final String TERRAIN_COORDINATOR_OWNER =
-        "net/jr/ClientRuntime/runtime/TerrainCoordinator";
+        "net/jr/client/runtime/terrain/TerrainCoordinator";
     private static final String[] EXCLUDED_CLASS_PREFIXES = {
         "java.",
         "javax.",
@@ -51,7 +51,7 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
         "cpw.mods.modlauncher.",
         "org.objectweb.asm.",
         "org.spongepowered.asm.",
-        "net.jr.ClientRuntime.",
+        "net.jr.client.runtime.",
         "net.jr.mixin.",
         "net.alnv.javareforged.",
         "net.alnv.mixin."

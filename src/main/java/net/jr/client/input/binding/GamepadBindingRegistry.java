@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import net.jr.ClientRuntime.runtime.Client;
+import net.jr.client.runtime.context.LocalClientAcces;
 import net.jr.client.input.InputJsonFiles;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
@@ -316,12 +316,12 @@ public final class GamepadBindingRegistry {
     }
 
     private GamepadBindingEvaluator evaluator() {
-        int clientId = Client.currentOrNull() == null ? 0 : Client.slotId();
+        int clientId = LocalClientAcces.currentOrNull() == null ? 0 : LocalClientAcces.slotId();
         return this.evaluators[clientId];
     }
 
     private static GamepadBindingEvaluator[] createEvaluators() {
-        GamepadBindingEvaluator[] evaluators = new GamepadBindingEvaluator[Client.MAX_CLIENTS];
+        GamepadBindingEvaluator[] evaluators = new GamepadBindingEvaluator[LocalClientAcces.MAX_CLIENTS];
         for (int clientId = 0; clientId < evaluators.length; clientId++) {
             evaluators[clientId] = new GamepadBindingEvaluator();
         }

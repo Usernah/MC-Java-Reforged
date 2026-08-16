@@ -1,6 +1,6 @@
 package net.jr.client.ui.container.actions;
 
-import net.jr.mixin.accesors.CreativeModeInventoryScreenAccessor;
+import net.jr.mixin.accessors.CreativeModeInventoryScreenAccessor;
 import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;

@@ -1,6 +1,7 @@
 package net.jr.client.ui.navigation;
 
 import net.jr.Java_reforged;
+import net.jr.client.runtime.context.LocalClientAcces;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.cursor.CursorHider;
 import net.jr.client.input.cursor.MouseCoordinates;
@@ -11,7 +12,6 @@ import net.jr.mixin.uifocus.MouseHandlerAccessor;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
-import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -321,9 +321,9 @@ public final class UiInputModeController {
     }
 
     private static UiNavigationState state() {
-        return net.jr.ClientRuntime.runtime.Client.currentOrNull() == null
-            ? net.jr.ClientRuntime.runtime.Client.input(0).uiNavigation()
-            : net.jr.ClientRuntime.runtime.Client.input().uiNavigation();
+        return LocalClientAcces.currentOrNull() == null
+            ? LocalClientAcces.input(0).uiNavigation()
+            : LocalClientAcces.input().uiNavigation();
     }
 
     private static double getRawMouseX(Minecraft minecraft) {

@@ -5,8 +5,8 @@ import net.jr.client.ui.presentation.InterfaceProfile;
 import net.jr.client.ui.presentation.InterfaceProfileOption;
 import net.jr.client.ui.presentation.SplitOrientationOption;
 import net.jr.client.ui.presentation.UiPresentation;
-import net.jr.ClientRuntime.runtime.LocalPlayers;
-import net.jr.ClientRuntime.runtime.ActiveSlot;
+import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.context.ActiveClientSlot;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.CycleButton;
@@ -30,8 +30,8 @@ public abstract class InterfaceProfileVideoSettingsMixin extends OptionsSubScree
         CallbackInfoReturnable<OptionInstance<?>[]> cir
     ) {
         OptionInstance<?>[] original = cir.getReturnValue();
-        OptionInstance<?> playerGuiScale = LocalPlayers.INSTANCE.slots()
-            .slot(ActiveSlot.idOrNull() == null ? 0 : ActiveSlot.requireId())
+        OptionInstance<?> playerGuiScale = ClientRuntime.INSTANCE.slots()
+            .slot(ActiveClientSlot.idOrNull() == null ? 0 : ActiveClientSlot.requireId())
             .optionsState()
             .guiScale();
         OptionInstance<?>[] extended = Arrays.copyOf(original, original.length + 2);

@@ -1,8 +1,8 @@
 package net.jr.mixin;
 
 import com.mojang.blaze3d.platform.Window;
-import net.jr.ClientRuntime.runtime.LocalPlayers;
-import net.jr.ClientRuntime.viewport.ViewportLayout;
+import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.viewport.ViewportLayout;
 import net.jr.client.ui.presentation.UiPresentation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.Constant;
@@ -38,7 +38,7 @@ public class WindowMixin {
         if (!UiPresentation.isSplitScreen()) {
             return false;
         }
-        ViewportLayout layout = LocalPlayers.INSTANCE.slots().layout();
+        ViewportLayout layout = ClientRuntime.INSTANCE.slots().layout();
         return layout == ViewportLayout.TWO_HORIZONTAL || layout == ViewportLayout.FOUR_GRID;
     }
 }

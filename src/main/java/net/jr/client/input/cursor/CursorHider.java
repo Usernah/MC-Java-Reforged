@@ -1,13 +1,13 @@
 package net.jr.client.input.cursor;
 
-import net.jr.ClientRuntime.runtime.Client;
+import net.jr.client.runtime.context.LocalClientAcces;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
 public class CursorHider {
 
-    private static final boolean[] controllerHiddenBySlot = new boolean[Client.MAX_CLIENTS];
-    private static final boolean[] replacementHiddenBySlot = new boolean[Client.MAX_CLIENTS];
+    private static final boolean[] controllerHiddenBySlot = new boolean[LocalClientAcces.MAX_CLIENTS];
+    private static final boolean[] replacementHiddenBySlot = new boolean[LocalClientAcces.MAX_CLIENTS];
     private static int appliedCursorMode = -1;
 
     public static void setHidden(boolean hidden) {
@@ -45,7 +45,7 @@ public class CursorHider {
     }
 
     public static boolean isHidden() {
-        for (int slotId = 0; slotId < Client.MAX_CLIENTS; slotId++) {
+        for (int slotId = 0; slotId < LocalClientAcces.MAX_CLIENTS; slotId++) {
             if (isHiddenForSlot(slotId)) {
                 return true;
             }
@@ -99,11 +99,11 @@ public class CursorHider {
     }
 
     private static int currentSlotId() {
-        return Client.currentOrNull() == null ? 0 : Client.slotId();
+        return LocalClientAcces.currentOrNull() == null ? 0 : LocalClientAcces.slotId();
     }
 
     private static int normalizeSlotId(int slotId) {
-        return Math.max(0, Math.min(Client.MAX_CLIENTS - 1, slotId));
+        return Math.max(0, Math.min(LocalClientAcces.MAX_CLIENTS - 1, slotId));
     }
 
 }

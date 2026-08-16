@@ -1,6 +1,6 @@
 package net.jr.api.client.split;
 
-import net.jr.ClientRuntime.runtime.Client;
+import net.jr.client.runtime.context.LocalClientAcces;
 
 /** Public, world-independent view of the local split-screen runtime. */
 public final class SplitScreen {
@@ -13,7 +13,7 @@ public final class SplitScreen {
 
     public static int localPlayerCount() {
         try {
-            return Client.connectedCount();
+            return LocalClientAcces.connectedCount();
         } catch (RuntimeException ignored) {
             return 1;
         }

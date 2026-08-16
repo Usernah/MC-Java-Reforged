@@ -57,7 +57,7 @@ public final class GamepadGlyphThemeState {
         }
 
         if (vendor == 0x054c || containsAny(text, "sony", "playstation", "dualshock", "dualsense", "ps3", "ps4", "ps5", "wireless controller")) {
-            return isPlayStation5(text, product) ? ControllerGlyphTheme.PS : ControllerGlyphTheme.PS_OLD;
+            return isPlayStation5(text, product) ? ControllerGlyphTheme.PS_OLD : ControllerGlyphTheme.PS_OLD;
         }
 
         if (containsAny(text, "xbox 360", "360 controller") || (vendor == 0x045e && isXbox360(product))) {
