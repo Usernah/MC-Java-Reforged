@@ -9,14 +9,7 @@ import net.neoforged.neoforgespi.transformation.ClassProcessorIds;
 import net.neoforged.neoforgespi.transformation.ProcessorName;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +25,21 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
     private static final String PARTICLE_ENGINE_OWNER = "net/minecraft/client/particle/ParticleEngine";
     private static final String PARTICLE_ENGINE_FIELDS_OWNER =
         "net/jr/client/runtime/bridge/ParticleEngineStateAccess";
+    private static final String TOAST_MANAGER_OWNER =
+            "net/minecraft/client/gui/components/toasts/ToastManager";
+
+    private static final String TOAST_MANAGER_STATE_OWNER =
+            "net/jr/client/runtime/bridge/ToastManagerStateAccess";
+
+    private static final String TOAST_INSTANCE_OWNER =
+            TOAST_MANAGER_OWNER + "$ToastInstance";
+
+    private static final FieldKey NOW_PLAYING_TOAST_FIELD =
+            new FieldKey(
+                    TOAST_MANAGER_OWNER,
+                    "nowPlayingToast",
+                    "L" + TOAST_INSTANCE_OWNER + ";"
+            );
     private static final String RENDER_SECTION_OWNER =
         "net/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection";
     private static final String COMPILE_TASK_OWNER = RENDER_SECTION_OWNER + "$CompileTask";
@@ -85,7 +93,8 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
         "net.minecraft.client.gui.components.debug.DebugEntryLookingAtEntityTags",
         "net.minecraft.client.gui.components.debug.DebugEntryPosition",
         "net.minecraft.client.gui.components.debug.DebugEntrySoundMood",
-        "net.minecraft.client.gui.components.toasts.RecipeToast",
+            "net.minecraft.client.gui.components.toasts.RecipeToast",
+            "net.minecraft.client.gui.components.toasts.ToastManager",
         "net.minecraft.client.gui.contextualbar.ExperienceBar",
         "net.minecraft.client.gui.contextualbar.JumpableVehicleBar",
         "net.minecraft.client.gui.contextualbar.LocatorBar",
@@ -241,7 +250,51 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
                 "Lit/unimi/dsi/fastutil/objects/Object2IntOpenHashMap;"
             ),
             new FieldRedirect(PARTICLE_ENGINE_FIELDS_OWNER, "trackedParticleCounts")
-        )
+        ),
+            Map.entry(
+                    new FieldKey(
+                            TOAST_MANAGER_OWNER,
+                            "visibleToasts",
+                            "Ljava/util/List;"
+                    ),
+                    new FieldRedirect(
+                            TOAST_MANAGER_STATE_OWNER,
+                            "visibleToasts"
+                    )
+            ),
+            Map.entry(
+                    new FieldKey(
+                            TOAST_MANAGER_OWNER,
+                            "occupiedSlots",
+                            "Ljava/util/BitSet;"
+                    ),
+                    new FieldRedirect(
+                            TOAST_MANAGER_STATE_OWNER,
+                            "occupiedSlots"
+                    )
+            ),
+            Map.entry(
+                    new FieldKey(
+                            TOAST_MANAGER_OWNER,
+                            "queued",
+                            "Ljava/util/Deque;"
+                    ),
+                    new FieldRedirect(
+                            TOAST_MANAGER_STATE_OWNER,
+                            "queued"
+                    )
+            ),
+            Map.entry(
+                    new FieldKey(
+                            TOAST_MANAGER_OWNER,
+                            "playedToastSounds",
+                            "Ljava/util/Set;"
+                    ),
+                    new FieldRedirect(
+                            TOAST_MANAGER_STATE_OWNER,
+                            "playedToastSounds"
+                    )
+            )
     );
 
     private static final Map<FieldKey, FieldRedirect> PUTFIELD_REDIRECTS = Map.ofEntries(
@@ -343,34 +396,92 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
 
         int redirectedReads = 0;
         int redirectedWrites = 0;
+
         for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; ) {
             AbstractInsnNode nextInsn = insn.getNext();
+
             if (!(insn instanceof FieldInsnNode fieldInsn)) {
                 insn = nextInsn;
                 continue;
             }
-            FieldKey key = new FieldKey(fieldInsn.owner, fieldInsn.name, fieldInsn.desc);
+
+            FieldKey key = new FieldKey(
+                    fieldInsn.owner,
+                    fieldInsn.name,
+                    fieldInsn.desc
+            );
+
+            if (NOW_PLAYING_TOAST_FIELD.equals(key)) {
+                if (fieldInsn.getOpcode() == Opcodes.GETFIELD) {
+                    MethodInsnNode redirect = new MethodInsnNode(
+                            Opcodes.INVOKESTATIC,
+                            TOAST_MANAGER_STATE_OWNER,
+                            "nowPlayingToast",
+                            "(L" + TOAST_MANAGER_OWNER + ";)Ljava/lang/Object;",
+                            false
+                    );
+
+                    method.instructions.set(fieldInsn, redirect);
+
+                    method.instructions.insert(
+                            redirect,
+                            new TypeInsnNode(
+                                    Opcodes.CHECKCAST,
+                                    TOAST_INSTANCE_OWNER
+                            )
+                    );
+
+                    redirectedReads++;
+                    insn = nextInsn;
+                    continue;
+                }
+
+                if (fieldInsn.getOpcode() == Opcodes.PUTFIELD) {
+                    method.instructions.set(
+                            fieldInsn,
+                            new MethodInsnNode(
+                                    Opcodes.INVOKESTATIC,
+                                    TOAST_MANAGER_STATE_OWNER,
+                                    "setNowPlayingToast",
+                                    "(L"
+                                            + TOAST_MANAGER_OWNER
+                                            + ";Ljava/lang/Object;)V",
+                                    false
+                            )
+                    );
+
+                    redirectedWrites++;
+                    insn = nextInsn;
+                    continue;
+                }
+            }
+
             if (isRawStateBoundRenderMethod(classNode, method) && !isSlotCameraField(key)) {
                 insn = nextInsn;
                 continue;
             }
+
             FieldRedirect redirect;
+
             if (fieldInsn.getOpcode() == Opcodes.GETFIELD) {
                 redirect = GETFIELD_REDIRECTS.get(key);
+
                 if (redirect == null) {
                     insn = nextInsn;
                     continue;
                 }
+
                 method.instructions.set(
-                    fieldInsn,
-                    new MethodInsnNode(
-                        Opcodes.INVOKESTATIC,
-                        redirect.accessOwner(),
-                        redirect.accessorName(),
-                        "(L" + fieldInsn.owner + ";)" + fieldInsn.desc,
-                        false
-                    )
+                        fieldInsn,
+                        new MethodInsnNode(
+                                Opcodes.INVOKESTATIC,
+                                redirect.accessOwner(),
+                                redirect.accessorName(),
+                                "(L" + fieldInsn.owner + ";)" + fieldInsn.desc,
+                                false
+                        )
                 );
+
                 redirectedReads++;
                 insn = nextInsn;
                 continue;
@@ -380,24 +491,29 @@ public final class RuntimeFieldRedirectLaunchPlugin implements ClassProcessor {
                 insn = nextInsn;
                 continue;
             }
+
             redirect = PUTFIELD_REDIRECTS.get(key);
+
             if (redirect == null) {
                 insn = nextInsn;
                 continue;
             }
+
             method.instructions.set(
-                fieldInsn,
-                new MethodInsnNode(
-                    Opcodes.INVOKESTATIC,
-                    redirect.accessOwner(),
-                    redirect.accessorName(),
-                    "(L" + fieldInsn.owner + ";" + fieldInsn.desc + ")V",
-                    false
-                )
+                    fieldInsn,
+                    new MethodInsnNode(
+                            Opcodes.INVOKESTATIC,
+                            redirect.accessOwner(),
+                            redirect.accessorName(),
+                            "(L" + fieldInsn.owner + ";" + fieldInsn.desc + ")V",
+                            false
+                    )
             );
+
             redirectedWrites++;
             insn = nextInsn;
         }
+
         return new FieldRewriteCount(redirectedReads, redirectedWrites);
     }
 

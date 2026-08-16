@@ -2,11 +2,13 @@ package net.jr.mixin.runtime;
 
 import java.util.Stack;
 import net.jr.client.runtime.render.pass.HudRenderPass;
+import net.jr.client.runtime.render.pass.ToastRenderPass;
 import net.jr.client.runtime.ui.LocalScreenManager;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
+import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.neoforge.client.ClientHooks;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,13 +18,44 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(Gui.class)
 public abstract class GuiSSExtractionMixin {
     @Redirect(
-        method = "extractRenderState",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/Hud;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V"
-        )
+            method = "update",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/components/toasts/ToastManager;update()V"
+            )
     )
-    private void splitTest$extractSlotHudStates(Hud hud, GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+    private void splitTest$updateLocalToastStates(
+            ToastManager manager
+    ) {
+        ToastRenderPass.update(manager);
+    }
+
+    @Redirect(
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/components/toasts/ToastManager;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;)V"
+            )
+    )
+    private void splitTest$extractLocalToastStates(
+            ToastManager manager,
+            GuiGraphicsExtractor graphics
+    ) {
+        ToastRenderPass.extract(manager, graphics);
+    }
+
+    @Redirect(
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/Hud;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V"
+            )
+    )
+    private void splitTest$extractSlotHudStates(
+            Hud hud,
+            GuiGraphicsExtractor graphics,
+            DeltaTracker deltaTracker
+    ) {
         if (LocalScreenManager.slotUiPassOwnsScreens()) {
             HudRenderPass.extract(hud, graphics, deltaTracker);
         } else {
@@ -31,54 +64,71 @@ public abstract class GuiSSExtractionMixin {
     }
 
     @Redirect(
-        method = "extractRenderState",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/neoforged/neoforge/client/ClientHooks;extractScreen(Lnet/minecraft/client/gui/screens/Screen;Ljava/util/Stack;Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V"
-        )
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/neoforged/neoforge/client/ClientHooks;extractScreen(Lnet/minecraft/client/gui/screens/Screen;Ljava/util/Stack;Lnet/minecraft/client/gui/GuiGraphicsExtractor;IIF)V"
+            )
     )
     private void splitTest$skipGlobalScreenExtraction(
-        Screen screen,
-        Stack<Screen> backgroundLayers,
-        GuiGraphicsExtractor graphics,
-        int mouseX,
-        int mouseY,
-        float partialTick
+            Screen screen,
+            Stack<Screen> backgroundLayers,
+            GuiGraphicsExtractor graphics,
+            int mouseX,
+            int mouseY,
+            float partialTick
     ) {
         if (!LocalScreenManager.slotUiPassOwnsScreens()) {
-            ClientHooks.extractScreen(screen, backgroundLayers, graphics, mouseX, mouseY, partialTick);
+            ClientHooks.extractScreen(
+                    screen,
+                    backgroundLayers,
+                    graphics,
+                    mouseX,
+                    mouseY,
+                    partialTick
+            );
         }
     }
 
     @Redirect(
-        method = "extractRenderState",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/Hud;extractSavingIndicator(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V"
-        )
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/Hud;extractSavingIndicator(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V"
+            )
     )
-    private void splitTest$skipGlobalSavingIndicator(Hud hud, GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+    private void splitTest$skipGlobalSavingIndicator(
+            Hud hud,
+            GuiGraphicsExtractor graphics,
+            DeltaTracker deltaTracker
+    ) {
         if (!LocalScreenManager.slotUiPassOwnsScreens()) {
             hud.extractSavingIndicator(graphics, deltaTracker);
         }
     }
 
     @Redirect(
-        method = "extractRenderState",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/Hud;extractDebugOverlay(Lnet/minecraft/client/gui/GuiGraphicsExtractor;)V"
-        )
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/Hud;extractDebugOverlay(Lnet/minecraft/client/gui/GuiGraphicsExtractor;)V"
+            )
     )
-    private void splitTest$skipGlobalDebugOverlay(Hud hud, GuiGraphicsExtractor graphics) {
+    private void splitTest$skipGlobalDebugOverlay(
+            Hud hud,
+            GuiGraphicsExtractor graphics
+    ) {
         if (!LocalScreenManager.slotUiPassOwnsScreens()) {
             hud.extractDebugOverlay(graphics);
         }
     }
 
     @Redirect(
-        method = "extractRenderState",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Hud;extractDeferredSubtitles()V")
+            method = "extractRenderState",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/Hud;extractDeferredSubtitles()V"
+            )
     )
     private void splitTest$skipGlobalDeferredSubtitles(Hud hud) {
         if (!LocalScreenManager.slotUiPassOwnsScreens()) {

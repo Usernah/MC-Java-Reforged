@@ -1,5 +1,7 @@
 package net.jr.mixin;
 
+import net.jr.client.runtime.context.LocalClient;
+import net.jr.client.runtime.context.LocalClientAcces;
 import net.jr.client.sound.bridge.MusicManagerBridge;
 import net.jr.client.sound.bridge.SoundEngineBridge;
 import net.jr.client.sound.config.SoundTransitionConfig;
@@ -43,9 +45,14 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "setLevel", at = @At("TAIL"))
     private void javareforged$onWorldLoadFinished(ClientLevel level, CallbackInfo ci) {
+        LocalClient client = LocalClientAcces.currentOrNull();
+
+        if (client != null && client.slotId() != 0) {
+            return;
+        }
+
         this.javareforged$finishWorldLoadMusicState();
     }
-
     @Inject(
         method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;ZZ)V",
         at = @At("HEAD")
@@ -113,9 +120,15 @@ public abstract class MixinMinecraft {
         )
     )
     private void javareforged$preventForcedLevelTransitionStop(SoundManager instance) {
+        LocalClient client = LocalClientAcces.currentOrNull();
+
+        if (client != null && client.slotId() != 0) {
+            return;
+        }
+
         if (!MusicTransitionState.shouldProtectWorldLoadAudio()
-            && !MusicTransitionState.shouldProtectForcedSoundStop()
-            && !this.shouldFadeMusicOnLoad) {
+                && !MusicTransitionState.shouldProtectForcedSoundStop()
+                && !this.shouldFadeMusicOnLoad) {
             instance.stop();
         }
     }

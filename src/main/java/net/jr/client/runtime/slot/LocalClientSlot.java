@@ -1,11 +1,6 @@
 package net.jr.client.runtime.slot;
 
-import net.jr.client.runtime.state.GameplayState;
-import net.jr.client.runtime.state.ChatState;
-import net.jr.client.runtime.state.InputState;
-import net.jr.client.runtime.state.OptionsState;
-import net.jr.client.runtime.state.RenderState;
-import net.jr.client.runtime.state.ScreenState;
+import net.jr.client.runtime.state.*;
 import net.jr.client.runtime.viewport.ViewportArea;
 
 public final class LocalClientSlot {
@@ -15,6 +10,7 @@ public final class LocalClientSlot {
     private final GameplayState gameplayState = new GameplayState();
     private final ScreenState screenState = new ScreenState();
     private final InputState inputState = new InputState();
+    private final ToastState toastState = new ToastState();
     private final OptionsState optionsState;
     private boolean connected;
     private boolean visible;
@@ -60,6 +56,8 @@ public final class LocalClientSlot {
     public InputState inputState() {
         return this.inputState;
     }
+
+    public ToastState toastState() {return this.toastState;}
 
     public OptionsState optionsState() {
         return this.optionsState;
@@ -110,5 +108,6 @@ public final class LocalClientSlot {
         this.screenState.clear();
         this.inputState.clear();
         this.chatState.clear();
+        this.toastState.clear();
     }
 }

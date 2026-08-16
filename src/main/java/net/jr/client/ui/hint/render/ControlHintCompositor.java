@@ -37,6 +37,12 @@ public final class ControlHintCompositor {
         return SplitScreen.isActive() ? HD_BASE_HEIGHT : BASE_HEIGHT;
     }
 
+    private static MetricsResolver resolveMetrics(boolean hd) {
+        return hd
+                ? MetricsResolver.HD
+                : MetricsResolver.DEFAULT;
+    }
+
     static boolean render(
         ControlHintContext context,
         GuiGraphicsExtractor parentGraphics,

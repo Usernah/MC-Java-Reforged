@@ -5,12 +5,7 @@ import javax.annotation.Nullable;
 import net.jr.client.input.LocalClientCursor;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.state.GameplayState;
-import net.jr.client.runtime.state.ChatState;
-import net.jr.client.runtime.state.InputState;
-import net.jr.client.runtime.state.OptionsState;
-import net.jr.client.runtime.state.RenderState;
-import net.jr.client.runtime.state.ScreenState;
+import net.jr.client.runtime.state.*;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.minecraft.client.Camera;
 import net.minecraft.client.gui.screens.Screen;
@@ -69,6 +64,10 @@ public final class LocalClient {
 
     public ChatState chat() {
         return this.slot.chatState();
+    }
+
+    public ToastState toasts() {
+        return this.slot.toastState();
     }
 
     public GameplayState gameplay() {
