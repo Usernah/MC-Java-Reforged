@@ -1,0 +1,20 @@
+{
+  "default_height": 16,
+  "heights": {
+    "button_start": 16,
+    "button_select": 16,
+    "button_up": 23,
+    "button_down": 23,
+    "button_left": 23,
+    "button_right": 23,
+    "dpad": 22,
+    "dpad_down": 22,
+    "dpad_up": 22,
+    "dpad_left": 22,
+    "dpad_right": 22,
+    "trigger_left": 15,
+    "trigger_right": 15,
+    "bumper_left": 13,
+    "bumper_right": 13
+  }
+}

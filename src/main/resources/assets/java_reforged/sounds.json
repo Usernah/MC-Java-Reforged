@@ -1,0 +1,66 @@
+{
+  "ui.hover": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/focus_rem", "pitch": 0.95 },
+      { "name": "java_reforged:ui/focus_rem", "pitch": 1.0 },
+      { "name": "java_reforged:ui/focus_rem", "pitch": 1.05 }
+    ]
+  },
+  "ui.click": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/press_rem", "pitch": 0.95 },
+      { "name": "java_reforged:ui/press_rem", "pitch": 1.0 },
+      { "name": "java_reforged:ui/press_rem", "pitch": 1.05 }
+    ]
+  },
+  "ui.char": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/scroll_rem", "pitch": 0.95 },
+      { "name": "java_reforged:ui/scroll_rem", "pitch": 1.0 },
+      { "name": "java_reforged:ui/scroll_rem", "pitch": 1.05 }
+    ]
+  },
+  "ui.back": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/back_rem", "pitch": 0.95 },
+      { "name": "java_reforged:ui/back_rem", "pitch": 1.0 },
+      { "name": "java_reforged:ui/back_rem", "pitch": 1.05 }
+    ]
+  },
+  "ui.block": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/craftfail_rem", "pitch": 0.95 },
+      { "name": "java_reforged:ui/craftfail_rem", "pitch": 1.0 },
+      { "name": "java_reforged:ui/craftfail_rem", "pitch": 1.05 }
+    ]
+  },
+  "ui.hotbar_focus": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/hotbar_focus", "pitch": 0.95 },
+      { "name": "java_reforged:ui/hotbar_focus", "pitch": 1.0 },
+      { "name": "java_reforged:ui/hotbar_focus", "pitch": 1.05 }
+    ]
+  },
+  "ui.toast_new": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/toast_rem", "pitch": 0.95 },
+      { "name": "java_reforged:ui/toast_rem", "pitch": 1.0 },
+      { "name": "java_reforged:ui/toast_rem", "pitch": 1.05 }
+    ]
+  },
+  "gameplay.item_pop": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:gameplay/item_drop_rem", "pitch": 0.95 },
+      { "name": "java_reforged:gameplay/item_drop_rem", "pitch": 1.0 },
+      { "name": "java_reforged:gameplay/item_drop_rem", "pitch": 1.05 }
+    ]
+  }
+}

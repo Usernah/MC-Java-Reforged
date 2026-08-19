@@ -1,0 +1,17 @@
+image: {
+    size: {
+        width: 138,
+        height: 140,
+    },
+    scale: 1,
+},
+
+nine: {
+    borders: {
+        top: 3,
+        bottom: 3,
+        left: 3,
+        right: 3,
+    },
+        mode: repeat,
+}

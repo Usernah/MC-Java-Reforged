@@ -1,0 +1,141 @@
+@@import asset.local("textures/controller/steam/button_up.png") as steam_y
+@@import asset.local("textures/controller/steam/button_up_press.png") as steam_y_press
+@@import asset.local("textures/controller/steam/button_down.png") as steam_a
+@@import asset.local("textures/controller/steam/button_down_press.png") as steam_a_press
+@@import asset.local("textures/controller/steam/button_right.png") as steam_b
+@@import asset.local("textures/controller/steam/button_right_press.png") as steam_b_press
+@@import asset.local("videos/backgrounds/farm.mp4") as menu_video
+@@import asset.local("styles/common") as common
+@@import asset.local("styles/menu_widgets") as mw
+
+screen "test" {
+    renderables {
+        background {
+            video "menu_background" {
+                source: @menu_video
+                fullscreen: true
+                loop: true
+                loop_fade: 320
+            }
+
+            image "background_icon" {
+                texture: @steam_y
+                x: 100
+                y: 40
+                w: 15
+                h: 16
+                uv: (0, 0)
+                uv_size: (45, 48)
+                atlas_size: (45, 48)
+            }
+        }
+
+        content {
+            image "content_icon" {
+                texture: @steam_a
+                x: 190
+                y: 40
+                w: 15
+                h: 16
+                uv: (0, 0)
+                uv_size: (45, 48)
+                atlas_size: (45, 48)
+            }
+        }
+
+        foreground {
+            image "foreground_icon" {
+                texture: @steam_b
+                x: 280
+                y: 40
+                w: 15
+                h: 16
+                uv: (0, 0)
+                uv_size: (45, 48)
+                atlas_size: (45, 48)
+            }
+
+            @common.controller_badge "blueprint_test" (235, 120, 30, 32)
+
+            text "outline_test" {
+                literal: "Texto con outline"
+                x: 16
+                y: 150
+                color: #ffffff
+                outline: #202020
+            }
+
+            text "normal_shadow_test" {
+                literal: "Texto con sombra normal"
+                x: 16
+                y: 165
+                color: #ffffff
+                shadow: true
+            }
+
+            text "colored_shadow_test" {
+                literal: "Texto con sombra de color"
+                x: 16
+                y: 180
+                color: #ffffff
+                shadow_color: #4080ff
+            }
+        }
+    }
+
+    elements {
+        button "steam_y" {
+            x: 100
+            y: 70
+            w: 230
+            h: 118
+            renderables {
+            @mw.main_button_withe "test" ()
+            }
+
+
+        }
+
+        button "steam_a" {
+            x: 190
+            y: 70
+            w: 80
+            h: 24
+            scissor: true
+
+            renderables {
+                image "icon" {
+                    texture: if (${this.pressed}) @steam_a_press else @steam_a
+                    x: 4
+                    y: 4
+                    w: 15
+                    h: 16
+                    uv: (0, 0)
+                    uv_size: (45, 48)
+                    atlas_size: (45, 48)
+                }
+            }
+        }
+
+        button "steam_b" {
+            x: 280
+            y: 70
+            w: 80
+            h: 24
+            scissor: false
+
+            renderables {
+                image "icon" {
+                    texture: if (${this.pressed}) @steam_b_press else @steam_b
+                    x: 4
+                    y: 4
+                    w: 15
+                    h: 16
+                    uv: (0, 0)
+                    uv_size: (45, 48)
+                    atlas_size: (45, 48)
+                }
+            }
+        }
+    }
+}

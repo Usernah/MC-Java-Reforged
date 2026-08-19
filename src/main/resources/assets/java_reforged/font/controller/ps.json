@@ -1,0 +1,291 @@
+{
+  "providers": [
+    {
+      "type": "space",
+      "advances": {
+        "\uF801": -1,
+        "\uF802": -5,
+        "\uF80A": -10
+      }
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/button_down.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE000"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/button_right.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE001"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/button_left.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE002"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/button_up.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE003"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/bumper_left.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE004"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/bumper_right.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE005"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/trigger_left.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE006"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/trigger_right.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE007"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/button_select.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE008"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/button_start.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE009"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/dpad_up.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE00A"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/dpad_down.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE00B"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/dpad_left.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE00C"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/dpad_right.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE00D"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_left.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE00E"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_right.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE00F"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_left_button.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE010"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_right_button.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE011"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/dpad.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE012"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_left_move_up.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE013"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_left_move_down.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE014"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_left_move_left.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE015"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_left_move_right.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE016"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_right_move_up.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE017"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_right_move_down.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE018"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_right_move_left.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE019"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/stick_right_move_right.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE01A"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/touchpad.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE01B"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/touchpad_button.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE029"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/touchpad_left_button.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE027"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "java_reforged:controller/ps/touchpad_right_button.png",
+      "ascent": 8,
+      "height": 12,
+      "chars": [
+        "\uE028"
+      ]
+    }
+  ]
+}
