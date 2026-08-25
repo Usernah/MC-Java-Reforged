@@ -16,6 +16,34 @@ public final class SlotGrid {
     }
 
     public SlotGrid grid(SlotGroup group, int startX, int startY, int columns, int stepX, int stepY) {
+        return this.grid(group, startX, startY, columns, stepX, stepY, 16, 16);
+    }
+
+    public SlotGrid grid(
+        SlotGroup group,
+        int startX,
+        int startY,
+        int columns,
+        int stepX,
+        int stepY,
+        int width,
+        int height
+    ) {
+        return this.grid(group, startX, startY, columns, stepX, stepY, width, height,
+            Math.max(1, Math.min(16, Math.min(width, height) - 2)));
+    }
+
+    public SlotGrid grid(
+        SlotGroup group,
+        int startX,
+        int startY,
+        int columns,
+        int stepX,
+        int stepY,
+        int width,
+        int height,
+        int itemSize
+    ) {
         SlotSlice slice = map.get(group);
 
         for (int i = 0; i < slice.size(); i++) {
@@ -23,7 +51,7 @@ public final class SlotGrid {
             int row = i / columns;
             positions.put(
                 slice.slot(i),
-                new SlotPos(startX + col * stepX, startY + row * stepY)
+                new SlotPos(startX + col * stepX, startY + row * stepY, width, height, itemSize)
             );
         }
 
@@ -57,7 +85,31 @@ public final class SlotGrid {
     }
 
     public SlotGrid point(SlotGroup group, int localIndex, int x, int y) {
-        positions.put(map.slot(group, localIndex), new SlotPos(x, y));
+        return this.point(group, localIndex, x, y, 16, 16);
+    }
+
+    public SlotGrid point(SlotGroup group, int localIndex, int x, int y, int width, int height) {
+        return this.point(
+            group,
+            localIndex,
+            x,
+            y,
+            width,
+            height,
+            Math.max(1, Math.min(16, Math.min(width, height) - 2))
+        );
+    }
+
+    public SlotGrid point(
+        SlotGroup group,
+        int localIndex,
+        int x,
+        int y,
+        int width,
+        int height,
+        int itemSize
+    ) {
+        positions.put(map.slot(group, localIndex), new SlotPos(x, y, width, height, itemSize));
         return this;
     }
 

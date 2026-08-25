@@ -247,6 +247,13 @@ public final class InputApi {
         GamepadBindingRegistry.get().suppressHeldInputs();
     }
 
+    public static void resetSlotInputState(int slotId) {
+        SlotScope.run(slotId, () -> {
+            GamepadBindingRegistry.get().resetAppliedBindings();
+            inputState(slotId).clear();
+        });
+    }
+
     public static boolean isDown(KeyMapping keyMapping) {
         return state(keyMapping).isDown();
     }

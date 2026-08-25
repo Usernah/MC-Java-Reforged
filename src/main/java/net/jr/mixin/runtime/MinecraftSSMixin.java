@@ -223,7 +223,7 @@ public abstract class MinecraftSSMixin {
 
     @Inject(
             method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;ZZ)V",
-            at = @At("TAIL")
+            at = @At("HEAD")
     )
     private void splitTest$resetLocalRuntimeAfterDisconnect(
             Screen nextScreen,
@@ -265,8 +265,6 @@ public abstract class MinecraftSSMixin {
                         candidate.hitResult()
                 );
 
-                // Igual que el bloque anterior de startUseItem():
-                // Success/Fail terminan la interacción.
                 if (result instanceof InteractionResult.Success
                         || result instanceof InteractionResult.Fail) {
                     return result;

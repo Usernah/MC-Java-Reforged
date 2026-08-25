@@ -69,6 +69,17 @@ final class GamepadBindingEvaluator {
         this.appliedStates.clear();
     }
 
+    void reset(GamepadBindingRegistry bindings) {
+        for (String keyName : this.appliedStates.keySet()) {
+            KeyMapping keyMapping = bindings.keyMapping(keyName);
+            if (keyMapping != null) {
+                InputApi.release(keyMapping);
+            }
+        }
+        this.appliedStates.clear();
+        this.suppressedInputs.clear();
+    }
+
     void suppressHeldInputs() {
         for (GamepadDigitalInput input : GamepadDigitalInput.values()) {
             if (InputApi.isPressed(input)) {

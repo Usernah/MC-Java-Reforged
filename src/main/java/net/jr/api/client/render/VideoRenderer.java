@@ -145,9 +145,7 @@ public class VideoRenderer implements AutoCloseable {
 
                 grabber.stop();
             } catch (InterruptedException interrupted) {
-                // close() stops the decoder with shutdownNow(). Interrupting
-                // its frame pacing sleep is therefore the normal shutdown
-                // path, not a video decoding failure.
+
                 Thread.currentThread().interrupt();
                 if (isRunning.get()) {
                     Java_reforged.LOGGER.error("Video decoder was interrupted for {}", video.debugId(), interrupted);

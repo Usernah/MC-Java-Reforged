@@ -6,7 +6,6 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.network.chat.Component;
 
-/** Keeps the network-safe identity of a split player separate from its visible name. */
 public final class SecondaryPlayerProfileFactory {
     private static final int FIRST_SECONDARY_ORDINAL = 2;
     private static final int LAST_SECONDARY_ORDINAL = 4;

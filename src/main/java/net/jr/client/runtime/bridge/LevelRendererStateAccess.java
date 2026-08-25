@@ -7,7 +7,6 @@ import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.state.TerrainState;
 import net.jr.client.runtime.terrain.SharedTerrainStore;
 
-/** Runtime bridge for the one shared terrain pool and the active player's state. */
 public final class LevelRendererStateAccess {
     private static final TerrainState BOOTSTRAP_TERRAIN = new TerrainState();
     @Nullable

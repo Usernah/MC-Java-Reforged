@@ -22,7 +22,6 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Reloadable metric store for keyboard and mouse glyph themes. */
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class KeyboardMouseGlyphDefinitions {
     private static final Asset RELOAD_LISTENER_ID =

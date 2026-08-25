@@ -80,12 +80,6 @@ public final class UILayoutRenderTarget implements AutoCloseable {
         );
     }
 
-    /**
-     * Extracts an arbitrary GUI fragment into this target and then places the
-     * finished composition in the parent GUI. The fragment owns one logical
-     * coordinate space, while {@code rasterScale} controls only its internal
-     * raster resolution.
-     */
     public void extractCompositionAndSubmit(
         GuiGraphicsExtractor parentGraphics,
         int logicalWidth,

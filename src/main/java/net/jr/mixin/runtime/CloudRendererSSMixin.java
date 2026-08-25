@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Keeps each viewport's cloud uniforms alive until the shared GPU submit ends. */
 @Mixin(CloudRenderer.class)
 public abstract class CloudRendererSSMixin {
     @Shadow

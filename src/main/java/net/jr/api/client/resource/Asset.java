@@ -21,10 +21,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-/**
- * Stable resource API used by Java Reforged. Minecraft 26.2 renamed
- * ResourceLocation to Identifier; that implementation detail is contained here.
- */
 public class Asset {
     private static final String MOD_ID = "java_reforged";
     private static final Map<String, Asset> DYNAMIC_TEXTURE_CACHE = new ConcurrentHashMap<>();
@@ -134,7 +130,6 @@ public class Asset {
         return new Asset(Identifier.withDefaultNamespace(path));
     }
 
-    /** Kept with its historical spelling for source compatibility. */
     public static Asset NamespaceAndPatch(String NameSpace, String Patch) {
         return new Asset(Identifier.fromNamespaceAndPath(NameSpace, Patch));
     }
@@ -143,9 +138,6 @@ public class Asset {
         return new Asset(Identifier.parse(fullPath));
     }
 
-    /**
-     * Resolves a resource below this asset while preserving its namespace.
-     */
     public Asset child(String childPath) {
         Objects.requireNonNull(childPath, "childPath");
         String normalized = childPath.replace('\\', '/');
@@ -163,10 +155,6 @@ public class Asset {
         return new Asset(Identifier.fromNamespaceAndPath(location.getNamespace(), combinedPath));
     }
 
-    /**
-     * Appends a suffix to this asset's path while preserving its namespace.
-     * Useful for companion resources such as texture.png.meta.
-     */
     public Asset withPathSuffix(String suffix) {
         Objects.requireNonNull(suffix, "suffix");
         if (suffix.isBlank()) {
@@ -180,36 +168,21 @@ public class Asset {
         );
     }
 
-    /**
-     * Looks up this asset through an explicit resource manager. This is safe to
-     * use from resource reload listeners, where the Minecraft singleton should
-     * not be used as the source of the resource manager.
-     */
     public Optional<Resource> find(ResourceManager manager) {
         Objects.requireNonNull(manager, "manager");
         return manager.getResource(location);
     }
 
-    /**
-     * Returns the required resource or reports which stable Asset was missing.
-     */
     public Resource require(ResourceManager manager) {
         return find(manager).orElseThrow(
             () -> new IllegalStateException("Missing required asset: " + this)
         );
     }
 
-    /**
-     * Opens this asset. The caller owns and must close the returned stream.
-     */
     public InputStream open(ResourceManager manager) throws IOException {
         return require(manager).open();
     }
 
-    /**
-     * Registers a reload listener without leaking Minecraft's native identifier
-     * type into callers of the Asset API.
-     */
     public void registerReloadListener(
         AddClientReloadListenersEvent event,
         PreparableReloadListener listener
@@ -219,9 +192,6 @@ public class Asset {
         event.addListener(location, listener);
     }
 
-    /**
-     * Creates the native font description behind the Asset boundary.
-     */
     public FontDescription.Resource asFontDescription() {
         return new FontDescription.Resource(location);
     }

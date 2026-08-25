@@ -5,7 +5,6 @@ import net.jr.client.runtime.slot.LocalClientSlot;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.state.WindowRenderState;
 
-/** Keeps viewport-edge GUI scissors aligned with the exact framebuffer partition. */
 public final class GuiScissorBounds {
     private GuiScissorBounds() {
     }
@@ -22,21 +21,37 @@ public final class GuiScissorBounds {
         }
 
         for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
-            ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slot.id());
-            int guiLeft = (int)Math.floor(viewport.x() / (float)scale);
-            int guiTop = (int)Math.floor(viewport.y() / (float)scale);
-            int guiRight = guiLeft + (int)Math.floor(viewport.width() / (float)scale);
-            int guiBottom = guiTop + (int)Math.floor(viewport.height() / (float)scale);
+            ViewportArea viewport =
+                    ClientRuntime.INSTANCE.viewports().viewport(slot.id());
+
+            int guiLeft = (int)Math.floor(
+                    viewport.x() / (float)scale
+            );
+
+            int guiTop = (int)Math.floor(
+                    viewport.y() / (float)scale
+            );
+
+            int guiRight = (int)Math.floor(
+                    (viewport.x() + viewport.width()) / (float)scale
+            );
+
+            int guiBottom = (int)Math.floor(
+                    (viewport.y() + viewport.height()) / (float)scale
+            );
 
             if (rectangle.left() == guiLeft) {
                 left = viewport.x();
             }
+
             if (rectangle.top() == guiTop) {
                 top = viewport.y();
             }
+
             if (rectangle.right() == guiRight) {
                 right = viewport.x() + viewport.width();
             }
+
             if (rectangle.bottom() == guiBottom) {
                 bottom = viewport.y() + viewport.height();
             }

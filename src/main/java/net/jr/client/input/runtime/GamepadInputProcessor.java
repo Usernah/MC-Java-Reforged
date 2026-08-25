@@ -12,17 +12,22 @@ import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.input.gamepad.GamepadAxis;
 import net.jr.client.input.InputApi;
+import net.jr.client.input.cursor.CursorMagnetTarget;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.components.navigation.UiAction;
+import net.jr.client.components.navigation.UiActionFeedback;
 import net.jr.client.components.navigation.UiActionHandler;
+import net.jr.client.components.widgets.ScrollPanelElement;
 import net.jr.mixin.controls.ClientInputAccessor;
 import net.jr.mixin.uifocus.MouseHandlerAccessor;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.input.cursor.CursorHider;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.input.cursor.MouseCoordinates;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
+import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
@@ -202,6 +207,7 @@ public class GamepadInputProcessor {
             state.lastScreen = screen;
             if (InputApi.isGamepadMode()
                 || state.cursorInputSource == CursorInputSource.JOYSTICK
+                || state.cursorInputSource == CursorInputSource.MAGNET
                 || !InputApi.canPhysicalMouseDrive()) {
                 centerVirtualCursor(mc, slotId);
                 markCursorAsJoystickDriven(slotId);
@@ -242,6 +248,8 @@ public class GamepadInputProcessor {
         int height = cursorSpaceHeight(mc, slotId, screen);
         state.virtualCursorX = Math.max(0, Math.min(width, state.virtualCursorX));
         state.virtualCursorY = Math.max(0, Math.min(height, state.virtualCursorY));
+
+        applyControllerCursorMagnet(screen, slotId, joystickMovedCursor);
     }
 
     private static float applyResponseCurve(float input) {
@@ -250,12 +258,58 @@ public class GamepadInputProcessor {
         return sign * (abs * abs);
     }
 
+    private static void applyControllerCursorMagnet(
+            Screen screen,
+            int slotId,
+            boolean joystickMovedCursor
+    ) {
+        CursorState state = cursorState(slotId);
+        if (joystickMovedCursor
+                || UiInputModeController.isFocusNavigationActive()
+                || screen.isDragging()
+                || MappedActionProcessor.hasActivePointerGesture()
+                || !(screen instanceof CustomSlotLayout layout)
+                || !isJoystickCursorActive(slotId)) {
+            return;
+        }
+
+        CursorMagnetTarget target = layout.cursorMagnetTargetAt(
+                state.virtualCursorX,
+                state.virtualCursorY
+        );
+        if (target == null) {
+            if (state.cursorInputSource == CursorInputSource.MAGNET) {
+                state.cursorInputSource = CursorInputSource.JOYSTICK;
+                resetFocusCursorAnimation(slotId, state.virtualCursorX, state.virtualCursorY);
+            }
+            return;
+        }
+
+        if (state.cursorInputSource == CursorInputSource.MAGNET
+                && Math.abs(state.focusCursorAnimationTargetX - target.guiX()) < 0.01D
+                && Math.abs(state.focusCursorAnimationTargetY - target.guiY()) < 0.01D) {
+            return;
+        }
+
+        double visualX = visualCursorX(slotId);
+        double visualY = visualCursorY(slotId);
+        state.virtualCursorX = target.guiX();
+        state.virtualCursorY = target.guiY();
+        state.focusCursorAnimationStartX = visualX;
+        state.focusCursorAnimationStartY = visualY;
+        state.focusCursorAnimationTargetX = target.guiX();
+        state.focusCursorAnimationTargetY = target.guiY();
+        state.focusCursorAnimationActive = true;
+        state.cursorInputSource = CursorInputSource.MAGNET;
+    }
+
     public static boolean isJoystickCursorActive() {
         return isJoystickCursorActive(currentCursorSlotId());
     }
 
     public static boolean isJoystickCursorActive(int slotId) {
-        return cursorState(slotId).cursorInputSource == CursorInputSource.JOYSTICK;
+        CursorInputSource source = cursorState(slotId).cursorInputSource;
+        return source == CursorInputSource.JOYSTICK || source == CursorInputSource.MAGNET;
     }
 
     public static boolean isVirtualCursorActive() {
@@ -368,6 +422,21 @@ public class GamepadInputProcessor {
         releaseFocusedSlotCursor(currentCursorSlotId());
     }
 
+    public static void releaseFocusedSlotCursorToJoystick() {
+        int slotId = currentCursorSlotId();
+        CursorState state = cursorState(slotId);
+        if (state.cursorInputSource != CursorInputSource.FOCUS_SLOT) {
+            return;
+        }
+
+        double visualX = visualCursorX(slotId);
+        double visualY = visualCursorY(slotId);
+        state.virtualCursorX = visualX;
+        state.virtualCursorY = visualY;
+        state.cursorInputSource = CursorInputSource.JOYSTICK;
+        resetFocusCursorAnimation(slotId, visualX, visualY);
+    }
+
     public static void releaseFocusedSlotCursor(int slotId) {
         CursorState state = cursorState(slotId);
         if (state.cursorInputSource == CursorInputSource.FOCUS_SLOT) {
@@ -461,6 +530,33 @@ public class GamepadInputProcessor {
 
     static void dispatchFocusNavigation(Screen screen, int keyCode) {
         UiInputModeController.prepareForFocusNavigation(keyCode);
+        FocusSnapshot focusBefore = FocusSnapshot.capture(screen);
+        UiAction directionalAction = switch (keyCode) {
+            case GLFW.GLFW_KEY_LEFT -> UiAction.MOVE_LEFT;
+            case GLFW.GLFW_KEY_RIGHT -> UiAction.MOVE_RIGHT;
+            case GLFW.GLFW_KEY_UP -> UiAction.MOVE_UP;
+            case GLFW.GLFW_KEY_DOWN -> UiAction.MOVE_DOWN;
+            default -> null;
+        };
+
+        if (directionalAction != null && dispatchActionToFocusedElement(screen, directionalAction)) {
+            playFocusedUiActionFeedback(screen, directionalAction);
+            syncVirtualCursorToFocusedComponent(screen);
+            screen.afterKeyboardAction();
+            return;
+        }
+
+        if (directionalAction != null
+                && screen instanceof UiActionHandler screenHandler
+                && screenHandler.handleUiAction(directionalAction)) {
+            if (focusBefore.hasChanged(screen)) {
+                InputActionSounds.playFocus();
+            }
+            syncVirtualCursorToFocusedComponent(screen);
+            screen.afterKeyboardAction();
+            return;
+        }
+
         boolean handled;
         boolean fallbackHandled;
         if (UiInputModeController.shouldPrioritizeContainerSlotFocus(screen)) {
@@ -471,10 +567,42 @@ public class GamepadInputProcessor {
             fallbackHandled = handled ? false : UiInputModeController.applyContainerSlotFocusFallback(screen, keyCode);
         }
         if (handled || fallbackHandled) {
-            InputActionSounds.playHover();
+            if (focusBefore.hasChanged(screen)) {
+                InputActionSounds.playFocus();
+            }
             syncVirtualCursorToFocusedComponent(screen);
         }
         screen.afterKeyboardAction();
+    }
+
+    private static boolean dispatchActionToFocusedElement(Screen screen, UiAction action) {
+        GuiEventListener focused = focusedElement(screen);
+        return focused instanceof UiActionHandler handler
+            && handler.handleUiAction(action);
+    }
+
+    private record FocusSnapshot(GuiEventListener focusedLeaf, Integer focusedSlot) {
+        private static FocusSnapshot capture(Screen screen) {
+            GuiEventListener focused = GamepadInputProcessor.focusedElement(screen);
+            Integer slot = screen instanceof AbstractContainerScreen<?> containerScreen
+                    ? ContainerSlotFocusController.getFocusedSlotIndex(containerScreen)
+                    : null;
+            return new FocusSnapshot(focused, slot);
+        }
+
+        private boolean hasChanged(Screen screen) {
+            FocusSnapshot current = capture(screen);
+            return this.focusedLeaf != current.focusedLeaf
+                    || !java.util.Objects.equals(this.focusedSlot, current.focusedSlot);
+        }
+
+    }
+
+    static boolean focusedElementPrefersDirectAction(Screen screen) {
+        GuiEventListener focused = focusedElement(screen);
+
+        return focused instanceof UiActionHandler handler
+            && handler.prefersDirectFocusAction();
     }
 
     static boolean activateFocusedElement(Screen screen, int mouseButton) {
@@ -483,25 +611,43 @@ public class GamepadInputProcessor {
             return ContainerSlotFocusController.pickupFocusedOrHoveredSlot(containerScreen, mouseButton);
         }
 
-        if (mouseButton == 0) {
-            GuiEventListener focused = focusedLeaf(screen.getCurrentFocusPath());
-            if (focused == null || focused == screen) {
-                focused = screen.getFocused();
-            }
+        if (mouseButton == 0 || mouseButton == 1) {
+            GuiEventListener focused = focusedElement(screen);
             if (focused instanceof UiActionHandler handler) {
-                return handler.handleUiAction(UiAction.ACCEPT);
+                boolean handled = handler.handleUiAction(
+                        mouseButton == 0 ? UiAction.ACCEPT : UiAction.ALTERNATE
+                );
+                if (handled) {
+
+                    syncVirtualCursorToFocusedComponent(screen);
+                }
+                return handled;
             }
         }
 
         return false;
     }
 
-    static FocusedElementCenter focusedElementCenter(Screen screen) {
-        GuiEventListener focused = focusedLeaf(screen.getCurrentFocusPath());
-        if (focused == null || focused == screen) {
-            focused = screen.getFocused();
+    static boolean dispatchFocusedUiAction(Screen screen, UiAction action) {
+        if (dispatchActionToFocusedElement(screen, action)) {
+            return true;
         }
-        if (focused == null || focused == screen) {
+
+        return screen instanceof UiActionHandler handler && handler.handleUiAction(action);
+    }
+
+    static void playFocusedUiActionFeedback(Screen screen, UiAction action) {
+        GuiEventListener focused = focusedElement(screen);
+        if (focused instanceof UiActionHandler handler) {
+            InputActionSounds.play(handler.uiActionFeedback(action));
+            return;
+        }
+        InputActionSounds.play(UiActionFeedback.CLICK);
+    }
+
+    static FocusedElementCenter focusedElementCenter(Screen screen) {
+        GuiEventListener focused = focusedElement(screen);
+        if (focused == null) {
             return null;
         }
 
@@ -532,8 +678,32 @@ public class GamepadInputProcessor {
             UiInputModeController.prepareForFocusNavigation(keyCode);
         }
         if (screen instanceof UiActionHandler handler && handler.handleUiAction(action)) {
-            InputActionSounds.playClick();
+            InputActionSounds.play(handler.uiActionFeedback(action));
+            syncVirtualCursorToFocusedComponent(screen);
         }
+    }
+
+    public static void trackFocusedCursorDuringScroll(Screen screen) {
+        if (screen == null || !UiInputModeController.isFocusNavigationActive()) {
+            return;
+        }
+
+        ScrollPanelElement viewport = focusedScrollViewport(screen);
+        GuiEventListener focused = focusedElement(screen);
+        if (viewport == null || focused == null || !viewport.hasActiveScrollTransition()) {
+            return;
+        }
+
+        ScreenRectangle rectangle = focused.getRectangle();
+        double centerX = rectangle.left() + rectangle.width() / 2.0D;
+        double centerY = rectangle.top() + rectangle.height() / 2.0D;
+        double viewportRight = viewport.getX() + viewport.getWidth();
+        double viewportBottom = viewport.getY() + viewport.getHeight();
+
+        trackVirtualCursorAtFocus(
+                Math.max(viewport.getX(), Math.min(viewportRight, centerX)),
+                Math.max(viewport.getY(), Math.min(viewportBottom, centerY))
+        );
     }
 
     private static void syncVirtualCursorToFocusedComponent(Screen screen) {
@@ -554,8 +724,7 @@ public class GamepadInputProcessor {
             return;
         }
 
-        ComponentPath path = screen.getCurrentFocusPath();
-        GuiEventListener focused = focusedLeaf(path);
+        GuiEventListener focused = focusedElement(screen);
         if (focused == null) {
             return;
         }
@@ -565,6 +734,53 @@ public class GamepadInputProcessor {
         double centerY = rectangle.top() + rectangle.height() / 2.0D;
 
         moveVirtualCursorToFocusedSlot(centerX, centerY);
+    }
+
+    public static void syncVirtualCursorToFocus(Screen screen) {
+        syncVirtualCursorToFocusedComponent(screen);
+    }
+
+    private static GuiEventListener focusedElement(Screen screen) {
+        GuiEventListener current = screen;
+        while (current instanceof ContainerEventHandler container) {
+            GuiEventListener child = container.getFocused();
+            if (child == null || child == current) {
+                break;
+            }
+            current = child;
+        }
+        if (current != screen) {
+            return current;
+        }
+
+        GuiEventListener fromPath = focusedLeaf(screen.getCurrentFocusPath());
+        return fromPath == screen ? null : fromPath;
+    }
+
+    private static ScrollPanelElement focusedScrollViewport(Screen screen) {
+        GuiEventListener current = screen;
+        ScrollPanelElement viewport = null;
+        while (current instanceof ContainerEventHandler container) {
+            if (current instanceof ScrollPanelElement panel) {
+                viewport = panel;
+            }
+            GuiEventListener child = container.getFocused();
+            if (child == null || child == current) {
+                break;
+            }
+            current = child;
+        }
+        return current == screen ? null : viewport;
+    }
+
+    private static void trackVirtualCursorAtFocus(double guiX, double guiY) {
+        int slotId = currentCursorSlotId();
+        CursorState state = cursorState(slotId);
+        state.virtualCursorX = guiX;
+        state.virtualCursorY = guiY;
+        state.cursorInputSource = CursorInputSource.FOCUS_SLOT;
+
+        resetFocusCursorAnimation(slotId, guiX, guiY);
     }
 
     private static GuiEventListener focusedLeaf(ComponentPath path) {
@@ -647,7 +863,7 @@ public class GamepadInputProcessor {
 
     private static double resolveFocusAnimatedCursorX(int slotId) {
         CursorState state = cursorState(slotId);
-        if (state.cursorInputSource != CursorInputSource.FOCUS_SLOT || !state.focusCursorAnimationActive) {
+        if (!isAnimatedCursorSource(state.cursorInputSource) || !state.focusCursorAnimationActive) {
             return state.virtualCursorX;
         }
 
@@ -660,7 +876,7 @@ public class GamepadInputProcessor {
 
     private static double resolveFocusAnimatedCursorY(int slotId) {
         CursorState state = cursorState(slotId);
-        if (state.cursorInputSource != CursorInputSource.FOCUS_SLOT || !state.focusCursorAnimationActive) {
+        if (!isAnimatedCursorSource(state.cursorInputSource) || !state.focusCursorAnimationActive) {
             return state.virtualCursorY;
         }
 
@@ -681,6 +897,10 @@ public class GamepadInputProcessor {
         int normalizedSlotId = normalizedSlotId(slotId);
         InputAnimator.value(FOCUS_CURSOR_ANIMATION_X + "." + normalizedSlotId).fromTo((float) x, (float) x).time(0).getFloat();
         InputAnimator.value(FOCUS_CURSOR_ANIMATION_Y + "." + normalizedSlotId).fromTo((float) y, (float) y).time(0).getFloat();
+    }
+
+    private static boolean isAnimatedCursorSource(CursorInputSource source) {
+        return source == CursorInputSource.FOCUS_SLOT || source == CursorInputSource.MAGNET;
     }
 
     private static int currentCursorSlotId() {
@@ -735,6 +955,7 @@ public class GamepadInputProcessor {
     private enum CursorInputSource {
         MOUSE,
         JOYSTICK,
+        MAGNET,
         FOCUS_SLOT
     }
 

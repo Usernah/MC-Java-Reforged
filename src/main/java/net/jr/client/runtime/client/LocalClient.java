@@ -3,13 +3,7 @@ package net.jr.client.runtime.client;
 import javax.annotation.Nullable;
 import net.jr.client.input.SlotCursorView;
 import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.state.ChatState;
-import net.jr.client.runtime.state.ClientRenderState;
-import net.jr.client.runtime.state.GameplayState;
-import net.jr.client.runtime.state.InputState;
-import net.jr.client.runtime.state.OptionsState;
-import net.jr.client.runtime.state.ScreenState;
-import net.jr.client.runtime.state.ToastState;
+import net.jr.client.runtime.state.*;
 import net.minecraft.client.Camera;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -41,6 +35,10 @@ public final class LocalClient {
 
     public ToastState toasts() {
         return this.slot.toastState();
+    }
+
+    public MinimapState minimap() {
+        return this.render().minimap();
     }
 
     public GameplayState gameplay() {

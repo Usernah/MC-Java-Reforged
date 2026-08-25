@@ -36,7 +36,6 @@ public final class CursorRenderer {
         CursorHider.sync();
     }
 
-    /** Draws the replacement cursor for this process' normal HUD pass. */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();

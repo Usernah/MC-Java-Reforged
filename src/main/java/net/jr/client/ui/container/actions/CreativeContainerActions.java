@@ -69,7 +69,6 @@ public final class CreativeContainerActions {
             return false;
         }
 
-
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         MultiPlayerGameMode gameMode = net.minecraft.client.Minecraft.getInstance().gameMode;
         if (player == null || gameMode == null) {

@@ -1,12 +1,17 @@
 package net.jr.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.jr.client.input.InputApi;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.sound.bridge.MusicManagerBridge;
 import net.jr.client.sound.bridge.SoundEngineBridge;
 import net.jr.client.sound.config.SoundTransitionConfig;
 import net.jr.client.sound.music.MusicTransitionManager;
+import net.jr.screens.inventory.JavaInventoryScreen;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -100,6 +105,37 @@ public abstract class MixinMinecraft {
         if (this.javareforged$globalMusicLevel() != null && this.javareforged$globalMusicPlayer() != null) {
             this.javareforged$finishWorldLoadMusicState();
         }
+    }
+
+    @WrapOperation(
+            method = "handleKeybinds",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/KeyMapping;consumeClick()Z"
+            )
+    )
+    private boolean javaReforged$openCreativeIndividualInventory(
+            KeyMapping mapping,
+            Operation<Boolean> original
+    ) {
+        Minecraft minecraft = (Minecraft)(Object)this;
+        if (mapping != minecraft.options.keyInventory
+                || this.player == null
+                || !this.player.hasInfiniteMaterials()) {
+            return original.call(mapping);
+        }
+
+        if (!InputApi.consumeClick(mapping)) {
+            return false;
+        }
+
+        minecraft.gui.setScreen(new JavaInventoryScreen(
+                this.player.inventoryMenu,
+                this.player.getInventory(),
+                net.minecraft.network.chat.Component.translatable("container.inventory")
+        ));
+
+        return false;
     }
 
     @Redirect(

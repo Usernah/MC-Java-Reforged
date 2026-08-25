@@ -7,7 +7,6 @@ import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.util.Util;
 
-/** Per-player timing state for pressed control-hint glyphs. */
 public final class ControlHintAnimationState {
     private final Map<GamepadDigitalInput, PressState> gamepadStates =
         new EnumMap<>(GamepadDigitalInput.class);

@@ -11,14 +11,16 @@ import net.jr.client.runtime.ui.LocalChatRouter;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
 import net.jr.client.ui.hint.ControlHintPipeline;
+import net.jr.client.ui.hud.MinimapHudOverlay;
 import net.jr.client.ui.hud.PlayerNameHudOverlay;
+import net.jr.mixin.accessors.HudCameraEffectsAccessor;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
 import net.minecraft.client.gui.components.ChatComponent;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.Screen;
 
 public final class HudRenderPass {
     private HudRenderPass() {
@@ -58,12 +60,20 @@ public final class HudRenderPass {
         if (!LocalClientReadinessPolicy.gameplayReady(client)) {
             return;
         }
-        if (client.screen() instanceof AbstractContainerScreen<?>) {
+        Screen screen = client.screen();
+        if (screen != null) {
+            try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
+                ((HudCameraEffectsAccessor)hud).javaReforged$extractCameraEffects(
+                        graphics,
+                        deltaTracker
+                );
+            }
             return;
         }
 
         try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
             hud.extractRenderState(graphics, deltaTracker);
+            // MinimapHudOverlay.extract(graphics);
             ControlHintPipeline.renderHud(graphics);
             if (SplitScreen.isActive()) {
                 PlayerNameHudOverlay.render(graphics);

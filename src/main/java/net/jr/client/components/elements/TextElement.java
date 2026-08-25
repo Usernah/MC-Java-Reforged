@@ -3,13 +3,23 @@ package net.jr.client.components.elements;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.render.font.FontHolder;
 import net.jr.api.client.resource.Asset;
+import net.jr.client.render.GuiGraphicsExtractorBridge;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Util;
 import net.minecraft.util.FormattedCharSequence;
 
 import java.util.Objects;
 
 public class TextElement implements VisualElementsInterface {
+    public enum ScrollType {
+        LOOP,
+        PING_PONG
+    }
+
+    private static final float DEFAULT_SCROLL_VELOCITY = 0.055F;
+    private static final long DEFAULT_SCROLL_DELAY_MS = 350L;
+
     private final VisualState visualState;
     private Component componentText;
     private FormattedCharSequence charSequenceText;
@@ -22,6 +32,11 @@ public class TextElement implements VisualElementsInterface {
     private Integer outlineColor;
     private Draw.TextAlign align = Draw.TextAlign.LEFT;
     private Asset font;
+    private float scrollWidth;
+    private ScrollType scrollType = ScrollType.PING_PONG;
+    private float scrollVelocity = DEFAULT_SCROLL_VELOCITY;
+    private long scrollDelayMs = DEFAULT_SCROLL_DELAY_MS;
+    private long scrollStartedAtMs = -1L;
 
     public TextElement(Component text, float x, float y, GuiGraphicsExtractor guiGraphics) {
         this.visualState = new VisualState(x, y, 0.0F, 0.0F);
@@ -51,15 +66,23 @@ public class TextElement implements VisualElementsInterface {
     }
 
     public void setText(Component text) {
+        if (this.charSequenceText == null && Objects.equals(this.componentText, text)) {
+            return;
+        }
         this.componentText = Objects.requireNonNull(text, "text");
         this.charSequenceText = null;
         this.updateMeasurements();
+        this.resetScrollClock();
     }
 
     public void setText(FormattedCharSequence text) {
+        if (this.componentText == null && Objects.equals(this.charSequenceText, text)) {
+            return;
+        }
         this.componentText = null;
         this.charSequenceText = Objects.requireNonNull(text, "text");
         this.updateMeasurements();
+        this.resetScrollClock();
     }
 
     public GuiGraphicsExtractor guiGraphics() {
@@ -77,6 +100,7 @@ public class TextElement implements VisualElementsInterface {
     public void setScale(float scale) {
         this.scale = scale;
         this.updateMeasurements();
+        this.resetScrollClock();
     }
 
     public int color() {
@@ -148,6 +172,7 @@ public class TextElement implements VisualElementsInterface {
     public void setFont(Asset font) {
         this.font = font;
         this.updateMeasurements();
+        this.resetScrollClock();
     }
 
     public void setFont(FontHolder font) {
@@ -157,6 +182,48 @@ public class TextElement implements VisualElementsInterface {
     public void clearFont() {
         this.font = null;
         this.updateMeasurements();
+        this.resetScrollClock();
+    }
+
+    public void setScrolling(float width, ScrollType type) {
+        this.scrollWidth = Math.max(0.0F, width);
+        this.scrollType = type == null ? ScrollType.PING_PONG : type;
+        this.resetScrollClock();
+    }
+
+    public void clearScrolling() {
+        this.scrollWidth = 0.0F;
+        this.resetScrollClock();
+    }
+
+    public boolean isScrolling() {
+        return this.scrollWidth > 0.0F;
+    }
+
+    public float scrollWidth() {
+        return this.scrollWidth;
+    }
+
+    public ScrollType scrollType() {
+        return this.scrollType;
+    }
+
+    public float scrollVelocity() {
+        return this.scrollVelocity;
+    }
+
+    public void setScrollVelocity(float velocity) {
+        this.scrollVelocity = Math.max(0.0F, velocity);
+        this.resetScrollClock();
+    }
+
+    public long scrollDelayMs() {
+        return this.scrollDelayMs;
+    }
+
+    public void setScrollDelayMs(long delayMs) {
+        this.scrollDelayMs = Math.max(0L, delayMs);
+        this.resetScrollClock();
     }
 
     public void draw() {
@@ -171,22 +238,53 @@ public class TextElement implements VisualElementsInterface {
         Draw.TextBuilder builder = this.builder();
         this.applyStyle(builder);
         this.updateMeasurements(builder);
-        builder.draw(guiGraphics);
+
+        float overflow = this.width() - this.scrollWidth;
+        if (!this.isScrolling() || overflow <= 0.0F || this.scrollVelocity <= 0.0F) {
+            builder.draw(guiGraphics);
+            return;
+        }
+
+        float clipX = this.scrollClipX();
+        float offset = this.scrollOffset(Util.getMillis(), overflow);
+        Draw.TextBuilder scrollingBuilder = this.builder(clipX - offset, this.y());
+        this.applyStyle(scrollingBuilder, Draw.TextAlign.LEFT);
+
+        ((GuiGraphicsExtractorBridge)(Object)guiGraphics)
+            .javaReforged$enablePreciseScissor(
+                clipX,
+                this.y() - 1.0F,
+                clipX + this.scrollWidth,
+                this.y() + this.height() + 1.0F
+            );
+        try {
+            scrollingBuilder.draw(guiGraphics);
+        } finally {
+            guiGraphics.disableScissor();
+        }
     }
 
     private Draw.TextBuilder builder() {
-        int drawX = Math.round(this.x());
-        int drawY = Math.round(this.y());
+        return this.builder(this.x(), this.y());
+    }
+
+    private Draw.TextBuilder builder(float x, float y) {
+        int drawX = Math.round(x);
+        int drawY = Math.round(y);
         return this.componentText != null
             ? Draw.text(this.componentText, drawX, drawY)
             : Draw.text(this.charSequenceText, drawX, drawY);
     }
 
     private void applyStyle(Draw.TextBuilder builder) {
+        this.applyStyle(builder, this.align);
+    }
+
+    private void applyStyle(Draw.TextBuilder builder, Draw.TextAlign alignment) {
         builder.scale(this.scale)
             .color(this.colorWithElementAlpha())
             .shadow(this.shadow)
-            .align(this.align);
+            .align(alignment);
         if (this.shadowColor != null) {
             builder.shadowColor(this.shadowColor);
         }
@@ -215,5 +313,67 @@ public class TextElement implements VisualElementsInterface {
         int colorAlpha = this.color >>> 24;
         int finalAlpha = Math.round(colorAlpha * this.alpha());
         return (finalAlpha << 24) | (this.color & 0xFFFFFF);
+    }
+
+    private float scrollClipX() {
+        return switch (this.align) {
+            case LEFT -> this.x();
+            case CENTER -> this.x() - this.scrollWidth / 2.0F;
+            case RIGHT -> this.x() - this.scrollWidth;
+        };
+    }
+
+    private float scrollOffset(long nowMs, float overflow) {
+        if (this.scrollStartedAtMs < 0L) {
+            this.scrollStartedAtMs = nowMs;
+        }
+
+        double travelMs = overflow / this.scrollVelocity;
+        if (travelMs <= 0.0D) {
+            return 0.0F;
+        }
+
+        double elapsed = Math.max(0L, nowMs - this.scrollStartedAtMs);
+        return switch (this.scrollType) {
+            case LOOP -> this.loopOffset(elapsed, travelMs, overflow);
+            case PING_PONG -> this.pingPongOffset(elapsed, travelMs, overflow);
+        };
+    }
+
+    private float loopOffset(double elapsed, double travelMs, float overflow) {
+        double cycleMs = this.scrollDelayMs + travelMs;
+        double cycleElapsed = cycleMs <= 0.0D ? 0.0D : elapsed % cycleMs;
+        if (cycleElapsed <= this.scrollDelayMs) {
+            return 0.0F;
+        }
+        return Math.min(
+            overflow,
+            (float)((cycleElapsed - this.scrollDelayMs) * this.scrollVelocity)
+        );
+    }
+
+    private float pingPongOffset(double elapsed, double travelMs, float overflow) {
+        double cycleMs = this.scrollDelayMs * 2.0D + travelMs * 2.0D;
+        double cycleElapsed = cycleMs <= 0.0D ? 0.0D : elapsed % cycleMs;
+        if (cycleElapsed <= this.scrollDelayMs) {
+            return 0.0F;
+        }
+
+        cycleElapsed -= this.scrollDelayMs;
+        if (cycleElapsed <= travelMs) {
+            return Math.min(overflow, (float)(cycleElapsed * this.scrollVelocity));
+        }
+
+        cycleElapsed -= travelMs;
+        if (cycleElapsed <= this.scrollDelayMs) {
+            return overflow;
+        }
+
+        cycleElapsed -= this.scrollDelayMs;
+        return Math.max(0.0F, overflow - (float)(cycleElapsed * this.scrollVelocity));
+    }
+
+    private void resetScrollClock() {
+        this.scrollStartedAtMs = -1L;
     }
 }

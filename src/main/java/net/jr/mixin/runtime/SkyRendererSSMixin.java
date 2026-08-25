@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.SkyRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Makes the one shared SkyRenderer draw into the complete frame graph of the active slot. */
 @Mixin(SkyRenderer.class)
 public abstract class SkyRendererSSMixin {
     @ModifyExpressionValue(

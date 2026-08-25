@@ -33,7 +33,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Makes vanilla's single LevelRenderer consume the active player's state tree. */
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererRuntimeMixin implements LevelRendererRuntimeAccessor {
     @Shadow @Final @Mutable

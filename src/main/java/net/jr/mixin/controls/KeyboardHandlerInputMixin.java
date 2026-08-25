@@ -13,11 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Routes real and simulated keyboard events through JR before vanilla handles
- * the active screen. This is required for slot focus and mapped container
- * actions; the tick-side controller path uses the same processor.
- */
 @Mixin(KeyboardHandler.class)
 public final class KeyboardHandlerInputMixin {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
@@ -46,7 +41,8 @@ public final class KeyboardHandlerInputMixin {
 
         if (action != GLFW.GLFW_PRESS && action != GLFW.GLFW_REPEAT) return;
         Screen screen = minecraft.gui.screen();
-        if (screen == null || minecraft.gui.overlay() != null) return;
+        if (screen == null) return;
+        if (minecraft.gui.overlay() != null) return;
 
         if (MappedActionProcessor.handleScreenKey(screen, key, scanCode, action)) {
             MappedActionProcessor.rememberSuppressedScreenKey(key, scanCode);

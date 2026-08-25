@@ -66,6 +66,8 @@ public final class ScreenRenderPass {
             "Extracting slot screen render state",
             renderScreen.getClass().getCanonicalName()
         );
+
+        GamepadInputProcessor.trackFocusedCursorDuringScroll(renderScreen);
         ControlHintPipeline.renderScreen(renderScreen, graphics);
         CursorRenderer.renderForCurrentClient(graphics, minecraft);
     }

@@ -56,8 +56,6 @@ public final class BedrockBridgePlacement {
             return null;
         }
 
-        // Conservamos el comportamiento del bridge viejo:
-        // sólo extender hacia espacio vacío.
         if (!level.isEmptyBlock(targetPos)) {
             return null;
         }

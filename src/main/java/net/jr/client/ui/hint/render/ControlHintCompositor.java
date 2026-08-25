@@ -14,9 +14,7 @@ import net.jr.client.ui.layout.render.UILayoutRenderTarget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Composes a complete hint strip before scaling it into its viewport. */
 public final class ControlHintCompositor {
-
 
     public record FrameBufferMetrics (int width, int hegiht) {}
 
@@ -24,10 +22,9 @@ public final class ControlHintCompositor {
     private static final FrameBufferMetrics FB_FHD = new FrameBufferMetrics(1920, 1080);
 
     private static FrameBufferMetrics activeMetrics() {
-        // Aquí es donde el código decide cuál de tus dos moldes entregar
+
         return SplitScreen.isActive() ? FB_HD : FB_FHD;
     }
-
 
     private static final int INTERNAL_RASTER_SCALE = 1;
     private static final float PIXEL_BIAS = 0.35F;

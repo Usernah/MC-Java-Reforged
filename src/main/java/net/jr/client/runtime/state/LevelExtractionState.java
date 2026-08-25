@@ -3,7 +3,6 @@ package net.jr.client.runtime.state;
 import javax.annotation.Nullable;
 import net.minecraft.client.SectionUpdateTracker;
 
-/** Mutable data owned by one local player and consumed by the single LevelExtractor. */
 public final class LevelExtractionState {
     @Nullable
     private SectionUpdateTracker sectionUpdateTracker;
@@ -81,11 +80,6 @@ public final class LevelExtractionState {
         this.shouldResetSkyRenderer = value;
     }
 
-    /**
-     * Marks that this player's ClientLevel identity changed while the shared
-     * terrain engine remained alive. The request is consumed only at the common
-     * extraction boundary, where releasing the old logical view is safe.
-     */
     public void requestLocalLevelReset() {
         this.localLevelResetRequested = true;
     }

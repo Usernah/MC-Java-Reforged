@@ -8,7 +8,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
-/** Makes each per-player Camera build projection and culling matrices for its own viewport. */
 @Mixin(Camera.class)
 public abstract class CameraSSMixin {
     @ModifyArgs(

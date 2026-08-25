@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Keeps each viewport's fog uniform alive until the shared GPU submit ends. */
 @Mixin(FogRenderer.class)
 public abstract class FogRendererSSMixin {
     @Shadow

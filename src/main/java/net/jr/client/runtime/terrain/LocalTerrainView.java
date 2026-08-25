@@ -6,14 +6,6 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import net.minecraft.client.multiplayer.ClientLevel;
 
-/**
- * A player's logical terrain window.
- *
- * <p>The window stores only its bounds. It deliberately does not retain one
- * TerrainKey (or RenderSection) per visible coordinate; those objects belong to
- * {@link SharedTerrainStore}. Moving the camera enumerates only columns that
- * leave or enter the square window.</p>
- */
 public final class LocalTerrainView {
     @Nullable
     private SharedTerrainStore store;
@@ -102,7 +94,6 @@ public final class LocalTerrainView {
         }
     }
 
-    /** Adds columns in the first rectangle that are not inside the second rectangle. */
     private static void collectDifference(
         ClientLevel level,
         int sourceMinX,

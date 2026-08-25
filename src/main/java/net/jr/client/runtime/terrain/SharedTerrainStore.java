@@ -13,14 +13,6 @@ import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 
-/**
- * The single owner of Minecraft's terrain RenderSections.
- *
- * <p>Every player owns a logical camera window, but overlapping windows resolve
- * to the same RenderSection instance and therefore to the same compiled mesh and
- * GPU allocations. Retired sections are delayed before reuse so an asynchronous
- * occlusion graph can finish reading the previous frame safely.</p>
- */
 public final class SharedTerrainStore implements AutoCloseable {
     private static final int RETIRE_DELAY_FRAMES = 2;
 
@@ -89,11 +81,6 @@ public final class SharedTerrainStore implements AutoCloseable {
         }
     }
 
-    /**
-     * Drops every compiled mesh while retaining the shared RenderSection pool.
-     * This is the shared equivalent of vanilla ViewArea.releaseAllBuffers(); it
-     * is intentionally distinct from ordinary reference-based retirement.
-     */
     public void invalidateCompiledGeometry() {
         this.ensureOpen();
         for (Entry entry : this.sections.values()) {

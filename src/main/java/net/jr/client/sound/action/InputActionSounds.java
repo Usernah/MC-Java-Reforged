@@ -1,6 +1,7 @@
 package net.jr.client.sound.action;
 
 import net.jr.registry.ModSounds;
+import net.jr.client.components.navigation.UiActionFeedback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -14,12 +15,27 @@ public final class InputActionSounds {
 
     public static void playBack() { play(ModSounds.UI_BACK.get()); }
     public static void playHover() { play(ModSounds.UI_HOVER.get()); }
+    public static void playFocus() { play(ModSounds.UI_HOVER.get()); }
     public static void playClick() { play(ModSounds.UI_CLICK.get()); }
     public static void playChar() { play(ModSounds.UI_CHAR.get()); }
     public static void playBlock() { play(ModSounds.UI_BLOCK.get()); }
+    public static void playCraft() { play(ModSounds.UI_CRAFT.get()); }
     public static void playHotbarFocus() { play(ModSounds.UI_HOTBAR_FOCUS.get()); }
     public static void playToastNotify() { play(ModSounds.UI_TOAST_NOTIFY.get()); }
     public static void playGameplayItemPop() { play(ModSounds.GAMEPLAY_ITEM_POP.get()); }
+
+    public static void play(UiActionFeedback feedback) {
+        if (feedback == null) {
+            return;
+        }
+
+        switch (feedback) {
+            case CLICK -> playClick();
+            case CHAR -> playChar();
+            case NONE -> {
+            }
+        }
+    }
 
     private static void play(SoundEvent sound) {
         Minecraft minecraft = Minecraft.getInstance();

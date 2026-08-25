@@ -8,6 +8,7 @@ import net.jr.screens.controller.ControllerMenuCaptureAware;
 import net.jr.client.ui.hint.provider.ContainerControlHintProvider;
 import net.jr.client.ui.hint.provider.HudControlHintProvider;
 import net.jr.client.ui.hint.provider.PauseMenuControlHintProvider;
+import net.jr.client.ui.hint.provider.TabNavigationControlHintProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -23,6 +24,7 @@ public final class ControlHintPipeline {
     private static final CopyOnWriteArrayList<ControlHintProvider> PROVIDERS = new CopyOnWriteArrayList<>();
 
     static {
+        registerProvider(new TabNavigationControlHintProvider());
         registerProvider(new ContainerControlHintProvider());
         registerProvider(new PauseMenuControlHintProvider());
         registerProvider(new HudControlHintProvider());
@@ -50,6 +52,10 @@ public final class ControlHintPipeline {
     }
 
     private static void renderInternal(ControlHintContext context, GuiGraphicsExtractor gui) {
+        if (!context.isGamepadMode()) {
+            return;
+        }
+
         if (context.screen() instanceof ControllerMenuCaptureAware captureAware
             && captureAware.javareforged$isCapturingControllerBinding()) {
             return;

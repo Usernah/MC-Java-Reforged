@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Parsed metadata associated with a UI texture. */
 public final class Meta {
     public final Map<String, Object> data;
     public final Map<String, Map<String, Object>> configs;

@@ -7,6 +7,10 @@ import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
 import net.jr.client.ui.container.actions.CreativeContainerActions;
+import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
+import net.jr.client.components.navigation.UiAction;
+import net.jr.client.components.widgets.recipe.RecipeSlotElement;
+import net.jr.screens.crafting.AbstractJavaCraftingScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.inventory.ChestMenu;
@@ -37,8 +41,96 @@ public final class ContainerControlHintProvider implements ControlHintProvider {
             hints.add(new ControlHintRequest(ModKeyBindings.UI_STORE_ALL, Component.translatable("hint.container.java_reforged.store_all")));
         }
 
-        Slot targetSlot = targetSlot(screen);
         ItemStack carried = screen.getMenu().getCarried();
+        if (screen instanceof CreativeCatalogActionHost creativeHost) {
+            switch (creativeHost.creativeCatalogTarget()) {
+                case CATALOG_ITEM -> {
+                    if (carried.isEmpty()) {
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_CONFIRM,
+                                Component.translatable("hint.container.java_reforged.take")
+                        ));
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_QUICK_MOVE,
+                                Component.translatable("hint.container.java_reforged.add_to_hotbar")
+                        ));
+                    } else {
+
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_CONFIRM,
+                                Component.translatable("hint.container.java_reforged.delete")
+                        ));
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_QUICK_MOVE,
+                                Component.translatable("hint.container.java_reforged.delete")
+                        ));
+                    }
+                }
+                case HOTBAR_ITEM -> {
+                    Slot hotbarSlot = targetSlot(screen);
+                    if (!carried.isEmpty() && hotbarSlot != null) {
+                        boolean sameStack = hotbarSlot.getItem().isEmpty()
+                                || ItemStack.isSameItemSameComponents(carried, hotbarSlot.getItem());
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_CONFIRM,
+                                Component.translatable(sameStack
+                                        ? "hint.container.java_reforged.take"
+                                        : "hint.container.java_reforged.swap")
+                        ));
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_ALTERNATE,
+                                Component.translatable(sameStack
+                                        ? "hint.container.java_reforged.place"
+                                        : "hint.container.java_reforged.swap")
+                        ));
+                    } else {
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_CONFIRM,
+                                Component.translatable("hint.container.java_reforged.take")
+                        ));
+                        hints.add(new ControlHintRequest(
+                                ModKeyBindings.UI_ALTERNATE,
+                                Component.translatable("hint.container.java_reforged.take_half")
+                        ));
+                    }
+                    hints.add(new ControlHintRequest(
+                            ModKeyBindings.UI_QUICK_MOVE,
+                            Component.translatable("hint.container.java_reforged.delete")
+                    ));
+                }
+                case NONE -> {
+                }
+            }
+            hints.add(new ControlHintRequest(ModKeyBindings.UI_BACK, Component.translatable("hint.container.java_reforged.exit")));
+            return hints;
+        }
+
+        if (screen instanceof AbstractJavaCraftingScreen<?> craftingScreen
+                && craftingScreen.hasTargetedRecipe()) {
+            RecipeSlotElement.ActivationFeedback primary =
+                    craftingScreen.focusedRecipeActivationFeedback(UiAction.ACCEPT);
+            RecipeSlotElement.ActivationFeedback alternate =
+                    craftingScreen.focusedRecipeActivationFeedback(UiAction.ALTERNATE);
+            if (primary == RecipeSlotElement.ActivationFeedback.CRAFT) {
+                hints.add(new ControlHintRequest(
+                        ModKeyBindings.UI_CONFIRM,
+                        Component.translatable("hint.container.java_reforged.craft")
+                ));
+            } else if (primary == RecipeSlotElement.ActivationFeedback.CLICK) {
+                hints.add(new ControlHintRequest(
+                        ModKeyBindings.UI_CONFIRM,
+                        Component.translatable("hint.container.java_reforged.view_variants")
+                ));
+            }
+            if (alternate == RecipeSlotElement.ActivationFeedback.CRAFT) {
+                hints.add(new ControlHintRequest(
+                        ModKeyBindings.UI_ALTERNATE,
+                        Component.translatable("hint.container.java_reforged.craft")
+                ));
+            }
+        }
+
+        Slot targetSlot = targetSlot(screen);
         if (!carried.isEmpty() && targetSlot != null) {
             boolean sameStack = targetSlot.getItem().isEmpty()
                 || ItemStack.isSameItemSameComponents(carried, targetSlot.getItem());

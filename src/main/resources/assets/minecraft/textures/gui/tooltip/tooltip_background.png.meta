@@ -1,0 +1,10 @@
+image: {
+    size: {
+        width: 9,
+        height: 9,
+    },
+},
+
+nine: {
+    borders: 4,
+}

@@ -7,7 +7,6 @@ import net.jr.client.input.InputApi;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 
-/** Keeps pressed hint glyphs visible for a fixed pulse instead of for the whole held input. */
 final class ControlHintPressAnimation {
     private static final long DURATION_MS = 300L;
 

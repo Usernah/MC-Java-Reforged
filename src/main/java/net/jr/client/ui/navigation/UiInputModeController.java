@@ -7,8 +7,10 @@ import net.jr.client.input.InputApi;
 import net.jr.client.input.cursor.CursorHider;
 import net.jr.client.input.cursor.MouseCoordinates;
 import net.jr.client.input.runtime.GamepadInputProcessor;
+import net.jr.client.input.runtime.MappedActionProcessor;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.mixin.uifocus.MouseHandlerAccessor;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
@@ -32,12 +34,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-/**
- * Owns the pointer/focus transition rules used by the original controller
- * implementation. The old custom MainScreen/UILayout branches intentionally
- * remain outside this class until that UI framework itself is ported; every
- * vanilla Screen and AbstractContainerScreen path is preserved here.
- */
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class UiInputModeController {
     private static final double RAW_MOUSE_MOVE_EPSILON = 0.25D;
@@ -45,7 +41,6 @@ public final class UiInputModeController {
     private UiInputModeController() {
     }
 
-    /** Called once per frame for this JVM's vanilla client. */
     public static void updateCurrentClientFrame(Minecraft minecraft) {
         Screen screen = minecraft.gui.screen();
         UiNavigationState state = state();
@@ -91,10 +86,13 @@ public final class UiInputModeController {
         }
         if (isContainerSlotNavigationKey(event.getKeyCode())
             && screen instanceof AbstractContainerScreen<?>) {
+            FocusSnapshot focusBefore = FocusSnapshot.capture(screen);
             boolean handled = applyContainerSlotFocusFallback(screen, event.getKeyCode());
             event.setCanceled(true);
+            if (handled && focusBefore.hasChanged(screen)) {
+                InputActionSounds.playFocus();
+            }
             if (handled) {
-                InputActionSounds.playHover();
                 screen.afterKeyboardAction();
             }
         }
@@ -147,9 +145,18 @@ public final class UiInputModeController {
     }
 
     public static boolean shouldShowCursorDuringFocus() {
-        return isFocusNavigationActive()
-            && currentScreen() instanceof AbstractContainerScreen<?> containerScreen
-            && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen);
+        if (!isFocusNavigationActive()) {
+            return false;
+        }
+
+        Screen screen = currentScreen();
+        if (screen instanceof FocusCursorVisibilityHost host
+                && host.shouldShowCursorDuringFocus()) {
+            return true;
+        }
+
+        return screen instanceof AbstractContainerScreen<?> containerScreen
+                && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen);
     }
 
     public static boolean shouldSuppressPointerHover() {
@@ -166,21 +173,17 @@ public final class UiInputModeController {
         completeFocusedContainerPath(minecraft.gui.screen());
     }
 
-    /**
-     * Vanilla object lists require a focused entry to also own a focused child
-     * before processing directional navigation. Mouse-seeded focus can legally
-     * stop at the entry, so finish that path before passing the arrow event to
-     * vanilla.
-     */
     private static void completeFocusedContainerPath(@Nullable GuiEventListener listener) {
+        if (listener instanceof AbstractContainerScreen<?> containerScreen
+                && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen)) {
+            return;
+        }
+
         GuiEventListener current = listener;
         while (current instanceof ContainerEventHandler container) {
             GuiEventListener focused = container.getFocused();
             if (focused == null) {
-                if (container.children().isEmpty()) {
-                    return;
-                }
-                ComponentPath initialPath = container.nextFocusPath(new FocusNavigationEvent.InitialFocus());
+                ComponentPath initialPath = resolveInitialFocusPath(container);
                 if (initialPath != null) {
                     initialPath.applyFocus(true);
                 }
@@ -202,7 +205,7 @@ public final class UiInputModeController {
             activatePointerModeFromJoystick();
             return;
         }
-        applyPointerInputTypeAndClearFocus(minecraft);
+        applyPointerInputTypeAndClearFocus(minecraft, true);
     }
 
     public static void notifyPhysicalPointerActivity() {
@@ -218,14 +221,12 @@ public final class UiInputModeController {
             return;
         }
         GamepadInputProcessor.activatePhysicalMouseCursor(minecraft);
-        // Do not clear the focus path while a mouse press is being dragged.
-        // Screen/UILayout use that path to deliver mouseReleased to the
-        // component that captured mouseClicked.
+
         if (minecraft.gui.screen() != null && minecraft.gui.screen().isDragging()) {
             minecraft.setLastInputType(InputType.MOUSE);
             return;
         }
-        applyPointerInputTypeAndClearFocus(minecraft);
+        applyPointerInputTypeAndClearFocus(minecraft, false);
     }
 
     public static void activateFocusNavigation() {
@@ -238,8 +239,12 @@ public final class UiInputModeController {
             return;
         }
 
-        initializeContainerFocusFromPointer(screen, minecraft);
+        if (!hasNavigationFocus(screen)) {
+            clearFocusState(screen);
+            initializeContainerFocusFromPointer(screen, minecraft);
+        }
         state().setFocusNavigationActive(true);
+        GamepadInputProcessor.syncVirtualCursorToFocus(screen);
         CursorHider.setHidden(true);
         CursorHider.setReplacementHidden(true);
         CursorHider.sync();
@@ -265,7 +270,7 @@ public final class UiInputModeController {
         state.setLastObservedRawMouseX(getRawMouseX(minecraft));
         state.setLastObservedRawMouseY(getRawMouseY(minecraft));
         state.setHasObservedRawMousePosition(true);
-        applyPointerInputTypeAndClearFocus(minecraft);
+        applyPointerInputTypeAndClearFocus(minecraft, true);
     }
 
     private static void activatePointerModeFromPhysicalMouse(Minecraft minecraft) {
@@ -278,7 +283,7 @@ public final class UiInputModeController {
         state.setLastObservedRawMouseY(getRawMouseY(minecraft));
         state.setHasObservedRawMousePosition(true);
         GamepadInputProcessor.activatePhysicalMouseCursor(minecraft);
-        applyPointerInputTypeAndClearFocus(minecraft);
+        applyPointerInputTypeAndClearFocus(minecraft, false);
     }
 
     private static void activatePointerModeFromMouseInteraction() {
@@ -379,10 +384,22 @@ public final class UiInputModeController {
         return screen instanceof AbstractContainerScreen<?>;
     }
 
-    private static void applyPointerInputTypeAndClearFocus(Minecraft minecraft) {
+    private static void applyPointerInputTypeAndClearFocus(
+            Minecraft minecraft,
+            boolean controllerPointer
+    ) {
         minecraft.setLastInputType(InputType.MOUSE);
-        clearFocusState(minecraft.gui.screen());
-        GamepadInputProcessor.releaseFocusedSlotCursor();
+        Screen screen = minecraft.gui.screen();
+
+        if (screen == null
+            || (!screen.isDragging() && !MappedActionProcessor.hasActivePointerGesture())) {
+            clearFocusState(screen);
+        }
+        if (controllerPointer) {
+            GamepadInputProcessor.releaseFocusedSlotCursorToJoystick();
+        } else {
+            GamepadInputProcessor.releaseFocusedSlotCursor();
+        }
         CursorHider.setReplacementHidden(false);
     }
 
@@ -398,11 +415,30 @@ public final class UiInputModeController {
         if (screen == null) {
             return;
         }
+        if (screen instanceof CustomSlotLayout layout) {
+            layout.clearFocusForPointer();
+        }
         if (screen instanceof AbstractContainerScreen<?> containerScreen) {
             ContainerSlotFocusController.clearFocusedSlot(containerScreen);
+        }
+        clearNestedFocusState(screen);
+        screen.clearFocus();
+    }
+
+    private static boolean hasNavigationFocus(Screen screen) {
+        return screen instanceof AbstractContainerScreen<?> containerScreen
+                && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen)
+            || resolveFocusedListener(screen) != null;
+    }
+
+    private static void clearNestedFocusState(GuiEventListener listener) {
+        if (!(listener instanceof ContainerEventHandler container)) {
             return;
         }
-        screen.clearFocus();
+        for (GuiEventListener child : new ArrayList<>(container.children())) {
+            clearNestedFocusState(child);
+        }
+        container.setFocused(null);
     }
 
     private static void initializeContainerFocusFromPointer(Screen screen, Minecraft minecraft) {
@@ -485,8 +521,7 @@ public final class UiInputModeController {
                 }
             }
         }
-        ComponentPath initialPath = listener.nextFocusPath(new FocusNavigationEvent.InitialFocus());
-        return initialPath != null ? initialPath : ComponentPath.leaf(listener);
+        return resolveInitialFocusPath(listener);
     }
 
     @Nullable
@@ -519,6 +554,42 @@ public final class UiInputModeController {
     }
 
     private static boolean isFocusableListener(GuiEventListener listener) {
+        return resolveInitialFocusPath(listener) != null;
+    }
+
+    @Nullable
+    private static ComponentPath resolveInitialFocusPath(GuiEventListener listener) {
+        if (listener instanceof AbstractWidget widget && (!widget.visible || !widget.active)) {
+            return null;
+        }
+
+        if (!(listener instanceof ContainerEventHandler container)) {
+            ComponentPath initialPath = listener.nextFocusPath(new FocusNavigationEvent.InitialFocus());
+            return initialPath != null ? initialPath : ComponentPath.leaf(listener);
+        }
+
+        ComponentPath fallbackPath = null;
+        for (GuiEventListener child : container.children()) {
+            ComponentPath childPath = resolveInitialFocusPath(child);
+            if (childPath != null) {
+                fallbackPath = ComponentPath.path(container, childPath);
+                break;
+            }
+        }
+
+        if (fallbackPath == null) {
+            return null;
+        }
+
+        ComponentPath initialPath = container.nextFocusPath(new FocusNavigationEvent.InitialFocus());
+        GuiEventListener focusedLeaf = extractFocusedLeaf(initialPath);
+        return isFocusableLeaf(focusedLeaf) ? initialPath : fallbackPath;
+    }
+
+    private static boolean isFocusableLeaf(@Nullable GuiEventListener listener) {
+        if (listener == null || listener instanceof ContainerEventHandler) {
+            return false;
+        }
         return !(listener instanceof AbstractWidget widget) || (widget.visible && widget.active);
     }
 
@@ -556,11 +627,28 @@ public final class UiInputModeController {
 
     @Nullable
     private static ComponentPath buildInitialFocusPath(Screen screen, GuiEventListener listener) {
-        ComponentPath childPath = listener.nextFocusPath(new FocusNavigationEvent.InitialFocus());
-        if (childPath == null) {
-            childPath = ComponentPath.leaf(listener);
+        ComponentPath childPath = resolveInitialFocusPath(listener);
+        return childPath == null ? null : ComponentPath.path(screen, childPath);
+    }
+
+    private record FocusSnapshot(@Nullable GuiEventListener focusedLeaf, @Nullable Integer focusedSlot) {
+        private static FocusSnapshot capture(Screen screen) {
+            GuiEventListener focused = extractFocusedLeaf(screen.getCurrentFocusPath());
+            if (focused == null || focused == screen) {
+                focused = screen.getFocused();
+            }
+            Integer slot = screen instanceof AbstractContainerScreen<?> containerScreen
+                    ? ContainerSlotFocusController.getFocusedSlotIndex(containerScreen)
+                    : null;
+            return new FocusSnapshot(focused, slot);
         }
-        return ComponentPath.path(screen, childPath);
+
+        private boolean hasChanged(Screen screen) {
+            FocusSnapshot current = capture(screen);
+            return this.focusedLeaf != current.focusedLeaf
+                    || !java.util.Objects.equals(this.focusedSlot, current.focusedSlot);
+        }
+
     }
 
     private static double squaredDistance(double x1, double y1, double x2, double y2) {

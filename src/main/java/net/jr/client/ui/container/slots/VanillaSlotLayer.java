@@ -1,9 +1,7 @@
 package net.jr.client.ui.container.slots;
 
-import net.jr.Java_reforged;
-import net.jr.api.client.render.Draw;
-import net.jr.api.client.resource.Asset;
 import net.jr.client.ui.navigation.UiInputModeController;
+import net.jr.client.render.GuiGraphicsExtractorBridge;
 import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -28,21 +26,7 @@ import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Vanilla inventory interaction layer used by JR layouts.
- *
- * <p>This is the 26.2 adaptation of the original layer. Its state machine and
- * click protocol intentionally mirror {@link AbstractContainerScreen}.</p>
- */
 public final class VanillaSlotLayer {
-    private static final Asset SLOT_SELECTION = Asset.NamespaceAndPatch(
-        Java_reforged.MODID,
-        "textures/gui/containers/inventory/slot_selection.png"
-    );
-    private static final float SLOT_SELECTION_OFFSET = -3.0F;
-    private static final float SLOT_SELECTION_WIDTH = 22.0F;
-    private static final float SLOT_SELECTION_HEIGHT = 22.0F;
-
     private final AbstractContainerMenu menu;
     private final Font font;
     private final Minecraft minecraft;
@@ -112,13 +96,13 @@ public final class VanillaSlotLayer {
             return;
         }
 
-        Draw.imageFromMeta(
-            SLOT_SELECTION,
-            slotPos.x() + SLOT_SELECTION_OFFSET,
-            slotPos.y() + SLOT_SELECTION_OFFSET,
-            SLOT_SELECTION_WIDTH,
-            SLOT_SELECTION_HEIGHT
-        ).uvSize(24.0F, 24.0F).atlasSize(24.0F, 24.0F).draw(graphics);
+        SlotHighlightRenderer.draw(
+                graphics,
+                slotPos.x(),
+                slotPos.y(),
+                slotPos.width(),
+                slotPos.height()
+        );
     }
 
     public void renderTooltip(GuiGraphicsExtractor graphics, SlotGrid grid, int mouseX, int mouseY) {
@@ -132,8 +116,8 @@ public final class VanillaSlotLayer {
         if (UiInputModeController.isFocusNavigationActive()) {
             SlotPos slotPos = grid.get(hoveredSlot.index);
             if (slotPos != null) {
-                tooltipX = slotPos.x() + 8;
-                tooltipY = slotPos.y() + 8;
+                tooltipX = slotPos.x() + slotPos.width() / 2;
+                tooltipY = slotPos.y() + slotPos.height() / 2;
             }
         }
         graphics.setTooltipForNextFrame(this.font, hoveredSlot.getItem(), tooltipX, tooltipY);
@@ -150,10 +134,18 @@ public final class VanillaSlotLayer {
         graphics.pose().pushMatrix();
         graphics.pose().translate(mouseX - 9.0F - scale / 2.0F, mouseY - 9.0F - scale / 2.0F);
         graphics.pose().scale(scale, scale);
-        graphics.item(carriedItem, 0, 0);
         Font itemFont = IClientItemExtensions.of(carriedItem)
             .getFont(carriedItem, IClientItemExtensions.FontContext.ITEM_COUNT);
-        graphics.itemDecorations(itemFont == null ? this.font : itemFont, carriedItem, 0, 0, null);
+        ((GuiGraphicsExtractorBridge)graphics).javaReforged$renderItemStackAtSize(
+            carriedItem,
+            0,
+            0,
+            0,
+            20,
+            false,
+            itemFont == null ? this.font : itemFont,
+            null
+        );
         graphics.pose().popMatrix();
     }
 
@@ -439,6 +431,12 @@ public final class VanillaSlotLayer {
     }
 
     @Nullable
+    public Slot getSlotAt(SlotGrid grid, double mouseX, double mouseY) {
+        Integer slotId = this.findSlotIdAt(grid, mouseX, mouseY);
+        return slotId == null ? null : this.menu.slots.get(slotId);
+    }
+
+    @Nullable
     public Slot getFocusedSlot() {
         if (this.focusedSlotId == null
             || this.focusedSlotId < 0
@@ -478,21 +476,8 @@ public final class VanillaSlotLayer {
 
     @Nullable
     public Slot resolveActionSlot(boolean focusNavigationActive, boolean requireItem) {
-        Slot focusedSlot = focusNavigationActive ? this.getFocusedSlot() : null;
-        if (isUsableActionSlot(focusedSlot, requireItem)) {
-            return focusedSlot;
-        }
-        Slot hoveredSlot = this.getHoveredSlot();
-        if (isUsableActionSlot(hoveredSlot, requireItem)) {
-            return hoveredSlot;
-        }
-        if (!focusNavigationActive) {
-            focusedSlot = this.getFocusedSlot();
-            if (isUsableActionSlot(focusedSlot, requireItem)) {
-                return focusedSlot;
-            }
-        }
-        return null;
+        Slot target = focusNavigationActive ? this.getFocusedSlot() : this.getHoveredSlot();
+        return isUsableActionSlot(target, requireItem) ? target : null;
     }
 
     @Nullable
@@ -553,7 +538,11 @@ public final class VanillaSlotLayer {
         }
 
         if (renderQuickCraftOverlay) {
-            graphics.fill(slotPos.x(), slotPos.y(), slotPos.x() + 16, slotPos.y() + 16, -2130706433);
+            graphics.fill(
+                slotPos.x(), slotPos.y(),
+                slotPos.x() + slotPos.width(), slotPos.y() + slotPos.height(),
+                -2130706433
+            );
         }
         if (renderStack.isEmpty()) {
             if (slot.isActive() && slot.getNoItemIcon() != null) {
@@ -562,18 +551,30 @@ public final class VanillaSlotLayer {
                     slot.getNoItemIcon(),
                     slotPos.x(),
                     slotPos.y(),
-                    16,
-                    16
+                    slotPos.width(),
+                    slotPos.height()
                 );
             }
             return;
         }
-        if (slot.isFake()) {
-            graphics.fakeItem(renderStack, slotPos.x(), slotPos.y(), slotId);
-        } else {
-            graphics.item(renderStack, slotPos.x(), slotPos.y(), slotId);
-        }
-        graphics.itemDecorations(this.font, renderStack, slotPos.x(), slotPos.y(), countText);
+        int itemSize = slotPos.itemSize();
+        int itemX = slotPos.x() + (slotPos.width() - itemSize) / 2;
+        int itemY = slotPos.y() + (slotPos.height() - itemSize) / 2;
+        float scale = itemSize / 16.0F;
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(itemX, itemY);
+        graphics.pose().scale(scale, scale);
+        ((GuiGraphicsExtractorBridge)graphics).javaReforged$renderItemStackAtSize(
+            renderStack,
+            0,
+            0,
+            slotId,
+            itemSize,
+            slot.isFake(),
+            this.font,
+            countText
+        );
+        graphics.pose().popMatrix();
     }
 
     private void recalculateQuickCraftRemaining() {
@@ -649,10 +650,10 @@ public final class VanillaSlotLayer {
     }
 
     private boolean isHovering(SlotPos slotPos, double mouseX, double mouseY) {
-        return mouseX >= slotPos.x() - 1.0D
-            && mouseX < slotPos.x() + this.slotSize + 1.0D
-            && mouseY >= slotPos.y() - 1.0D
-            && mouseY < slotPos.y() + this.slotSize + 1.0D;
+        return mouseX >= slotPos.x()
+            && mouseX < slotPos.x() + slotPos.width()
+            && mouseY >= slotPos.y()
+            && mouseY < slotPos.y() + slotPos.height();
     }
 
     private static boolean isUsableActionSlot(@Nullable Slot slot, boolean requireItem) {

@@ -37,8 +37,8 @@ public record MetricsResolver(
             2F,
             0,
             1,
-            1.4F,
-            1.4F
+            1.0F,
+            1.0F
     );
 
 }

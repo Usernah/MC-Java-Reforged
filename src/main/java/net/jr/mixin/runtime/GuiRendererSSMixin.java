@@ -2,6 +2,8 @@ package net.jr.mixin.runtime;
 
 import com.mojang.blaze3d.systems.RenderPass;
 import net.jr.client.runtime.viewport.GuiScissorBounds;
+import net.jr.client.runtime.viewport.PreciseGuiScissor;
+import net.jr.client.runtime.viewport.PreciseScissorAccess;
 import net.jr.client.runtime.viewport.ViewportPanoramaRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -24,16 +26,56 @@ public abstract class GuiRendererSSMixin {
         ViewportPanoramaRenderer.renderPending(this.cubeMap);
     }
 
-    @Inject(method = "enableScissor", at = @At("HEAD"), cancellable = true)
-    private void splitTest$useExactViewportEdges(ScreenRectangle rectangle, RenderPass renderPass, CallbackInfo callback) {
-        WindowRenderState window = Minecraft.getInstance().gameRenderer.gameRenderState().windowRenderState;
-        GuiScissorBounds.PixelRectangle pixels = GuiScissorBounds.resolve(rectangle, window);
+    @Inject(
+            method = "enableScissor",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void splitTest$usePreciseViewportScissor(
+            ScreenRectangle rectangle,
+            RenderPass renderPass,
+            CallbackInfo callback
+    ) {
+        PreciseScissorAccess access =
+                (PreciseScissorAccess)(Object)rectangle;
+
+        PreciseGuiScissor precise =
+                access.javaReforged$preciseScissor();
+
+        if (precise == null) {
+            return;
+        }
+
+        WindowRenderState window =
+                Minecraft.getInstance()
+                        .gameRenderer
+                        .gameRenderState()
+                        .windowRenderState;
+
+        int left = (int)Math.floor(precise.left());
+        int top = (int)Math.floor(precise.top());
+        int right = (int)Math.ceil(precise.right());
+        int bottom = (int)Math.ceil(precise.bottom());
+
+        left = Math.max(0, Math.min(left, window.width));
+        top = Math.max(0, Math.min(top, window.height));
+        right = Math.max(0, Math.min(right, window.width));
+        bottom = Math.max(0, Math.min(bottom, window.height));
+
+        int width = right - left;
+        int height = bottom - top;
+
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
         renderPass.enableScissor(
-            pixels.left(),
-            window.height - pixels.bottom(),
-            Math.max(0, pixels.right() - pixels.left()),
-            Math.max(0, pixels.bottom() - pixels.top())
+                left,
+                window.height - bottom,
+                width,
+                height
         );
+
         callback.cancel();
     }
 }

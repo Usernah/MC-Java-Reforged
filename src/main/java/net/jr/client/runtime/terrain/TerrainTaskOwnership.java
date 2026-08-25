@@ -10,7 +10,6 @@ import net.jr.client.runtime.bridge.LevelRendererStateAccess;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.world.phys.Vec3;
 
-/** Captures only the camera context required by Vanilla's asynchronous terrain task. */
 public final class TerrainTaskOwnership {
     private static final ConcurrentMap<Object, TaskContext> TASKS = new ConcurrentHashMap<>();
 

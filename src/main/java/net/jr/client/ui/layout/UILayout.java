@@ -88,11 +88,6 @@ public abstract class UILayout extends AbstractContainerEventHandler implements 
 
     protected abstract void initLayout();
 
-    /**
-     * Updates layout geometry without destroying its widgets, visual elements
-     * or other stateful resources. Subclasses may reposition Java-owned
-     * components here when their geometry depends on the screen size.
-     */
     protected void resizeLayout(int width, int height) {
     }
 
@@ -305,8 +300,7 @@ public abstract class UILayout extends AbstractContainerEventHandler implements 
         } else if (handled && !stillInteractive) {
             this.cancelCapturedInteraction(listener);
         }
-        // Preserve vanilla ContainerEventHandler semantics: hitting a child
-        // consumes the event even when that child declines the button.
+
         return true;
     }
 

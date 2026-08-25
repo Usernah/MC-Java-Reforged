@@ -7,11 +7,6 @@ import java.util.Objects;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Exposes the logical dimensions of the local player currently being rendered.
- * The vanilla passes themselves always use a complete viewport-local target and
- * are never resized or offset individually.
- */
 public final class ViewportRenderScope {
     private static final ThreadLocal<ViewportArea> ACTIVE_VIEWPORT = new ThreadLocal<>();
 
@@ -76,7 +71,6 @@ public final class ViewportRenderScope {
         return ACTIVE_VIEWPORT.get() != null;
     }
 
-    /** Computes the one destination region used when the completed slot is presented. */
     public static RenderPass.RenderArea areaFor(ViewportArea viewport, int textureWidth, int textureHeight) {
         int x = viewport.glX();
         int y = viewport.glY();

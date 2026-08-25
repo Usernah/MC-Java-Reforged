@@ -22,6 +22,9 @@ public class ModFonts implements IFontRegistryProvider {
     private ModFonts() {
     }
 
+    public static void bootstrap() {
+    }
+
     @Override
     public FontRegister getFontRegister() {
         return REGISTRY;

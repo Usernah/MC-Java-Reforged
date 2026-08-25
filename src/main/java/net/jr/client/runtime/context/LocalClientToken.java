@@ -1,6 +1,5 @@
 package net.jr.client.runtime.context;
 
-/** Immutable identity captured when client-owned asynchronous work is scheduled. */
 public record LocalClientToken(int slotId, long sessionId, long generation) {
     public LocalClientToken {
         if (slotId < 0) {

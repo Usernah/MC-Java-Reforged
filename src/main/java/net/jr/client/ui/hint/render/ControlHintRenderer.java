@@ -10,6 +10,7 @@ import net.jr.client.ui.hint.ControlHintContext;
 import net.jr.client.ui.hint.model.HintPlacement;
 import net.jr.client.ui.hint.model.ResolvedControlHint;
 import net.jr.client.ui.hint.model.ResolvedControlHintIcon;
+import net.jr.client.ui.hint.model.ResolvedControlHintInput;
 import net.jr.registry.ModFonts;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -111,40 +112,6 @@ public final class ControlHintRenderer {
                 true
         );
     }
-/*
-    private static void renderLayer(
-            ControlHintContext context,
-            GuiGraphicsExtractor graphics,
-            List<ResolvedControlHint> hints,
-            float canvasWidth,
-            float canvasHeight,
-            boolean drawIcons,
-            boolean drawText
-    ) {
-        MetricsResolver metrics = metrics();
-
-        if (context.isHud()) {
-            renderHud(
-                    graphics,
-                    hints,
-                    canvasWidth,
-                    canvasHeight,
-                    drawIcons,
-                    drawText,
-                    metrics
-            );
-        } else {
-            renderMenu(
-                    graphics,
-                    hints,
-                    canvasHeight,
-                    drawIcons,
-                    drawText,
-                    metrics
-            );
-        }
-    }
-    */
 
     private static void renderLayer(
             ControlHintContext context,
@@ -423,58 +390,48 @@ public final class ControlHintRenderer {
     ) {
         float current = x;
 
-        for (int i = 0; i < hint.icons().size(); i++) {
-            if (i > 0) {
-                current +=
-                        ResolvedControlHint.joinerGap();
+        for (int inputIndex = 0; inputIndex < hint.inputs().size(); inputIndex++) {
+            if (inputIndex > 0) {
+                current += ResolvedControlHint.inputGap();
+            }
 
-                Draw.TextBuilder joinerText =
-                        joinerText(alpha);
+            ResolvedControlHintInput input = hint.inputs().get(inputIndex);
+            for (int iconIndex = 0; iconIndex < input.icons().size(); iconIndex++) {
+                if (iconIndex > 0) {
+                    current += ResolvedControlHint.joinerGap();
 
-                joinerText.position(
-                        Math.round(current),
-                        Math.round(
-                                centerY
-                                        - joinerText.lineHeight() / 2F
-                        )
-                );
+                    Draw.TextBuilder joinerText = joinerText(alpha);
+                    joinerText.position(
+                            Math.round(current),
+                            Math.round(centerY - joinerText.lineHeight() / 2F)
+                    );
 
-                if (renderText) {
-                    joinerText.draw(graphics);
+                    if (renderText) {
+                        joinerText.draw(graphics);
+                    }
+
+                    current += joinerText.width() + ResolvedControlHint.joinerGap();
                 }
 
-                current +=
-                        joinerText.width()
-                                + ResolvedControlHint.joinerGap();
+                ResolvedControlHintIcon icon = input.icons().get(iconIndex);
+                GlyphTextureBounds metrics = icon.metrics();
+
+                if (renderIcons) {
+                    Draw.image(
+                                    icon.texture(),
+                                    current,
+                                    centerY - icon.drawHeight() / 2F,
+                                    icon.drawWidth(),
+                                    icon.drawHeight()
+                            )
+                            .uvSize(metrics.sourceWidth(), metrics.sourceHeight())
+                            .atlasSize(metrics.sourceWidth(), metrics.sourceHeight())
+                            .alpha(alpha)
+                            .draw(graphics);
+                }
+
+                current += icon.drawWidth();
             }
-
-            ResolvedControlHintIcon icon =
-                    hint.icons().get(i);
-
-            GlyphTextureBounds metrics =
-                    icon.metrics();
-
-            if (renderIcons) {
-                Draw.image(
-                                icon.texture(),
-                                current,
-                                centerY - icon.drawHeight() / 2F,
-                                icon.drawWidth(),
-                                icon.drawHeight()
-                        )
-                        .uvSize(
-                                metrics.sourceWidth(),
-                                metrics.sourceHeight()
-                        )
-                        .atlasSize(
-                                metrics.sourceWidth(),
-                                metrics.sourceHeight()
-                        )
-                        .alpha(alpha)
-                        .draw(graphics);
-            }
-
-            current += icon.drawWidth();
         }
     }
 

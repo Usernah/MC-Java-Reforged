@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.SectionOcclusionGraph;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.world.phys.Vec3;
 
-/** Per-player state consumed by Minecraft's one shared LevelRenderer. */
 public final class TerrainState {
     private final SectionOcclusionGraph sectionOcclusionGraph = new SectionOcclusionGraph();
     private final ObjectArrayList<SectionRenderDispatcher.RenderSection> visibleSections = new ObjectArrayList<>(10000);

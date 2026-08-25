@@ -8,12 +8,6 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Java-side registry for controller glyph themes.
- *
- * Theme identity, supported glyphs and pressed variants remain code-defined.
- * Only visual heights are loaded from each theme's definitions.json.
- */
 public enum ControllerGlyphTheme {
     XBOX(
         "controller/xbox",

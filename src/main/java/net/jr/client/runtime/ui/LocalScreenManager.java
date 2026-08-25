@@ -77,19 +77,20 @@ public final class LocalScreenManager {
                 continue;
             }
 
-            Screen screen = slot.screenState().screen();
-            if (screen == null) {
-                continue;
-            }
-
             SlotExecution.runForSlot(
                 minecraft,
                 slot.id(),
-                () -> LocalScreenInput.runEvent(
-                    screen::tick,
-                    "Ticking screen",
-                    screen.getClass().getCanonicalName()
-                )
+                () -> {
+                    LocalSleepScreenController.synchronize(minecraft);
+                    Screen screen = slot.screenState().screen();
+                    if (screen != null) {
+                        LocalScreenInput.runEvent(
+                            screen::tick,
+                            "Ticking screen",
+                            screen.getClass().getCanonicalName()
+                        );
+                    }
+                }
             );
         }
     }

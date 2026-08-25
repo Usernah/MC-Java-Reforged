@@ -20,7 +20,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Keeps viewport-specific mapped uniforms alive across the shared GPU submit. */
 @Mixin(MappableRingBuffer.class)
 public abstract class MappableRingBufferSSMixin {
     @Unique

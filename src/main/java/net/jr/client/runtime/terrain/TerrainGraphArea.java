@@ -8,10 +8,6 @@ import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 
-/**
- * Lightweight per-player ViewArea facade over the one shared RenderSection pool.
- * It owns camera-window membership only; it never creates a second terrain engine.
- */
 public final class TerrainGraphArea extends ViewArea {
     private final SharedTerrainStore store;
     private final LocalTerrainView view;

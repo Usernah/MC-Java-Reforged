@@ -4,8 +4,8 @@
       "type": "ttf",
       "file": "java_reforged:minecraft_ten.ttf",
       "shift": [0, 0],
-      "size": 10.0,
-      "oversample": 5.0,
+      "size": 16.0,
+      "oversample": 1.0,
       "point_scale": true
     }
   ]

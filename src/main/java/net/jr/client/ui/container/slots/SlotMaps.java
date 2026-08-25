@@ -32,6 +32,17 @@ public final class SlotMaps {
         new SlotSlice(SlotGroup.PLAYER_OFFHAND, new int[] {45})
     );
 
+    public static final SlotMap CRAFTING_TABLE = SlotMap.fromSlices(
+        new SlotSlice(SlotGroup.CRAFTING_RESULT, new int[] {0}),
+        new SlotSlice(SlotGroup.CRAFTING_GRID_3X3, new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9}),
+        new SlotSlice(SlotGroup.PLAYER_INVENTORY, new int[] {
+            10, 11, 12, 13, 14, 15, 16, 17, 18,
+            19, 20, 21, 22, 23, 24, 25, 26, 27,
+            28, 29, 30, 31, 32, 33, 34, 35, 36
+        }),
+        new SlotSlice(SlotGroup.PLAYER_HOTBAR, new int[] {37, 38, 39, 40, 41, 42, 43, 44, 45})
+    );
+
     public static final SlotMap BATTLE_PLAYER = SlotMap.build(
         SlotGroup.PLAYER_ARMOR,
         SlotGroup.PLAYER_HOTBAR,

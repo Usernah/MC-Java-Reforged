@@ -7,6 +7,10 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+
+import net.jr.client.components.navigation.UiAction;
+import net.jr.client.components.widgets.EditBoxElement;
+import net.jr.client.components.widgets.recipe.RecipeSlotElement;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotScope;
@@ -19,11 +23,19 @@ import net.jr.client.input.binding.KeyboardMouseInputBindings;
 import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
+import net.jr.client.sound.action.WidgetInputSounds;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
+import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
+import net.jr.client.ui.navigation.tabs.TabNavigationController;
+import net.jr.client.ui.navigation.tabs.TabNavigationHost;
 import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
 import net.jr.screens.controller.ControllerBindingsScreen;
 import net.jr.screens.controller.ControllerMenuCaptureAware;
+import net.jr.screens.crafting.AbstractJavaCraftingScreen;
+import net.jr.screens.crafting.JavaCrafting2x2Screen;
+import net.jr.screens.inventory.JavaCreativeInventoryScreen;
 import net.minecraft.util.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -31,7 +43,9 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.Slot;
@@ -68,20 +82,60 @@ public final class MappedActionProcessor {
         }
     }
 
-
     public static boolean handleScreenMouseButton(Screen screen, int button) {
-        ActionState state = state();
-        if (!(screen instanceof AbstractContainerScreen<?> containerScreen)
-                || shouldBypassUiActionHandling(screen)
-                || screen.getFocused() instanceof EditBox) {
-            return false;
-        }
-        return handleMouseContainerAction(state, containerScreen, button);
+        return handleScreenMouseButton(
+                screen,
+                button,
+                GamepadInputProcessor.cursorX(),
+                GamepadInputProcessor.cursorY()
+        );
     }
 
+    public static boolean handleScreenMouseButton(
+            Screen screen,
+            int button,
+            double mouseX,
+            double mouseY
+    ) {
+        ActionState state = state();
+        if (!(screen instanceof AbstractContainerScreen<?> containerScreen)
+                || shouldBypassUiActionHandling(screen)) {
+            return false;
+        }
+        return handleMouseContainerAction(state, containerScreen, button, mouseX, mouseY);
+    }
+
+    public static void playPhysicalMouseContainerActionFeedback(
+            Screen screen,
+            MouseButtonEvent event
+    ) {
+        if (!(screen instanceof AbstractContainerScreen<?> containerScreen)
+                || shouldBypassUiActionHandling(screen)) {
+            return;
+        }
+
+        ContainerAction action = ContainerAction.fromMouseButton(event.button());
+        if (action == null || !action.usesVanillaPhysicalMouseButton(event.button())) {
+            return;
+        }
+
+        playVanillaMouseContainerActionSound(
+                containerScreen,
+                action,
+                event.x(),
+                event.y()
+        );
+    }
 
     public static void rememberSuppressedScreenMouseButton(int button) {
         state().suppressedScreenMouseButtons.add(button);
+    }
+
+    public static void suppressNextScreenTransitionSound() {
+        Screen screen = Minecraft.getInstance().gui.screen();
+        if (screen != null) {
+            state().suppressNextScreenTransitionSoundFrom = screen;
+        }
     }
 
     public static boolean suppressConsumedScreenMouseButton(@Nullable Screen screen, int button, int action) {
@@ -105,7 +159,7 @@ public final class MappedActionProcessor {
         ActionState state = state();
         if (state.dispatchingSyntheticKey
             || shouldBypassUiActionHandling(screen)
-            || screen.getFocused() instanceof EditBox) {
+            || isTextInputFocused(screen)) {
             return false;
         }
 
@@ -133,7 +187,7 @@ public final class MappedActionProcessor {
         ActionState state = state();
         if (!(screen instanceof AbstractContainerScreen<?> containerScreen)
             || shouldBypassUiActionHandling(screen)
-            || screen.getFocused() instanceof EditBox) {
+            || isTextInputFocused(screen)) {
             return false;
         }
         return handleMouseScrollContainerAction(state, containerScreen, scrollY);
@@ -179,7 +233,7 @@ public final class MappedActionProcessor {
         } else if (player != null) {
             handleGameplayActions(minecraft, player, state, gamepadInput);
         }
-        syncInGameScreenSounds(minecraft, currentScreen, state);
+        syncInGameScreenSounds(minecraft, minecraft.gui.screen(), state);
     }
 
     private static boolean clearHandledMouseButton(ActionState state, @Nullable Screen screen, int button) {
@@ -199,8 +253,23 @@ public final class MappedActionProcessor {
     }
 
     private static boolean handleKeyboardScreenAction(ActionState state, Screen screen, int keyCode, int scanCode, int action) {
+        TabNavigationController tabNavigation = tabNavigationController(screen);
+        if (tabNavigation != null) {
+            KeyMapping handledMapping = tabNavigation.handleKey(
+                    new net.minecraft.client.input.KeyEvent(keyCode, scanCode, 0)
+            );
+            if (handledMapping != null) {
+                markHandledByInput(state, handledMapping);
+                return true;
+            }
+        }
+
         if (matchesKey(ModKeyBindings.UI_BACK, keyCode, scanCode)) {
-            screen.onClose();
+            if (GamepadInputProcessor.dispatchFocusedUiAction(screen, UiAction.BACK)) {
+                GamepadInputProcessor.playFocusedUiActionFeedback(screen, UiAction.BACK);
+            } else {
+                closeScreenWithBackFeedback(state, screen);
+            }
             markHandledByInput(state, ModKeyBindings.UI_BACK);
             return true;
         }
@@ -222,7 +291,8 @@ public final class MappedActionProcessor {
         }
 
         if (matchesKey(ModKeyBindings.UI_CONFIRM, keyCode, scanCode)) {
-            boolean handled = GamepadInputProcessor.activateFocusedElement(screen, 0);
+            boolean handledByFocusedElement = GamepadInputProcessor.activateFocusedElement(screen, 0);
+            boolean handled = handledByFocusedElement;
             if (!handled && keyCode != GLFW.GLFW_KEY_ENTER) {
                 state.dispatchingSyntheticKey = true;
                 try {
@@ -232,6 +302,9 @@ public final class MappedActionProcessor {
                 }
             }
             if (handled) {
+                if (handledByFocusedElement) {
+                    GamepadInputProcessor.playFocusedUiActionFeedback(screen, UiAction.ACCEPT);
+                }
                 state.suppressNextScreenTransitionSoundFrom = screen;
                 screen.afterKeyboardAction();
                 markHandledByInput(state, ModKeyBindings.UI_CONFIRM);
@@ -247,14 +320,20 @@ public final class MappedActionProcessor {
         return action != null && executeContainerAction(state, screen, action);
     }
 
-    private static boolean handleMouseContainerAction(ActionState state, AbstractContainerScreen<?> screen, int button) {
+    private static boolean handleMouseContainerAction(
+            ActionState state,
+            AbstractContainerScreen<?> screen,
+            int button,
+            double mouseX,
+            double mouseY
+    ) {
         if (isHandledMouseButton(state, screen, button)) {
             return true;
         }
 
         ContainerAction action = ContainerAction.fromMouseButton(button);
         if (action != null && action.usesVanillaPhysicalMouseButton(button)) {
-            playVanillaMouseContainerActionSound(screen, action);
+
             return false;
         }
         return action != null
@@ -262,18 +341,57 @@ public final class MappedActionProcessor {
     }
 
     private static void playVanillaMouseContainerActionSound(
-        AbstractContainerScreen<?> screen,
-        ContainerAction action
+            AbstractContainerScreen<?> screen,
+            ContainerAction action,
+            double mouseX,
+            double mouseY
     ) {
-        Slot hoveredSlot = ((AbstractContainerScreenAccessor) screen).javareforged$getHoveredSlot();
-        if (hoveredSlot != null && hoveredSlot.isActive()) {
-            if (action != ContainerAction.QUICK_MOVE || hoveredSlot.hasItem()) {
+        Slot cachedHoveredSlot =
+                ((AbstractContainerScreenAccessor) screen)
+                        .javareforged$getHoveredSlot();
+        Slot hoveredSlot = cachedHoveredSlot;
+        if (screen instanceof CustomSlotLayout layout) {
+            hoveredSlot = layout.slotLayer().getSlotAt(layout.slotGrid(), mouseX, mouseY);
+        }
+
+        boolean validVanillaSlot =
+                hoveredSlot != null
+                        && hoveredSlot.isActive()
+                        && hoveredSlot.hasItem();
+
+        if (action == ContainerAction.QUICK_MOVE) {
+            if (validVanillaSlot) {
                 InputActionSounds.playClick();
             } else {
                 InputActionSounds.playBlock();
             }
-        } else if (action == ContainerAction.QUICK_MOVE) {
-            InputActionSounds.playBlock();
+            return;
+        }
+
+        if (screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+            int mouseButton = action == ContainerAction.PRIMARY ? 0 : 1;
+            RecipeSlotElement.ActivationFeedback feedback =
+                    craftingScreen.recipeMouseActivationFeedbackAt(
+                            mouseX,
+                            mouseY,
+                            mouseButton
+                    );
+            if (feedback != null) {
+                playRecipeActivationFeedback(feedback);
+                return;
+            }
+        }
+
+        if (hoveredSlot != null && hoveredSlot.isActive()) {
+            InputActionSounds.playClick();
+        }
+    }
+
+    private static void playRecipeActivationFeedback(RecipeSlotElement.ActivationFeedback feedback) {
+        switch (feedback) {
+            case CRAFT -> InputActionSounds.playCraft();
+            case BLOCK -> InputActionSounds.playBlock();
+            case CLICK -> InputActionSounds.playClick();
         }
     }
 
@@ -290,7 +408,9 @@ public final class MappedActionProcessor {
         boolean handled = switch (action) {
             case TAKE_ALL -> ContainerSlotFocusController.takeAllFromContainer(screen);
             case STORE_ALL -> ContainerSlotFocusController.storeAllInContainer(screen);
-            case QUICK_MOVE -> ContainerSlotFocusController.quickMoveFocusedOrHoveredSlot(screen);
+            case QUICK_MOVE -> screen instanceof CreativeCatalogActionHost creativeHost
+                    ? creativeHost.handleCreativeQuickMove()
+                    : ContainerSlotFocusController.quickMoveFocusedOrHoveredSlot(screen);
             case PRIMARY -> ContainerSlotFocusController.pickupFocusedOrHoveredSlot(screen, 0);
             case ALTERNATE -> ContainerSlotFocusController.pickupFocusedOrHoveredSlot(screen, 1);
         };
@@ -309,9 +429,12 @@ public final class MappedActionProcessor {
         ActionState state,
         AbstractContainerScreen<?> screen,
         ContainerAction action,
-        boolean controllerUiActive
+        boolean controllerUiActive,
+        @Nullable TabNavigationController tabNavigation
     ) {
-        if (consumeScreenHandledMapping(state, action.mapping) || !controllerUiActive) {
+        if (consumeTabNavigationMapping(tabNavigation, action.mapping)
+                || consumeScreenHandledMapping(state, action.mapping)
+                || !controllerUiActive) {
             return;
         }
 
@@ -347,7 +470,7 @@ public final class MappedActionProcessor {
 
     private static void drainClickCounter(KeyMapping mapping) {
         while (mapping.consumeClick()) {
-            // The screen event already handled this press, so prevent a later tick duplicate.
+
         }
     }
 
@@ -382,7 +505,11 @@ public final class MappedActionProcessor {
     }
 
     private static void handleMenuActions(Minecraft minecraft, Screen screen, ActionState state, boolean gamepadInput) {
+        TabNavigationController tabNavigation = tabNavigationController(screen);
         if (shouldBypassUiActionHandling(screen)) {
+            if (tabNavigation != null) {
+                tabNavigation.synchronize();
+            }
             clearNavigationRepeat(state);
             syncUiButtonLatches(state);
             return;
@@ -395,34 +522,46 @@ public final class MappedActionProcessor {
             InputApi.markGamepadInput();
         }
         if (pauseButtonDown && !state.wasPauseButtonDown && screen instanceof PauseScreen) {
-            screen.onClose();
+            closeScreenWithBackFeedback(state, screen);
         }
         state.wasPauseButtonDown = pauseButtonDown;
 
         boolean controllerUiActive = controllerConnected && InputApi.isGamepadMode();
+        boolean textInputFocused = isTextInputFocused(screen);
 
-        if (!consumeScreenHandledMapping(state, ModKeyBindings.UI_BACK) && controllerUiActive) {
+        if (tabNavigation != null
+                && tabNavigation.process(controllerConnected, !textInputFocused)) {
+            screen.afterKeyboardAction();
+        }
+
+        if (!consumeTabNavigationMapping(tabNavigation, ModKeyBindings.UI_BACK)
+                && !consumeScreenHandledMapping(state, ModKeyBindings.UI_BACK)
+                && controllerUiActive) {
             while (ModKeyBindings.UI_BACK.consumeClick()) {
-                screen.onClose();
+                if (GamepadInputProcessor.dispatchFocusedUiAction(screen, UiAction.BACK)) {
+                    GamepadInputProcessor.playFocusedUiActionFeedback(screen, UiAction.BACK);
+                } else {
+                    closeScreenWithBackFeedback(state, screen);
+                }
             }
         }
 
-        boolean textInputFocused = screen.getFocused() instanceof EditBox;
         if (!textInputFocused) {
-            handleNavigationPresses(state, screen, controllerUiActive);
+            handleNavigationPresses(state, screen, controllerUiActive, tabNavigation);
             tickNavigationRepeat(state, screen);
 
             if (screen instanceof AbstractContainerScreen<?> containerScreen) {
-                consumeMappedContainerAction(state, containerScreen, ContainerAction.TAKE_ALL, controllerUiActive);
-                consumeMappedContainerAction(state, containerScreen, ContainerAction.STORE_ALL, controllerUiActive);
-                consumeMappedContainerAction(state, containerScreen, ContainerAction.QUICK_MOVE, controllerUiActive);
+                refreshPointerSlotHover(screen);
+                consumeMappedContainerAction(state, containerScreen, ContainerAction.TAKE_ALL, controllerUiActive, tabNavigation);
+                consumeMappedContainerAction(state, containerScreen, ContainerAction.STORE_ALL, controllerUiActive, tabNavigation);
+                consumeMappedContainerAction(state, containerScreen, ContainerAction.QUICK_MOVE, controllerUiActive, tabNavigation);
             }
         } else {
             clearNavigationRepeat(state);
         }
 
-        handlePointerAction(state, screen, textInputFocused, state.primaryPointer, controllerUiActive);
-        handlePointerAction(state, screen, textInputFocused, state.alternatePointer, controllerUiActive);
+        handlePointerAction(state, screen, textInputFocused, state.primaryPointer, controllerUiActive, tabNavigation);
+        handlePointerAction(state, screen, textInputFocused, state.alternatePointer, controllerUiActive, tabNavigation);
     }
 
     private static void handlePointerAction(
@@ -430,15 +569,21 @@ public final class MappedActionProcessor {
         Screen screen,
         boolean textInputFocused,
         UiPointerAction action,
-        boolean controllerUiActive
+        boolean controllerUiActive,
+        @Nullable TabNavigationController tabNavigation
     ) {
         boolean down = action.mapping.isDown();
-        if (consumeScreenHandledMapping(state, action.mapping) || !shouldHandleSyntheticUiButtonActions(controllerUiActive)) {
+        if (consumeTabNavigationMapping(tabNavigation, action.mapping)
+                || consumeScreenHandledMapping(state, action.mapping)
+                || !shouldHandleSyntheticUiButtonActions(controllerUiActive)) {
+
+            releaseActivePointerGesture(screen, action, true);
             action.wasDown = down;
             return;
         }
 
-        if (down && !action.wasDown && !textInputFocused) {
+        if (down && !action.wasDown) {
+            WidgetInputSounds.clearPointerClickFeedback();
             double mouseX = GamepadInputProcessor.cursorX();
             double mouseY = GamepadInputProcessor.cursorY();
             boolean handled = false;
@@ -446,12 +591,31 @@ public final class MappedActionProcessor {
             action.skipNextRelease = false;
             action.hasPressPosition = false;
             action.containerQuickCraft = false;
-            if (UiInputModeController.isFocusNavigationActive()) {
-                GamepadInputProcessor.FocusedElementCenter focusCenter =
-                    GamepadInputProcessor.focusedElementCenter(screen);
-                if (focusCenter != null) {
-                    mouseX = focusCenter.guiX();
-                    mouseY = focusCenter.guiY();
+            RecipeSlotElement.ActivationFeedback recipeFeedback = null;
+            if (UiInputModeController.isFocusNavigationActive() && !textInputFocused) {
+                boolean focusedContainerSlot =
+                        hasFocusedContainerSlot(screen);
+
+                GamepadInputProcessor.FocusedElementCenter focusCenter = null;
+
+                if (focusedContainerSlot
+                        && screen instanceof AbstractContainerScreen<?> containerScreen) {
+
+                    ContainerSlotFocusController.FocusedSlotCenter slotCenter =
+                            ContainerSlotFocusController.getFocusedSlotCenter(containerScreen);
+
+                    if (slotCenter != null) {
+                        mouseX = slotCenter.guiX();
+                        mouseY = slotCenter.guiY();
+                    }
+                } else {
+                    focusCenter =
+                            GamepadInputProcessor.focusedElementCenter(screen);
+
+                    if (focusCenter != null) {
+                        mouseX = focusCenter.guiX();
+                        mouseY = focusCenter.guiY();
+                    }
                 }
 
                 if (shouldBeginContainerQuickCraft(screen, true)) {
@@ -465,19 +629,40 @@ public final class MappedActionProcessor {
                 } else if (hasFocusedContainerSlot(screen)) {
                     handled = clickScreen(screen, action, mouseX, mouseY);
                 } else {
-                    // Spatial widgets must receive the same complete pointer
-                    // lifecycle as mouse/joystick-pointer input. Dispatching
-                    // UiAction first executes the callback but bypasses their
-                    // pressed state and matching release.
-                    if (focusCenter != null) {
-                        handled = clickScreen(screen, action, mouseX, mouseY);
-                    }
-                    if (!handled) {
+                    boolean directFocusAction =
+                        GamepadInputProcessor.focusedElementPrefersDirectAction(screen);
+
+                    if (directFocusAction) {
+
+                        if (screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+                            UiAction uiAction = action.mouseButton == 0
+                                    ? UiAction.ACCEPT
+                                    : UiAction.ALTERNATE;
+                            recipeFeedback = craftingScreen.focusedRecipeActivationFeedback(uiAction);
+                        }
                         handledByFocusedElement = GamepadInputProcessor.activateFocusedElement(screen, action.mouseButton);
                         handled = handledByFocusedElement;
-                    }
-                    if (!handled && focusCenter == null) {
-                        handled = clickScreen(screen, action, mouseX, mouseY);
+                    } else {
+
+                        if (focusCenter != null) {
+                            handled = clickScreen(screen, action, mouseX, mouseY);
+                        }
+                        if (!handled) {
+                            handledByFocusedElement = GamepadInputProcessor.activateFocusedElement(screen, action.mouseButton);
+                            handled = handledByFocusedElement;
+                        }
+                        if (!handled && focusCenter == null) {
+                            handled = clickScreen(screen, action, mouseX, mouseY);
+                        }
+
+                        if (handled
+                                && screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+                            recipeFeedback = craftingScreen.recipeMouseActivationFeedbackAt(
+                                    mouseX,
+                                    mouseY,
+                                    action.mouseButton
+                            );
+                        }
                     }
                 }
                 if (!handled && action.enterFallback) {
@@ -493,23 +678,64 @@ public final class MappedActionProcessor {
                     action.dragX = mouseX;
                     action.dragY = mouseY;
                 }
+                if (handled
+                        && screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+                    recipeFeedback = craftingScreen.recipeMouseActivationFeedbackAt(
+                            mouseX,
+                            mouseY,
+                            action.mouseButton
+                    );
+                }
             }
 
             if (handled) {
+
+                state.suppressNextScreenTransitionSoundFrom = screen;
                 action.pressX = mouseX;
                 action.pressY = mouseY;
+
+                action.dragX = mouseX;
+                action.dragY = mouseY;
+
                 action.hasPressPosition = true;
+
+                action.draggingPointerWidget =
+                        !handledByFocusedElement
+                                && !UiInputModeController.isFocusNavigationActive();
+
                 action.skipNextRelease = handledByFocusedElement;
-                InputActionSounds.playClick();
+
+                if (recipeFeedback != null) {
+                    playRecipeActivationFeedback(recipeFeedback);
+                } else if (handledByFocusedElement) {
+                    GamepadInputProcessor.playFocusedUiActionFeedback(
+                            screen,
+                            action.mouseButton == 0 ? UiAction.ACCEPT : UiAction.ALTERNATE
+                    );
+                } else {
+                    WidgetInputSounds.consumePointerClickFeedback()
+                            .ifPresentOrElse(
+                                    InputActionSounds::play,
+                                    InputActionSounds::playClick
+                            );
+                }
             }
-        } else if (down && action.wasDown && action.containerQuickCraft) {
+        } else if (down
+                && action.wasDown
+                && (action.containerQuickCraft
+                || action.draggingPointerWidget)) {
             double dragX = GamepadInputProcessor.cursorX();
             double dragY = GamepadInputProcessor.cursorY();
-            GamepadInputProcessor.FocusedElementCenter focusCenter =
-                GamepadInputProcessor.focusedElementCenter(screen);
-            if (focusCenter != null) {
-                dragX = focusCenter.guiX();
-                dragY = focusCenter.guiY();
+            if (action.containerQuickCraft
+                    && UiInputModeController.isFocusNavigationActive()) {
+
+                GamepadInputProcessor.FocusedElementCenter focusCenter =
+                        GamepadInputProcessor.focusedElementCenter(screen);
+
+                if (focusCenter != null) {
+                    dragX = focusCenter.guiX();
+                    dragY = focusCenter.guiY();
+                }
             }
             if (dragX != action.dragX || dragY != action.dragY) {
                 screen.mouseDragged(
@@ -524,18 +750,32 @@ public final class MappedActionProcessor {
             if (action.skipNextRelease) {
                 action.skipNextRelease = false;
             } else {
-                double releaseX = action.containerQuickCraft
+                double releaseX = action.containerQuickCraft || action.draggingPointerWidget
                     ? action.dragX
                     : action.hasPressPosition ? action.pressX : GamepadInputProcessor.cursorX();
-                double releaseY = action.containerQuickCraft
+                double releaseY = action.containerQuickCraft || action.draggingPointerWidget
                     ? action.dragY
                     : action.hasPressPosition ? action.pressY : GamepadInputProcessor.cursorY();
                 screen.mouseReleased(mouseEvent(releaseX, releaseY, action.mouseButton));
             }
             action.hasPressPosition = false;
             action.containerQuickCraft = false;
+            action.draggingPointerWidget = false;
         }
         action.wasDown = down;
+    }
+
+    private static void refreshPointerSlotHover(Screen screen) {
+        if (!(screen instanceof CustomSlotLayout layout)
+                || UiInputModeController.isFocusNavigationActive()) {
+            return;
+        }
+
+        layout.slotLayer().updateHovered(
+                layout.slotGrid(),
+                GamepadInputProcessor.cursorX(),
+                GamepadInputProcessor.cursorY()
+        );
     }
 
     private static boolean shouldBeginContainerQuickCraft(Screen screen, boolean requireFocusedSlot) {
@@ -583,13 +823,28 @@ public final class MappedActionProcessor {
         }
 
         while (ModKeyBindings.GAMEPLAY_HOTBAR_PREV.consumeClick()) {
-           player.getInventory().setSelectedSlot((player.getInventory().getSelectedSlot() - 1 + 9) % 9);
-            //InputActionSounds.playHotbarFocus();
+            player.getInventory().setSelectedSlot((player.getInventory().getSelectedSlot() - 1 + 9) % 9);
+            // InputActionSounds.playHotbarFocus();
         }
 
         while (ModKeyBindings.GAMEPLAY_HOTBAR_NEXT.consumeClick()) {
             player.getInventory().setSelectedSlot((player.getInventory().getSelectedSlot() + 1) % 9);
-            //InputActionSounds.playHotbarFocus();
+            // InputActionSounds.playHotbarFocus();
+        }
+
+        while (ModKeyBindings.GAMEPLAY_CRAFTING.consumeClick()) {
+            if (player.hasInfiniteMaterials()) {
+                minecraft.gui.setScreen(new JavaCreativeInventoryScreen(
+                        player,
+                        Component.translatable("container.creative")
+                ));
+            } else {
+                minecraft.gui.setScreen(new JavaCrafting2x2Screen(
+                        player.inventoryMenu,
+                        player.getInventory(),
+                        Component.translatable("container.crafting")
+                ));
+            }
         }
     }
 
@@ -610,6 +865,18 @@ public final class MappedActionProcessor {
         }
         return screen instanceof ControllerBindingsScreen bindingsScreen
             && bindingsScreen.selectedKey != null;
+    }
+
+    private static boolean isTextInputFocused(Screen screen) {
+        if (screen == null) {
+            return false;
+        }
+        Object focused = screen.getFocused();
+        if (focused instanceof EditBox editBox) {
+            return editBox.canConsumeInput();
+        }
+        return focused instanceof EditBoxElement editBox
+            && editBox.canConsumeInput();
     }
 
     private static void syncUiButtonLatches(ActionState state) {
@@ -678,9 +945,16 @@ public final class MappedActionProcessor {
         }
     }
 
-    private static void handleNavigationPresses(ActionState state, Screen screen, boolean controllerUiActive) {
+    private static void handleNavigationPresses(
+            ActionState state,
+            Screen screen,
+            boolean controllerUiActive,
+            @Nullable TabNavigationController tabNavigation
+    ) {
         for (UiNavigationAction action : UiNavigationAction.values()) {
-            if (consumeScreenHandledMapping(state, action.mapping) || !controllerUiActive) {
+            if (consumeTabNavigationMapping(tabNavigation, action.mapping)
+                    || consumeScreenHandledMapping(state, action.mapping)
+                    || !controllerUiActive) {
                 continue;
             }
 
@@ -690,6 +964,57 @@ public final class MappedActionProcessor {
         }
     }
 
+    private static void releasePointerBeforeFocusMove(Screen screen, UiPointerAction action) {
+        if (!action.wasDown
+            || !action.hasPressPosition
+            || action.skipNextRelease) {
+            return;
+        }
+
+        double releaseX = action.containerQuickCraft || action.draggingPointerWidget
+            ? action.dragX
+            : action.pressX;
+        double releaseY = action.containerQuickCraft || action.draggingPointerWidget
+            ? action.dragY
+            : action.pressY;
+
+        screen.mouseReleased(mouseEvent(releaseX, releaseY, action.mouseButton));
+
+        action.hasPressPosition = false;
+        action.containerQuickCraft = false;
+        action.draggingPointerWidget = false;
+        action.skipNextRelease = true;
+    }
+
+    private static void releaseActivePointerGesture(
+        Screen screen,
+        UiPointerAction action,
+        boolean consumePhysicalRelease
+    ) {
+        if (!action.hasPressPosition || action.skipNextRelease) {
+            return;
+        }
+
+        double releaseX = action.containerQuickCraft || action.draggingPointerWidget
+            ? action.dragX
+            : action.pressX;
+        double releaseY = action.containerQuickCraft || action.draggingPointerWidget
+            ? action.dragY
+            : action.pressY;
+
+        screen.mouseReleased(mouseEvent(releaseX, releaseY, action.mouseButton));
+        action.hasPressPosition = false;
+        action.containerQuickCraft = false;
+        action.draggingPointerWidget = false;
+        action.skipNextRelease = consumePhysicalRelease;
+    }
+
+    public static boolean hasActivePointerGesture() {
+        ActionState state = state();
+        return state.primaryPointer.hasActiveGesture()
+            || state.alternatePointer.hasActiveGesture();
+    }
+
     private static void dispatchNavigationAction(
         ActionState state,
         Screen screen,
@@ -697,6 +1022,9 @@ public final class MappedActionProcessor {
         boolean keyboardHeld,
         boolean startRepeat
     ) {
+        releasePointerBeforeFocusMove(screen, state.primaryPointer);
+        releasePointerBeforeFocusMove(screen, state.alternatePointer);
+
         GamepadInputProcessor.dispatchFocusNavigation(screen, action.keyCode);
         if (startRepeat) {
             startNavigationRepeat(state, screen, action, keyboardHeld);
@@ -765,6 +1093,30 @@ public final class MappedActionProcessor {
     private static ActionState state() {
         Integer slotId = SlotScope.idOrNull();
         return STATES[slotId != null ? slotId : 0];
+    }
+
+    private static void closeScreenWithBackFeedback(ActionState state, Screen screen) {
+        state.suppressNextScreenTransitionSoundFrom = screen;
+        screen.onClose();
+        InputActionSounds.playBack();
+    }
+
+    @Nullable
+    private static TabNavigationController tabNavigationController(Screen screen) {
+        return screen instanceof TabNavigationHost host
+                ? host.tabNavigationController()
+                : null;
+    }
+
+    private static boolean consumeTabNavigationMapping(
+            @Nullable TabNavigationController tabNavigation,
+            KeyMapping mapping
+    ) {
+        if (tabNavigation == null || !tabNavigation.consumes(mapping)) {
+            return false;
+        }
+        drainClickCounter(mapping);
+        return true;
     }
 
     private static ActionState[] createStates() {
@@ -846,6 +1198,7 @@ public final class MappedActionProcessor {
         private final KeyMapping mapping;
         private final int mouseButton;
         private final boolean enterFallback;
+        private boolean draggingPointerWidget;
         private boolean wasDown;
         private boolean skipNextRelease;
         private boolean hasPressPosition;
@@ -869,6 +1222,11 @@ public final class MappedActionProcessor {
             this.skipNextRelease = false;
             this.hasPressPosition = false;
             this.containerQuickCraft = false;
+            this.draggingPointerWidget = false;
+        }
+
+        private boolean hasActiveGesture() {
+            return this.hasPressPosition && !this.skipNextRelease;
         }
     }
 

@@ -5,13 +5,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.multiplayer.chat.ChatListener;
 
-/**
- * Owns the complete vanilla chat component of one local client.
- *
- * <p>A real component is kept per slot so message history, wrapped lines,
- * scrolling, drafts, filters, and delayed deletions cannot leak between local
- * players.</p>
- */
 public final class ChatState {
     @Nullable
     private ChatComponent component;
@@ -39,19 +32,11 @@ public final class ChatState {
         return this.listener;
     }
 
-    /**
-     * Returns the clock used by this local player's chat.
-     *
-     * <p>The first observed vanilla value establishes the same absolute time
-     * base as messages that may already exist. From that point onward the
-     * clock belongs exclusively to this chat state.</p>
-     */
     public int ticks(int vanillaTicks) {
         this.initializeClock(vanillaTicks);
         return this.ticks;
     }
 
-    /** Advances this local player's chat exactly once with its HUD tick. */
     public void tick(int vanillaTicks) {
         if (this.clockInitialized) {
             this.ticks++;

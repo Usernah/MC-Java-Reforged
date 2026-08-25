@@ -1,6 +1,5 @@
 package net.jr.mixin.runtime;
 
-
 import com.mojang.blaze3d.platform.Window;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.minecraft.client.gui.contextualbar.ContextualBar;

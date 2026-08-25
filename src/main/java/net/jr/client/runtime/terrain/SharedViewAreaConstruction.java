@@ -2,12 +2,6 @@ package net.jr.client.runtime.terrain;
 
 import java.util.function.Supplier;
 
-/**
- * Marks construction of a logical split-screen {@code ViewArea}.  Minecraft
- * 26.2 normally fills every ViewArea with its own RenderSection cycle.  The
- * split runtime owns those sections in {@link SharedTerrainStore}, so its
- * logical views deliberately build only the rotating storage metadata.
- */
 public final class SharedViewAreaConstruction {
     private static final ThreadLocal<Integer> DEPTH = ThreadLocal.withInitial(() -> 0);
 

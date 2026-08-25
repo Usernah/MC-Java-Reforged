@@ -308,9 +308,7 @@ public final class SdlGamepad {
 
     private static boolean input(Snapshot currentSnapshot, GamepadDigitalInput input, float triggerThreshold) {
         if (splitTouchpad && input == GamepadDigitalInput.TOUCHPAD_BUTTON) {
-            // A split click normally resolves to LEFT or RIGHT. If the physical
-            // button works but SDL cannot provide a valid finger coordinate,
-            // expose the unsplit input instead of guessing from stale data.
+
             return currentSnapshot.button(BUTTON_TOUCHPAD)
                 && currentSnapshot.touchpadPressSide() == TOUCHPAD_SIDE_NONE;
         }
@@ -538,17 +536,14 @@ public final class SdlGamepad {
                 SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_UP -> handleTouchpadEvent(type, event.gtouchpad);
             case SDL_EventType.SDL_EVENT_JOYSTICK_BUTTON_DOWN, SDL_EventType.SDL_EVENT_JOYSTICK_BUTTON_UP -> belongsToOpenDevice(event.jbutton.which);
             case SDL_EventType.SDL_EVENT_JOYSTICK_HAT_MOTION -> belongsToOpenDevice(event.jhat.which);
-            // A remap changes SDL's logical mapping, not the physical device.
-            // Reopening here creates a remap -> rescan -> reopen loop on PS4 HIDAPI.
+
             case SDL_EventType.SDL_EVENT_GAMEPAD_REMAPPED -> belongsToOpenDevice(event.gdevice.which);
             default -> false;
         };
     }
 
     private static boolean handleDeviceRemoved(SDL_JoystickID deviceInstanceId) {
-        // Windows/HIDAPI can emit a transient remove while replacing the
-        // transport-facing device. The delayed inventory scan is authoritative;
-        // closing immediately caused PS4 Bluetooth devices to reopen forever.
+
         scheduleHotplugRescan();
         return belongsToOpenDevice(deviceInstanceId);
     }
@@ -999,9 +994,7 @@ public final class SdlGamepad {
         Path baseDir = minecraft == null
             ? Path.of(System.getProperty("java.io.tmpdir"))
             : minecraft.gameDirectory.toPath();
-        // Windows mantiene bloqueada una DLL mientras el proceso que la cargo
-        // siga vivo. Las instancias split comparten gameDirectory, por eso no
-        // pueden copiar todas sobre el mismo SDL3.dll.
+
         String processId = Long.toString(ProcessHandle.current().pid());
         return baseDir.resolve(".javareforged")
             .resolve("natives")
@@ -1195,7 +1188,6 @@ public final class SdlGamepad {
     private record OpenDevice(long instanceId, SDL_Gamepad gamepad, SDL_Joystick joystick) {
     }
 
-    /** State that belongs to one physical touchpad, never to a player slot. */
     private static final class TouchpadState {
         private final ByteByReference polledFingerState = new ByteByReference();
         private final FloatByReference polledX = new FloatByReference();
@@ -1212,9 +1204,7 @@ public final class SdlGamepad {
 
         private void handleFingerEvent(int type, float x) {
             if (type == SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_UP) {
-                // A very quick tap can finish before SDL exposes the physical
-                // button state. Preserve its final coordinate briefly so the
-                // rising button snapshot can still resolve the correct side.
+
                 this.recordCoordinate(x);
                 this.clearActiveFinger();
                 return;
@@ -1256,8 +1246,7 @@ public final class SdlGamepad {
                 this.polledPressure
             );
             if (!read) {
-                // Keep a coordinate received through the event queue. SDL can
-                // occasionally reject the immediate poll while the event is valid.
+
                 return;
             }
 
@@ -1299,7 +1288,6 @@ public final class SdlGamepad {
                 return sideFor(this.lastCoordinateX);
             }
 
-            // No trustworthy coordinate: expose the unified touchpad fallback.
             return TOUCHPAD_SIDE_NONE;
         }
 

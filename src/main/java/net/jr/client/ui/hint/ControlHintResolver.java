@@ -5,6 +5,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.GamepadInputChord;
+import net.jr.client.input.binding.UiInputBinding;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
@@ -15,6 +16,7 @@ import net.jr.client.ui.hint.glyph.KeyboardMouseGlyphTheme;
 import net.jr.client.ui.hint.model.ControlHintRequest;
 import net.jr.client.ui.hint.model.ResolvedControlHint;
 import net.jr.client.ui.hint.model.ResolvedControlHintIcon;
+import net.jr.client.ui.hint.model.ResolvedControlHintInput;
 import net.jr.client.ui.hint.render.GlyphTextureBounds;
 import net.jr.client.ui.hint.render.GlyphTextureBoundsCache;
 import net.jr.api.client.resource.Asset;
@@ -29,7 +31,7 @@ public final class ControlHintResolver {
 
         for (ControlHintRequest request : requests) {
             ResolvedControlHint hint = context.isGamepadMode()
-                ? resolveGamepadHint(context, request)
+                ? resolveGamepadHint(request)
                 : resolveKeyboardMouseHint(request);
             if (hint != null) {
                 resolved.add(hint);
@@ -40,37 +42,82 @@ public final class ControlHintResolver {
     }
 
     @Nullable
-    private static ResolvedControlHint resolveGamepadHint(ControlHintContext context, ControlHintRequest request) {
-        GamepadInputChord chord = InputApi.binding(request.binding());
-        if (chord == null) {
-            return null;
-        }
-
+    private static ResolvedControlHint resolveGamepadHint(ControlHintRequest request) {
         ControllerGlyphTheme theme = GamepadGlyphThemeState.themeForCurrentClient();
-        List<ResolvedControlHintIcon> icons = new ArrayList<>(chord.inputs().size());
-        for (GamepadDigitalInput input : chord.inputs()) {
-            ResolvedControlHintIcon icon = resolveGamepadIcon(theme, input);
-            if (icon == null) {
-                // An incomplete chord would communicate an action the player cannot perform.
+        List<ResolvedControlHintInput> resolvedInputs = new ArrayList<>(request.inputs().size());
+        for (UiInputBinding input : request.inputs()) {
+            ResolvedControlHintInput resolved = resolveGamepadInput(theme, input);
+            if (resolved == null) {
                 return null;
             }
-            icons.add(icon);
+            resolvedInputs.add(resolved);
         }
 
-        return icons.isEmpty()
+        return resolvedInputs.isEmpty()
             ? null
-            : new ResolvedControlHint(request.placement(), request.label(), icons);
+            : new ResolvedControlHint(request.placement(), request.label(), resolvedInputs);
     }
 
     @Nullable
     private static ResolvedControlHint resolveKeyboardMouseHint(ControlHintRequest request) {
-        List<KeyboardMouseGlyph> glyphs = KeyboardMouseGlyphResolver.glyphs(request.binding());
+        KeyboardMouseGlyphTheme theme = KeyboardMouseGlyphResolver.currentTheme();
+        List<ResolvedControlHintInput> resolvedInputs = new ArrayList<>(request.inputs().size());
+        for (UiInputBinding input : request.inputs()) {
+            ResolvedControlHintInput resolved = resolveKeyboardMouseInput(theme, input);
+            if (resolved == null) {
+                return null;
+            }
+            resolvedInputs.add(resolved);
+        }
+
+        return new ResolvedControlHint(request.placement(), request.label(), resolvedInputs);
+    }
+
+    @Nullable
+    private static ResolvedControlHintInput resolveGamepadInput(
+            ControllerGlyphTheme theme,
+            UiInputBinding input
+    ) {
+        List<GamepadDigitalInput> gamepadInputs;
+        if (input instanceof UiInputBinding.KeyMappingInput keyInput) {
+            GamepadInputChord chord = InputApi.binding(keyInput.mapping());
+            if (chord == null) {
+                return null;
+            }
+            gamepadInputs = chord.inputs();
+        } else if (input instanceof UiInputBinding.GamepadInput gamepadInput) {
+            gamepadInputs = List.of(gamepadInput.input());
+        } else {
+            return null;
+        }
+
+        List<ResolvedControlHintIcon> icons = new ArrayList<>(gamepadInputs.size());
+        for (GamepadDigitalInput gamepadInput : gamepadInputs) {
+            ResolvedControlHintIcon icon = resolveGamepadIcon(theme, gamepadInput);
+            if (icon == null) {
+
+                return null;
+            }
+            icons.add(icon);
+        }
+        return icons.isEmpty() ? null : new ResolvedControlHintInput(icons);
+    }
+
+    @Nullable
+    private static ResolvedControlHintInput resolveKeyboardMouseInput(
+            KeyboardMouseGlyphTheme theme,
+            UiInputBinding input
+    ) {
+        if (!(input instanceof UiInputBinding.KeyMappingInput keyInput)) {
+            return null;
+        }
+
+        List<KeyboardMouseGlyph> glyphs = KeyboardMouseGlyphResolver.glyphs(keyInput.mapping());
         if (glyphs.isEmpty()) {
             return null;
         }
 
-        KeyboardMouseGlyphTheme theme = KeyboardMouseGlyphResolver.currentTheme();
-        boolean pressed = ControlHintPressAnimation.isAnimating(request.binding());
+        boolean pressed = ControlHintPressAnimation.isAnimating(keyInput.mapping());
         List<ResolvedControlHintIcon> icons = new ArrayList<>(glyphs.size());
         for (KeyboardMouseGlyph glyph : glyphs) {
             ResolvedControlHintIcon icon = resolveKeyboardMouseIcon(theme, glyph, pressed);
@@ -79,8 +126,7 @@ public final class ControlHintResolver {
             }
             icons.add(icon);
         }
-
-        return new ResolvedControlHint(request.placement(), request.label(), icons);
+        return new ResolvedControlHintInput(icons);
     }
 
     @Nullable

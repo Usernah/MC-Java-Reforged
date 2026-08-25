@@ -40,9 +40,8 @@ public final class GamepadBindingRegistry {
     private static final GamepadBindingRegistry INSTANCE = new GamepadBindingRegistry();
 
     private final Map<String, KeyMapping> knownKeyMappings = new LinkedHashMap<>();
-    private final Map<String, GamepadInputChord> digitalBindings = new LinkedHashMap<>();
-    private final Set<String> explicitlyUnbound = new LinkedHashSet<>();
-    /** Evaluator latches belong to the local player whose physical device is being sampled. */
+    private final PlayerBindings[] playerBindings = createPlayerBindings();
+
     private final GamepadBindingEvaluator[] evaluators = createEvaluators();
     private boolean loaded;
     @Nullable
@@ -63,8 +62,10 @@ public final class GamepadBindingRegistry {
 
         filePath = minecraft.gameDirectory.toPath().resolve(FILE_NAME);
         loadFromDisk();
-        applyMissingDefaults();
-        pruneUnknownBindings();
+        for (PlayerBindings bindings : this.playerBindings) {
+            applyMissingDefaults(bindings);
+            pruneUnknownBindings(bindings);
+        }
         loaded = true;
         save();
     }
@@ -96,7 +97,7 @@ public final class GamepadBindingRegistry {
 
     @Nullable
     public GamepadInputChord getBinding(KeyMapping keyMapping) {
-        return digitalBindings.get(keyMapping.getName());
+        return this.bindings().get(keyMapping.getName());
     }
 
     public void setBinding(KeyMapping keyMapping, @Nullable GamepadDigitalInput input) {
@@ -105,37 +106,40 @@ public final class GamepadBindingRegistry {
 
     public void setBinding(KeyMapping keyMapping, @Nullable GamepadInputChord input) {
         String keyName = keyMapping.getName();
+        PlayerBindings bindings = this.currentPlayerBindings();
         if (input == null) {
-            digitalBindings.remove(keyName);
+            bindings.digitalBindings.remove(keyName);
             if (DEFAULT_BINDINGS.containsKey(keyName)) {
-                explicitlyUnbound.add(keyName);
+                bindings.explicitlyUnbound.add(keyName);
             } else {
-                explicitlyUnbound.remove(keyName);
+                bindings.explicitlyUnbound.remove(keyName);
             }
         } else {
-            digitalBindings.put(keyName, input);
-            explicitlyUnbound.remove(keyName);
+            bindings.digitalBindings.put(keyName, input);
+            bindings.explicitlyUnbound.remove(keyName);
         }
         save();
     }
 
     public void resetBindingToDefault(KeyMapping keyMapping) {
         String keyName = keyMapping.getName();
-        explicitlyUnbound.remove(keyName);
+        PlayerBindings bindings = this.currentPlayerBindings();
+        bindings.explicitlyUnbound.remove(keyName);
         GamepadInputChord defaultBinding = DEFAULT_BINDINGS.get(keyName);
         if (defaultBinding == null) {
-            digitalBindings.remove(keyName);
+            bindings.digitalBindings.remove(keyName);
         } else {
-            digitalBindings.put(keyName, defaultBinding);
+            bindings.digitalBindings.put(keyName, defaultBinding);
         }
         save();
     }
 
     public void resetAllToDefaults() {
-        digitalBindings.clear();
-        explicitlyUnbound.clear();
-        digitalBindings.putAll(DEFAULT_BINDINGS);
-        pruneUnknownBindings();
+        PlayerBindings bindings = this.currentPlayerBindings();
+        bindings.digitalBindings.clear();
+        bindings.explicitlyUnbound.clear();
+        bindings.digitalBindings.putAll(DEFAULT_BINDINGS);
+        pruneUnknownBindings(bindings);
         save();
     }
 
@@ -188,25 +192,29 @@ public final class GamepadBindingRegistry {
         this.evaluator().release(this);
     }
 
+    public void resetAppliedBindings() {
+        this.evaluator().reset(this);
+    }
+
     public void suppressHeldInputs() {
         this.evaluator().suppressHeldInputs();
     }
 
     public Map<String, GamepadInputChord> snapshotBindings() {
-        return Collections.unmodifiableMap(digitalBindings);
+        return Collections.unmodifiableMap(this.bindings());
     }
 
-    private void applyMissingDefaults() {
+    private void applyMissingDefaults(PlayerBindings bindings) {
         for (Map.Entry<String, GamepadInputChord> entry : DEFAULT_BINDINGS.entrySet()) {
-            if (!explicitlyUnbound.contains(entry.getKey())) {
-                digitalBindings.putIfAbsent(entry.getKey(), entry.getValue());
+            if (!bindings.explicitlyUnbound.contains(entry.getKey())) {
+                bindings.digitalBindings.putIfAbsent(entry.getKey(), entry.getValue());
             }
         }
     }
 
-    private void pruneUnknownBindings() {
-        digitalBindings.keySet().removeIf(keyName -> !knownKeyMappings.containsKey(keyName));
-        explicitlyUnbound.removeIf(keyName -> !knownKeyMappings.containsKey(keyName));
+    private void pruneUnknownBindings(PlayerBindings bindings) {
+        bindings.digitalBindings.keySet().removeIf(keyName -> !knownKeyMappings.containsKey(keyName));
+        bindings.explicitlyUnbound.removeIf(keyName -> !knownKeyMappings.containsKey(keyName));
     }
 
     private void loadFromDisk() {
@@ -215,14 +223,30 @@ public final class GamepadBindingRegistry {
             return;
         }
 
-        for (Map.Entry<String, JsonElement> entry : root.entrySet()) {
+        boolean playerBlocks = false;
+        for (int slotId = 0; slotId < this.playerBindings.length; slotId++) {
+            JsonElement element = root.get(playerKey(slotId));
+            if (element == null || !element.isJsonObject()) {
+                continue;
+            }
+            playerBlocks = true;
+            this.loadBindings(element.getAsJsonObject(), this.playerBindings[slotId]);
+        }
+
+        if (!playerBlocks) {
+            this.loadBindings(root, this.playerBindings[0]);
+        }
+    }
+
+    private void loadBindings(JsonObject json, PlayerBindings bindings) {
+        for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
             if (entry.getValue().isJsonNull()) {
-                explicitlyUnbound.add(entry.getKey());
+                bindings.explicitlyUnbound.add(entry.getKey());
                 continue;
             }
             GamepadInputChord input = parseChord(entry.getValue());
             if (input != null) {
-                digitalBindings.put(entry.getKey(), input);
+                bindings.digitalBindings.put(entry.getKey(), input);
             }
         }
     }
@@ -233,27 +257,35 @@ public final class GamepadBindingRegistry {
         }
 
         JsonObject root = new JsonObject();
-        Set<String> keys = new java.util.TreeSet<>(digitalBindings.keySet());
-        keys.addAll(explicitlyUnbound);
+        for (int slotId = 0; slotId < this.playerBindings.length; slotId++) {
+            root.add(playerKey(slotId), this.writeBindings(this.playerBindings[slotId]));
+        }
+
+        InputJsonFiles.write(this.filePath, root);
+    }
+
+    private JsonObject writeBindings(PlayerBindings bindings) {
+        JsonObject json = new JsonObject();
+        Set<String> keys = new java.util.TreeSet<>(bindings.digitalBindings.keySet());
+        keys.addAll(bindings.explicitlyUnbound);
         for (String key : keys) {
-            if (explicitlyUnbound.contains(key)) {
-                root.add(key, JsonNull.INSTANCE);
+            if (bindings.explicitlyUnbound.contains(key)) {
+                json.add(key, JsonNull.INSTANCE);
                 continue;
             }
 
-            List<GamepadDigitalInput> inputs = digitalBindings.get(key).inputs();
+            List<GamepadDigitalInput> inputs = bindings.digitalBindings.get(key).inputs();
             if (inputs.size() == 1) {
-                root.addProperty(key, inputs.getFirst().serializedName());
+                json.addProperty(key, inputs.getFirst().serializedName());
             } else {
                 JsonArray array = new JsonArray();
                 for (GamepadDigitalInput input : inputs) {
                     array.add(input.serializedName());
                 }
-                root.add(key, array);
+                json.add(key, array);
             }
         }
-
-        InputJsonFiles.write(this.filePath, root);
+        return json;
     }
 
     private static Map<String, GamepadInputChord> createDefaultBindings() {
@@ -281,6 +313,7 @@ public final class GamepadBindingRegistry {
         defaults.put(ModKeyBindings.UI_STORE_ALL.getName(), chord(GamepadDigitalInput.BUMPER_RIGHT));
         defaults.put(ModKeyBindings.GAMEPLAY_HOTBAR_PREV.getName(), chord(GamepadDigitalInput.BUMPER_LEFT));
         defaults.put(ModKeyBindings.GAMEPLAY_HOTBAR_NEXT.getName(), chord(GamepadDigitalInput.BUMPER_RIGHT));
+        defaults.put(ModKeyBindings.GAMEPLAY_CRAFTING.getName(), chord(GamepadDigitalInput.BUTTON_LEFT));
         return defaults;
     }
 
@@ -294,8 +327,7 @@ public final class GamepadBindingRegistry {
 
     private static boolean isMappingActiveInContext(KeyMapping keyMapping, BindingContext context) {
         return switch (context) {
-            // Normal mappings belong to their Vanilla/mod consumer. We only route our
-            // synthetic UI mappings separately because they have no native consumer.
+
             case GAMEPLAY -> !isUiMapping(keyMapping);
             case UI -> isUiMapping(keyMapping) && !isContainerOnlyMapping(keyMapping);
             case CONTAINER -> isUiMapping(keyMapping);
@@ -368,7 +400,24 @@ public final class GamepadBindingRegistry {
     }
 
     Map<String, GamepadInputChord> bindings() {
-        return this.digitalBindings;
+        return this.currentPlayerBindings().digitalBindings;
+    }
+
+    private PlayerBindings currentPlayerBindings() {
+        Integer slotId = SlotScope.idOrNull();
+        return this.playerBindings[slotId != null ? slotId : 0];
+    }
+
+    private static PlayerBindings[] createPlayerBindings() {
+        PlayerBindings[] bindings = new PlayerBindings[LocalClientSlotRegistry.MAX_SLOTS];
+        for (int slotId = 0; slotId < bindings.length; slotId++) {
+            bindings[slotId] = new PlayerBindings();
+        }
+        return bindings;
+    }
+
+    private static String playerKey(int slotId) {
+        return "player_" + (slotId + 1);
     }
 
     @Nullable
@@ -378,5 +427,10 @@ public final class GamepadBindingRegistry {
 
     boolean isActive(KeyMapping keyMapping, BindingContext context) {
         return isMappingActiveInContext(keyMapping, context);
+    }
+
+    private static final class PlayerBindings {
+        private final Map<String, GamepadInputChord> digitalBindings = new LinkedHashMap<>();
+        private final Set<String> explicitlyUnbound = new LinkedHashSet<>();
     }
 }

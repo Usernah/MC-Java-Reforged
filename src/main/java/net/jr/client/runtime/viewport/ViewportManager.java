@@ -204,7 +204,6 @@ public final class ViewportManager {
         }
     }
 
-
     private void rebuildExistingTable() {
         if (this.windowMetrics != null) {
             this.viewportTable = this.createViewportTable(this.layout, this.windowMetrics);

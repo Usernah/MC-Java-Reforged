@@ -15,6 +15,7 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_CLICK = register("ui.click");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_CHAR = register("ui.char");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_BLOCK = register("ui.block");
+    public static final DeferredHolder<SoundEvent, SoundEvent> UI_CRAFT = register("ui.craft");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_BACK = register("ui.back");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_HOTBAR_FOCUS = register("ui.hotbar_focus");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_TOAST_NOTIFY = register("ui.toast_new");

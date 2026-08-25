@@ -5,6 +5,8 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.jr.client.runtime.viewport.PreciseGuiScissor;
+import net.jr.client.runtime.viewport.PreciseScissorAccess;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -122,12 +124,24 @@ final class UILayoutStateRenderer {
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("DynamicTransforms", transforms);
             for (Draw draw : this.draws) {
-                this.execute(draw, pass, target.textureHeight(), job.guiScale());
+                this.execute(
+                    draw,
+                    pass,
+                    target.textureWidth(),
+                    target.textureHeight(),
+                    job.guiScale()
+                );
             }
         }
     }
 
-    private void execute(Draw draw, RenderPass pass, int targetHeight, int guiScale) {
+    private void execute(
+        Draw draw,
+        RenderPass pass,
+        int targetWidth,
+        int targetHeight,
+        int guiScale
+    ) {
         StagedVertexBuffer.ExecuteInfo info = this.vertexBuffer.getExecuteInfo(draw.draw());
         if (info == null) {
             return;
@@ -135,7 +149,13 @@ final class UILayoutStateRenderer {
 
         pass.setPipeline(draw.pipeline());
         pass.setVertexBuffer(0, info.vertexBuffer().slice());
-        this.applyScissor(pass, draw.scissor(), targetHeight, guiScale);
+        this.applyScissor(
+            pass,
+            draw.scissor(),
+            targetWidth,
+            targetHeight,
+            guiScale
+        );
 
         TextureSetup texture = draw.textureSetup();
         if (texture.texure0() != null) {
@@ -152,11 +172,36 @@ final class UILayoutStateRenderer {
         pass.drawIndexed(info.indexCount(), 1, info.firstIndex(), info.baseVertex(), 0);
     }
 
-    private void applyScissor(RenderPass pass, ScreenRectangle scissor, int targetHeight, int guiScale) {
+    private void applyScissor(
+        RenderPass pass,
+        ScreenRectangle scissor,
+        int targetWidth,
+        int targetHeight,
+        int guiScale
+    ) {
         if (scissor == null) {
             pass.disableScissor();
             return;
         }
+
+        PreciseGuiScissor precise =
+            ((PreciseScissorAccess)(Object)scissor)
+                .javaReforged$preciseScissor();
+
+        if (precise != null) {
+            int left = Math.clamp((int)Math.floor(precise.left()), 0, targetWidth);
+            int top = Math.clamp((int)Math.floor(precise.top()), 0, targetHeight);
+            int right = Math.clamp((int)Math.ceil(precise.right()), 0, targetWidth);
+            int bottom = Math.clamp((int)Math.ceil(precise.bottom()), 0, targetHeight);
+            pass.enableScissor(
+                left,
+                targetHeight - bottom,
+                Math.max(0, right - left),
+                Math.max(0, bottom - top)
+            );
+            return;
+        }
+
         int left = scissor.left() * guiScale;
         int top = scissor.top() * guiScale;
         int right = scissor.right() * guiScale;

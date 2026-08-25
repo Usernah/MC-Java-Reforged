@@ -8,7 +8,6 @@ import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 
-/** Bridge implemented by the 26.2 LevelRenderer mixin. */
 public interface LevelRendererRuntimeAccessor {
     @Nullable
     SectionRenderDispatcher splitTest$getSectionRenderDispatcher();

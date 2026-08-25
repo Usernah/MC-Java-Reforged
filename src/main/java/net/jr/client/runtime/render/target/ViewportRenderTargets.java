@@ -12,11 +12,6 @@ import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Owns only the render surfaces required to execute one complete vanilla frame
- * graph per local player. The GameRenderer, LevelRenderer and terrain engines
- * remain global and are never duplicated.
- */
 public final class ViewportRenderTargets {
     private static final Map<Integer, Targets> TARGETS = new HashMap<>();
     private static final ThreadLocal<Targets> ACTIVE = new ThreadLocal<>();
@@ -123,7 +118,6 @@ public final class ViewportRenderTargets {
             this.globalTarget = globalTarget;
         }
 
-        /** Copies the completed slot frame once, after every vanilla pass has finished. */
         public void present() {
             RenderPass.RenderArea area = ViewportRenderScope.areaFor(this.viewport, this.globalTarget.width, this.globalTarget.height);
             int width = Math.min(Objects.requireNonNull(this.targets.main).width, area.width());

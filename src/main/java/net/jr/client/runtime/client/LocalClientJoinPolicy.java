@@ -12,6 +12,7 @@ public final class LocalClientJoinPolicy {
     public static boolean canStartJoin(long deviceId) {
         return InputDeviceRouter.connectedGamepads().contains(deviceId)
             && InputDeviceRouter.assignedSlot(deviceId) == null
+            && !InputDeviceRouter.isAwaitingNeutral(deviceId)
             && nextFreeSecondarySlot() != null;
     }
 
@@ -24,7 +25,8 @@ public final class LocalClientJoinPolicy {
             return false;
         }
         return InputDeviceRouter.connectedGamepads().stream()
-            .anyMatch(deviceId -> InputDeviceRouter.assignedSlot(deviceId) == null);
+            .anyMatch(deviceId -> InputDeviceRouter.assignedSlot(deviceId) == null
+                && !InputDeviceRouter.isAwaitingNeutral(deviceId));
     }
 
     public static boolean hasFreeSecondarySlot() {

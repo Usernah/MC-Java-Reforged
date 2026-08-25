@@ -4,6 +4,7 @@ import net.jr.client.input.runtime.GamepadInputProcessor;
 import net.jr.client.ui.container.slots.SlotGrid;
 import net.jr.client.ui.container.slots.SlotPos;
 import net.jr.client.ui.container.slots.VanillaSlotLayer;
+import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.runtime.state.UiNavigationState;
 import net.jr.client.runtime.ClientRuntime;
@@ -21,11 +22,16 @@ import org.lwjgl.glfw.GLFW;
 import java.util.Comparator;
 import java.util.List;
 
-/** Controller focus for vanilla container slots and custom JR slot grids. */
 public final class ContainerSlotFocusController {
     private ContainerSlotFocusController() {}
 
     public static boolean moveFocus(AbstractContainerScreen<?> screen, int keyCode) {
+        if (screen instanceof CustomSlotLayout layout) {
+            if (!layout.allowsSlotFocusNavigation()) {
+                return false;
+            }
+            return moveFocus(screen, layout.slotGrid(), layout.slotLayer(), keyCode);
+        }
         Direction direction = Direction.fromKey(keyCode);
         if (direction == null) return false;
         List<Slot> slots = activeSlots(screen);
@@ -38,7 +44,10 @@ public final class ContainerSlotFocusController {
         }
         Slot origin = current;
         Slot next = nextSlot(slots, origin, direction);
-        if (next == null) return false;
+        if (next == null) {
+            return screen instanceof CustomSlotLayout layout
+                && layout.handleSlotNavigationBoundary(keyCode);
+        }
         setFocus(screen, next);
         return true;
     }
@@ -61,7 +70,10 @@ public final class ContainerSlotFocusController {
         Slot next = current == null
             ? initialGridSlot(slots, grid, direction)
             : nextGridSlot(slots, grid, current, direction);
-        if (next == null) return false;
+        if (next == null) {
+            return screen instanceof CustomSlotLayout layout
+                && layout.handleSlotNavigationBoundary(keyCode);
+        }
 
         slotLayer.setFocusedSlot(next);
         syncCursorToGridSlot(grid, next);
@@ -71,6 +83,17 @@ public final class ContainerSlotFocusController {
     public static boolean initializeFocusFromPointer(
         AbstractContainerScreen<?> screen, double mouseGuiX, double mouseGuiY
     ) {
+        if (screen instanceof CustomSlotLayout layout) {
+            if (layout.seedFocusFromPointer(mouseGuiX, mouseGuiY)) {
+                return true;
+            }
+            if (!layout.allowsSlotFocusNavigation()) {
+                return false;
+            }
+            return initializeFocusFromPointer(
+                screen, layout.slotGrid(), layout.slotLayer(), mouseGuiX, mouseGuiY
+            );
+        }
         List<Slot> slots = activeSlots(screen);
         if (slots.isEmpty()) return false;
         int left = accessor(screen).javareforged$getLeftPos();
@@ -96,8 +119,8 @@ public final class ContainerSlotFocusController {
             .filter(slot -> slot.isActive() && grid.has(slot.index))
             .min(Comparator.comparingDouble(slot -> {
                 SlotPos position = grid.get(slot.index);
-                double deltaX = position.x() + 8.0D - mouseGuiX;
-                double deltaY = position.y() + 8.0D - mouseGuiY;
+                double deltaX = position.x() + position.width() / 2.0D - mouseGuiX;
+                double deltaY = position.y() + position.height() / 2.0D - mouseGuiY;
                 return deltaX * deltaX + deltaY * deltaY;
             }))
             .orElse(null);
@@ -109,6 +132,9 @@ public final class ContainerSlotFocusController {
     }
 
     public static boolean hasFocusedSlot(AbstractContainerScreen<?> screen) {
+        if (screen instanceof CustomSlotLayout layout) {
+            return layout.slotLayer().hasFocusedSlot();
+        }
         return focused(screen) != null;
     }
 
@@ -117,11 +143,22 @@ public final class ContainerSlotFocusController {
     }
 
     public static Integer getFocusedSlotIndex(AbstractContainerScreen<?> screen) {
+        if (screen instanceof CustomSlotLayout layout) {
+            return layout.slotLayer().getFocusedSlotId();
+        }
         Slot slot = focused(screen);
         return slot == null ? null : slot.index;
     }
 
     public static FocusedSlotCenter getFocusedSlotCenter(AbstractContainerScreen<?> screen) {
+        if (screen instanceof CustomSlotLayout layout) {
+            Slot slot = layout.slotLayer().getFocusedSlot();
+            SlotPos position = slot == null ? null : layout.slotGrid().get(slot.index);
+            return position == null ? null : new FocusedSlotCenter(
+                position.x() + position.width() / 2.0D,
+                position.y() + position.height() / 2.0D
+            );
+        }
         Slot slot = focused(screen);
         if (slot == null) return null;
         AbstractContainerScreenAccessor access = accessor(screen);
@@ -132,6 +169,10 @@ public final class ContainerSlotFocusController {
     }
 
     public static void clearFocusedSlot(AbstractContainerScreen<?> screen) {
+        if (screen instanceof CustomSlotLayout layout) {
+            layout.slotLayer().clearFocusedSlot();
+            return;
+        }
         state().containerSlotFocus().remove(screen);
     }
 
@@ -210,23 +251,15 @@ public final class ContainerSlotFocusController {
     }
 
     private static Slot actionSlot(AbstractContainerScreen<?> screen, boolean requireItem) {
-        Slot focusedSlot = UiInputModeController.isFocusNavigationActive() ? focused(screen) : null;
-        if (isUsableActionSlot(focusedSlot, requireItem)) {
-            return focusedSlot;
+        if (screen instanceof CustomSlotLayout layout) {
+            return layout.slotLayer().resolveActionSlot(
+                UiInputModeController.isFocusNavigationActive(), requireItem
+            );
         }
-
-        Slot hoveredSlot = hovered(screen);
-        if (isUsableActionSlot(hoveredSlot, requireItem)) {
-            return hoveredSlot;
-        }
-
-        if (!UiInputModeController.isFocusNavigationActive()) {
-            focusedSlot = focused(screen);
-            if (isUsableActionSlot(focusedSlot, requireItem)) {
-                return focusedSlot;
-            }
-        }
-        return null;
+        Slot target = UiInputModeController.isFocusNavigationActive()
+            ? focused(screen)
+            : hovered(screen);
+        return isUsableActionSlot(target, requireItem) ? target : null;
     }
 
     private static boolean isUsableActionSlot(Slot slot, boolean requireItem) {
@@ -522,11 +555,13 @@ public final class ContainerSlotFocusController {
     }
 
     private static double gridX(SlotGrid grid, Slot slot) {
-        return grid.get(slot.index).x() + 8.0D;
+        SlotPos position = grid.get(slot.index);
+        return position.x() + position.width() / 2.0D;
     }
 
     private static double gridY(SlotGrid grid, Slot slot) {
-        return grid.get(slot.index).y() + 8.0D;
+        SlotPos position = grid.get(slot.index);
+        return position.y() + position.height() / 2.0D;
     }
 
     private static void syncCursorToGridSlot(SlotGrid grid, Slot slot) {

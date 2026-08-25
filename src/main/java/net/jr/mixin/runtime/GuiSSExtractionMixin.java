@@ -30,10 +30,6 @@ public abstract class GuiSSExtractionMixin {
         ToastRenderPass.update(manager);
     }
 
-    /**
-     * @author Usernah
-     * @reason GUI extraction is fully owned by the Java Reforged runtime.
-     */
     @Overwrite
     public void extractRenderState(
             DeltaTracker deltaTracker,

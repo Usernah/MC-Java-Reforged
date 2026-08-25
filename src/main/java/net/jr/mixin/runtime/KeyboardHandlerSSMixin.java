@@ -10,7 +10,6 @@ import net.minecraft.client.input.PreeditEvent;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 
-/** Installs the keyboard/mouse owner's local-client context at the GLFW boundary. */
 @Mixin(value = KeyboardHandler.class, priority = 2000)
 public abstract class KeyboardHandlerSSMixin {
     @WrapMethod(method = "keyPress")

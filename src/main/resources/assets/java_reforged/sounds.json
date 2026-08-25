@@ -39,6 +39,14 @@
       { "name": "java_reforged:ui/craftfail_rem", "pitch": 1.05 }
     ]
   },
+  "ui.craft": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:ui/craft_rem", "pitch": 0.95 },
+      { "name": "java_reforged:ui/craft_rem", "pitch": 1.0 },
+      { "name": "java_reforged:ui/craft_rem", "pitch": 1.05 }
+    ]
+  },
   "ui.hotbar_focus": {
     "category": "master",
     "sounds": [

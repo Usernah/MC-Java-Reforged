@@ -25,22 +25,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
-/**
- * Reloadable metric store for controller glyph themes.
- *
- * The Java theme registry owns theme structure. This class owns only the
- * default and per-glyph heights read from definitions.json.
- */
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class ControllerGlyphDefinitions {
-    /** Stable Asset used as the NeoForge reload-listener key. */
+
     private static final Asset RELOAD_LISTENER_ID =
         Asset.MOD("reload/controller_glyph_definitions");
 
-    /** Reverse index that translates JSON keys such as button_down to enum values. */
     private static final Map<String, ControllerGlyph> GLYPHS_BY_NAME = createGlyphIndex();
 
-    /** Immutable snapshot currently visible to the render thread. */
     private static volatile Map<ControllerGlyphTheme, Definition> definitions = Map.of();
     private static volatile Map<String, Map<ControllerGlyphTheme, Definition>> variantDefinitions = Map.of();
     private static volatile Set<Asset> availableVariantTextures = Set.of();
@@ -53,9 +45,6 @@ public final class ControllerGlyphDefinitions {
         RELOAD_LISTENER_ID.registerReloadListener(event, new ReloadListener());
     }
 
-    /**
-     * Returns a specific glyph height or the theme's default height.
-     */
     public static float height(ControllerGlyphTheme theme, ControllerGlyph glyph) {
         Definition definition = activeDefinition(theme);
         if (definition == null) {
@@ -90,10 +79,6 @@ public final class ControllerGlyphDefinitions {
         return definitions.get(theme);
     }
 
-    /**
-     * Deserializes and validates one theme definition. On a failed live reload,
-     * the last valid definition remains active for that theme.
-     */
     private static Definition loadDefinition(
         ResourceManager manager,
         ControllerGlyphTheme theme
@@ -171,9 +156,7 @@ public final class ControllerGlyphDefinitions {
                     ? positiveHeight(root.get("default_height"), theme + "." + folder + ".default_height")
                     : base.defaultHeight();
                 EnumMap<ControllerGlyph, Float> heights = new EnumMap<>(ControllerGlyph.class);
-                // A contextual default defines a complete new sizing baseline. In that
-                // case base per-glyph exceptions must not mask it. Without a contextual
-                // default, the file behaves as a genuinely partial overlay.
+
                 if (!replacesDefaultHeight) {
                     heights.putAll(base.heights());
                 }
@@ -194,7 +177,6 @@ public final class ControllerGlyphDefinitions {
         }
     }
 
-    /** Validates that a JSON element is a usable positive render height. */
     private static float positiveHeight(JsonElement element, String field) {
         if (element == null || !element.isJsonPrimitive()) {
             throw new IllegalArgumentException("Missing numeric height: " + field);
@@ -209,7 +191,6 @@ public final class ControllerGlyphDefinitions {
         return value;
     }
 
-    /** Builds the immutable reverse lookup used while parsing JSON. */
     private static Map<String, ControllerGlyph> createGlyphIndex() {
         Map<String, ControllerGlyph> index = new HashMap<>();
         for (ControllerGlyph glyph : ControllerGlyph.values()) {
@@ -218,17 +199,12 @@ public final class ControllerGlyphDefinitions {
         return Map.copyOf(index);
     }
 
-    /** Immutable data-transfer object representing one parsed JSON file. */
     private record Definition(
         float defaultHeight,
         Map<ControllerGlyph, Float> heights
     ) {
     }
 
-    /**
-     * Two-phase listener: prepare performs I/O and parsing, then apply exposes
-     * the complete immutable snapshot atomically.
-     */
     private static final class ReloadListener
         extends SimplePreparableReloadListener<ReloadSnapshot> {
 

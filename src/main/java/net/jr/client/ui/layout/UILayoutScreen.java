@@ -5,10 +5,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Host screen for layouts. It owns Minecraft's screen lifecycle while the
- * runtime owns which layout is visible and which one receives input.
- */
 public class UILayoutScreen extends Screen {
     private final UILayoutRuntime layoutRuntime;
     private UILayout interactiveLayout;
@@ -47,7 +43,7 @@ public class UILayoutScreen extends Screen {
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // The active layout owns its complete visual background.
+
     }
 
     @Override
@@ -76,8 +72,7 @@ public class UILayoutScreen extends Screen {
         }
         this.interactiveLayout = layout;
         if (layout != null) {
-            // It participates in focus, mouse, controller and narration, but its
-            // rendering remains exclusively inside the live render target.
+
             this.addWidget(layout);
         }
     }

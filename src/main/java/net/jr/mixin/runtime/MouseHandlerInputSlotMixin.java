@@ -4,15 +4,17 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import java.nio.file.Path;
 import java.util.List;
+import net.jr.client.input.runtime.MappedActionProcessor;
 import net.jr.client.runtime.input.LocalScreenInput;
 import net.jr.client.runtime.context.SlotExecution;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-/** Routes physical mouse callbacks through the local client that owns keyboard and mouse input. */
 @Mixin(value = MouseHandler.class, priority = 2000)
 public abstract class MouseHandlerInputSlotMixin {
     @WrapMethod(method = "onButton")
@@ -54,5 +56,21 @@ public abstract class MouseHandlerInputSlotMixin {
     )
     private double splitTest$readLocalMouseY(MouseHandler mouseHandler, com.mojang.blaze3d.platform.Window window) {
         return LocalScreenInput.localGuiY(mouseHandler);
+    }
+
+    @Redirect(
+        method = "onButton",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/screens/Screen;mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z"
+        )
+    )
+    private boolean splitTest$playContainerFeedbackFromRealMouseEvent(
+        Screen screen,
+        MouseButtonEvent event,
+        boolean doubleClick
+    ) {
+        MappedActionProcessor.playPhysicalMouseContainerActionFeedback(screen, event);
+        return screen.mouseClicked(event, doubleClick);
     }
 }

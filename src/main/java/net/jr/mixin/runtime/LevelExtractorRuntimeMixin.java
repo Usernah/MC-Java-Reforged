@@ -112,10 +112,6 @@ public abstract class LevelExtractorRuntimeMixin implements LevelExtractorRuntim
         }
     }
 
-    /**
-     * Slots sharing a ClientLevel must all observe the same vanilla chunk delta
-     * buffer. Only the final extraction for that level flips the double buffer.
-     */
     @Redirect(
         method = "extract",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientChunkCache;flipUpdateTrackingSets()V")
@@ -157,8 +153,6 @@ public abstract class LevelExtractorRuntimeMixin implements LevelExtractorRuntim
 
         HitResult hitResult = client.hitResult();
 
-        // No pisamos la selección vanilla de un bloque normal.
-        // El bridge aparece cuando estamos usando la ruta de "aire".
         if (hitResult != null
                 && hitResult.getType() != HitResult.Type.MISS) {
             return;

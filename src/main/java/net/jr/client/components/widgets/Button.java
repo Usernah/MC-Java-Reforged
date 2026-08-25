@@ -15,7 +15,6 @@ public class Button extends JavaBaseWidget {
     private IWidgetRenderer renderer;
     private boolean pressEffectApplied = false;
 
-    // 2. Constructor actualizado con soundHandler
     protected Button(int x, int y, int width, int height, OnPress onPress, IWidgetRenderer renderer) {
         super(x, y, width, height, Component.empty());
         this.onPress = onPress;
@@ -24,7 +23,7 @@ public class Button extends JavaBaseWidget {
 
     @Override
     protected void extractWidgetRenderState(GuiGraphicsExtractor gui, int mouseX, int mouseY, float partialTick) {
-        super.extractWidgetRenderState(gui, mouseX, mouseY, partialTick); // IMPORTANTE: Para lógica de sonido
+        super.extractWidgetRenderState(gui, mouseX, mouseY, partialTick);
         if (this.renderer != null) {
             this.renderer.render(gui, this, mouseX, mouseY, partialTick);
         }
@@ -48,9 +47,6 @@ public class Button extends JavaBaseWidget {
         super.setFocused(focused);
     }
 
-    // --- Getters y Setters ---
-    // Eliminamos isPressed() y setPressed() porque ya están en JavaBaseWidget
-
     public boolean isActive() { return this.active; }
     public void setActive(boolean active) {
         this.active = active;
@@ -73,7 +69,6 @@ public class Button extends JavaBaseWidget {
             return false;
         }
 
-        this.playDownSound(net.minecraft.client.Minecraft.getInstance().getSoundManager());
         this.onClick(this.getX() + (this.getWidth() / 2.0), this.getY() + (this.getHeight() / 2.0));
         return true;
     }
@@ -92,7 +87,6 @@ public class Button extends JavaBaseWidget {
         void onPress(Button button);
     }
 
-    // --- BUILDER ---
     public static class Builder {
         private final int x, y, width, height;
         private OnPress onPress = b -> {};
@@ -117,7 +111,6 @@ public class Button extends JavaBaseWidget {
             return this;
         }
 
-        // 5. Método para asignar el sonido desde fuera
         public Builder withSound(IWidgetSoundHandler sound) {
             this.soundHandler = sound;
             return this;
@@ -129,7 +122,7 @@ public class Button extends JavaBaseWidget {
         }
 
         public Button build() {
-            // 6. Pasar el soundHandler al constructor
+
             Button button = new Button(x, y, width, height, onPress, renderer);
             button.setActive(this.active);
             button.setSoundHandler(this.soundHandler);

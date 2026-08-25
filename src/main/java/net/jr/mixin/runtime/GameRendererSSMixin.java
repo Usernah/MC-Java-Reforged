@@ -28,7 +28,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
-/** Admits every local player through Minecraft's single 26.2 GameRenderer engine. */
 @Mixin(GameRenderer.class)
 public abstract class GameRendererSSMixin {
     @Inject(method = "mainRenderTarget", at = @At("HEAD"), cancellable = true)

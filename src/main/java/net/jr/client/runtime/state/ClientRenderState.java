@@ -1,7 +1,5 @@
 package net.jr.client.runtime.state;
 
-import javax.annotation.Nullable;
-import java.util.Objects;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -9,6 +7,9 @@ import net.minecraft.client.renderer.state.LightmapRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.HitResult;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 public final class ClientRenderState {
     @Nullable
@@ -18,6 +19,7 @@ public final class ClientRenderState {
     private final HudState hud = new HudState();
     private final FovState fovState = new FovState();
     private final TerrainState terrain = new TerrainState();
+    private final MinimapState minimap = new MinimapState();
     private final ParticleState particles = new ParticleState();
     private final LevelRenderState levelRenderState = new LevelRenderState();
     private final LightmapRenderState lightmapRenderState = new LightmapRenderState();
@@ -130,6 +132,8 @@ public final class ClientRenderState {
         return this.terrain;
     }
 
+    public MinimapState minimap() {return this.minimap;}
+
     public ParticleState particles() {
         return this.particles;
     }
@@ -196,6 +200,7 @@ public final class ClientRenderState {
         this.hands.clear();
         this.hud.clear();
         this.terrain.clear();
+        this.minimap.clearWorldBinding();
         this.particles.clear();
         this.levelRenderState.reset();
         this.lightmapRenderState.needsUpdate = false;

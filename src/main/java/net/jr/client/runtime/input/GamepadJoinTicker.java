@@ -41,6 +41,9 @@ public final class GamepadJoinTicker {
             if (Boolean.TRUE.equals(JOIN_LATCHED.get(deviceId))) {
                 continue;
             }
+            if (InputDeviceRouter.isAwaitingNeutral(deviceId)) {
+                continue;
+            }
             if (InputDeviceRouter.assignedSlot(deviceId) != null || !startDown || !selectDown) {
                 continue;
             }

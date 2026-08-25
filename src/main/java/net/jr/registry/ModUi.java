@@ -16,7 +16,7 @@ public final class ModUi implements IUiRegistryProvider {
     }
 
     public static void bootstrap() {
-        // Calling this method initializes the static registry entries before resource reload.
+
     }
 
     @Override

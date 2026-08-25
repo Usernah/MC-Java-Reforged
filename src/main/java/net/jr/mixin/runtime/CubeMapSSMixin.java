@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
-/** Constrains vanilla's cubemap renderer while it is serving a local viewport. */
 @Mixin(CubeMap.class)
 public abstract class CubeMapSSMixin {
     @ModifyArgs(

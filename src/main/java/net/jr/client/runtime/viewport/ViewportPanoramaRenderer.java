@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.CubeMap;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.client.renderer.state.gui.PanoramaRenderState;
 
-/** Collects panorama requests whose destination is one local player's viewport. */
 public final class ViewportPanoramaRenderer {
     private static final List<Request> PENDING = new ArrayList<>();
     private static boolean rendering;

@@ -39,6 +39,8 @@ public final class ModKeyBindings {
         key("gameplay_hotbar_prev", InputConstants.KEY_LBRACKET, CATEGORY_GAMEPLAY);
     public static final KeyMapping GAMEPLAY_HOTBAR_NEXT =
         key("gameplay_hotbar_next", InputConstants.KEY_RBRACKET, CATEGORY_GAMEPLAY);
+    public static final KeyMapping GAMEPLAY_CRAFTING =
+        key("gameplay_crafting", InputConstants.KEY_C, CATEGORY_GAMEPLAY);
 
     private ModKeyBindings() {}
 
@@ -88,10 +90,6 @@ public final class ModKeyBindings {
         }
     }
 
-    /**
-     * Repairs the invalid binding written by early 26.2 ports where quick move
-     * lost its Shift modifier and became indistinguishable from UI confirm.
-     */
     public static void repairLegacyQuickMoveBinding(Minecraft minecraft) {
         if (UI_QUICK_MOVE.getKeyModifier() != KeyModifier.NONE
             || UI_QUICK_MOVE.getDefaultKeyModifier() != KeyModifier.SHIFT

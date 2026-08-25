@@ -56,8 +56,7 @@ public enum GamepadDigitalInput {
 
     @Nullable
     public static GamepadDigitalInput fromSerializedName(String name) {
-        // Compatibility with bindings written before touchpad base/click glyphs
-        // became separate concepts.
+
         if ("TOUCHPAD".equalsIgnoreCase(name)) {
             return TOUCHPAD_BUTTON;
         }

@@ -18,7 +18,6 @@ public abstract class GuiControlHintsMixin {
         boolean resourcesLoaded,
         CallbackInfo ci
     ) {
-        // Gui owns the extractor locally, so HUD hints are connected through
-        // RenderGuiEvent.Post where NeoForge exposes that same extractor.
+
     }
 }

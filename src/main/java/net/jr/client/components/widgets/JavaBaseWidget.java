@@ -6,8 +6,8 @@ import net.jr.client.components.interfaces.IWidgetSoundHandler;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.input.InputApi;
+import net.jr.client.input.runtime.MappedActionProcessor;
 import net.jr.client.sound.action.InputActionSounds;
-import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -21,9 +21,12 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
 
     private static final IWidgetSoundHandler DEFAULT_SOUND_HANDLER = (handler, widget, event) -> {
         switch (event) {
-            case HOVER, FOCUS -> InputActionSounds.playHover();
-            case PRESS -> InputActionSounds.playClick();
-            case UNHOVER, RELEASE -> {
+            case FOCUS -> InputActionSounds.playHover();
+            case PRESS -> {
+                MappedActionProcessor.suppressNextScreenTransitionSound();
+                InputActionSounds.playClick();
+            }
+            case HOVER, UNHOVER, RELEASE -> {
             }
         }
     };
@@ -32,8 +35,6 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
     private boolean wasClicked = false;
 
     protected IWidgetSoundHandler soundHandler = DEFAULT_SOUND_HANDLER;
-    private boolean wasHovered = false;
-
     private final VisualState visualState;
     private float animProgress = 0.0f;
 
@@ -148,21 +149,6 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
 
     @Override
     protected void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if (this.active && this.visible) {
-            boolean isHoveredNow = this.isHoveredOrFocused();
-            if (isHoveredNow && !wasHovered) {
-                if (soundHandler != null) {
-                    soundHandler.handle(Minecraft.getInstance().getSoundManager(), this, IWidgetSoundHandler.Event.HOVER);
-                }
-            } else if (!isHoveredNow && wasHovered) {
-                if (soundHandler != null) {
-                    soundHandler.handle(Minecraft.getInstance().getSoundManager(), this, IWidgetSoundHandler.Event.UNHOVER);
-                }
-            }
-            wasHovered = isHoveredNow;
-        } else {
-            wasHovered = false;
-        }
     }
 
     @Override
@@ -205,14 +191,7 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
 
     @Override
     public void setFocused(boolean focused) {
-        boolean changed = this.isFocused() != focused;
         super.setFocused(focused);
-        if (changed && focused && UiInputModeController.isFocusNavigationActive() && soundHandler != null) {
-            soundHandler.handle(Minecraft.getInstance().getSoundManager(), this, IWidgetSoundHandler.Event.FOCUS);
-            // Focus itself already emitted the hover-equivalent sound; do not
-            // emit it again from the next render-state extraction.
-            this.wasHovered = true;
-        }
     }
 
     public void onClick(double mouseX, double mouseY) {
@@ -238,7 +217,6 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
         this.pressed = pressed;
     }
 
-    /** Cancels a pointer/controller press whose matching release can no longer be delivered. */
     public void cancelInteraction() {
         this.pressed = false;
         this.wasClicked = false;
@@ -250,9 +228,7 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
 
     @Override
     public void playDownSound(@NotNull SoundManager pHandler) {
-        // Controller-generated clicks are sounded by MappedActionProcessor once,
-        // after it knows the action was handled. Physical mouse/keyboard clicks
-        // are owned by the widget itself.
+
         if (!InputApi.isGamepadMode() && soundHandler != null) {
             soundHandler.handle(pHandler, this, IWidgetSoundHandler.Event.PRESS);
         }
@@ -292,6 +268,54 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
 
     public void setBaseBounds(int baseX, int baseY, int baseWidth, int baseHeight) {
         this.setBaseBounds((float) baseX, (float) baseY, (float) baseWidth, (float) baseHeight);
+    }
+
+    @Override
+    public void setX(int x) {
+        this.visualState.setX(x);
+        super.setX(x);
+    }
+
+    @Override
+    public void setY(int y) {
+        this.visualState.setY(y);
+        super.setY(y);
+    }
+
+    @Override
+    public void setWidth(int width) {
+        this.visualState.setWidth(width);
+        super.setWidth(width);
+    }
+
+    @Override
+    public void setHeight(int height) {
+        this.visualState.setHeight(height);
+        super.setHeight(height);
+    }
+
+    @Override
+    public void setSize(int width, int height) {
+        this.setWidth(width);
+        this.setHeight(height);
+    }
+
+    @Override
+    public void setAlpha(float alpha) {
+        this.visualState.setAlpha(alpha);
+        super.setAlpha(alpha);
+    }
+
+    @Override
+    public float getAlpha() {
+        return this.visualState.alpha();
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+        if (!active) {
+            this.cancelInteraction();
+        }
     }
 
     public float getAnimProgress() {

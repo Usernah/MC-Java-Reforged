@@ -6,6 +6,7 @@ public enum UiAction {
     MOVE_LEFT,
     MOVE_RIGHT,
     ACCEPT,
+    ALTERNATE,
     CANCEL,
     BACK,
     PAUSE;

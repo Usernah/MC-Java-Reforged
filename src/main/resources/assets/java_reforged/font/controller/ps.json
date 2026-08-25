@@ -75,7 +75,7 @@
       "type": "bitmap",
       "file": "java_reforged:controller/ps/trigger_right.png",
       "ascent": 8,
-      "height": 12,
+      "height": 15,
       "chars": [
         "\uE007"
       ]
@@ -84,7 +84,7 @@
       "type": "bitmap",
       "file": "java_reforged:controller/ps/button_select.png",
       "ascent": 8,
-      "height": 12,
+      "height": 15,
       "chars": [
         "\uE008"
       ]

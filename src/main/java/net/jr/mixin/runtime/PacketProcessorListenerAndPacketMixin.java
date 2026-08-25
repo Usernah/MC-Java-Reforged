@@ -9,14 +9,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-/**
- * Restores the local-client identity when Minecraft drains its 26.2 packet queue.
- *
- * <p>PacketProcessor stores the listener and packet directly, so an execution
- * context installed on the Netty thread cannot travel with the queued entry.
- * The listener's Connection is the stable owner of that entry and therefore
- * the authoritative place to recover the slot before any packet handler runs.</p>
- */
 @Mixin(targets = "net.minecraft.network.PacketProcessor$ListenerAndPacket")
 public abstract class PacketProcessorListenerAndPacketMixin {
     @Redirect(

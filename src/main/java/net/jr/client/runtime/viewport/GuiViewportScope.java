@@ -23,23 +23,22 @@ public final class GuiViewportScope implements AutoCloseable {
         float sharedGuiScale = (float)Minecraft.getInstance().getWindow().getGuiScale();
         float destinationX = viewport.x() / sharedGuiScale;
         float destinationY = viewport.y() / sharedGuiScale;
-        float destinationRight = (viewport.x() + viewport.width()) / sharedGuiScale;
-        float destinationBottom = (viewport.y() + viewport.height()) / sharedGuiScale;
-        float destinationWidth = destinationRight - destinationX;
-        float destinationHeight = destinationBottom - destinationY;
         int logicalWidth = ViewportGuiScale.logicalWidth(viewport);
         int logicalHeight = ViewportGuiScale.logicalHeight(viewport);
+
+        float localToSharedScale =
+                (float)(viewport.effectiveGuiScale() / sharedGuiScale);
         this.coordinateMapping = new CoordinateMapping(
             destinationX,
             destinationY,
-            destinationWidth / logicalWidth,
-            destinationHeight / logicalHeight
+            localToSharedScale,
+            localToSharedScale
         );
         COORDINATE_MAPPINGS.get().push(this.coordinateMapping);
 
         graphics.pose().pushMatrix();
         graphics.pose().translate(destinationX, destinationY);
-        graphics.pose().scale(destinationWidth / logicalWidth, destinationHeight / logicalHeight);
+        graphics.pose().scale(localToSharedScale, localToSharedScale);
         graphics.enableScissor(0, 0, logicalWidth, logicalHeight);
     }
 

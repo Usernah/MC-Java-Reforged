@@ -8,7 +8,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Keeps split players' protocol-safe names separate from the names shown by the client UI. */
 @Mixin(Player.class)
 public abstract class PlayerNameMixin {
     @Inject(method = "getName", at = @At("RETURN"), cancellable = true)

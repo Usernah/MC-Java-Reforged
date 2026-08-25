@@ -6,6 +6,8 @@ import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.client.meta.MetaManager;
 import net.jr.client.render.ModRenderPipelines;
 import net.jr.client.ui.dsl.UiDocumentManager;
+import net.jr.api.client.render.font.FontRegister;
+import net.jr.registry.ModFonts;
 import net.jr.registry.ModUi;
 import net.jr.registry.ModVideos;
 import net.jr.api.client.video.VideoRegister;
@@ -26,6 +28,7 @@ import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 public class JavaReforgedClient {
     public JavaReforgedClient(ModContainer container) {
         container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        ModFonts.bootstrap();
         ModUi.bootstrap();
         ModVideos.bootstrap();
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
@@ -46,6 +49,7 @@ public class JavaReforgedClient {
     static void onRegisterReloadListeners(AddClientReloadListenersEvent event) {
         MetaManager.registerClientReloadListener(event);
         VideoRegister.registerClientReloadListener(event);
+        FontRegister.registerClientReloadListener(event);
         UiDocumentManager.registerClientReloadListener(event);
     }
 

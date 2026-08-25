@@ -1,9 +1,11 @@
 package net.jr.client.runtime.input;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 import net.jr.client.input.gamepad.GamepadIdentity;
 import net.jr.client.input.sdl.SdlGamepad;
@@ -16,6 +18,7 @@ public final class InputDeviceRouter {
     public static final int KEYBOARD_MOUSE_SLOT = 0;
 
     private static final Map<Long, Integer> ASSIGNED_SLOTS = new HashMap<>();
+    private static final Set<Long> NEUTRALIZATION_PENDING = new HashSet<>();
 
     private InputDeviceRouter() {
     }
@@ -41,6 +44,7 @@ public final class InputDeviceRouter {
     }
 
     public static List<GamepadDevice> devices() {
+        refreshNeutralizationState();
         return SdlGamepad.deviceIds().stream()
             .map(deviceId -> new GamepadDevice(
                 deviceId,
@@ -53,10 +57,13 @@ public final class InputDeviceRouter {
 
     public static List<Long> gamepadsForSlot(int slotId) {
         LocalClientSlotRegistry.requireSlotId(slotId);
+        refreshNeutralizationState();
         List<Long> result = new ArrayList<>();
         for (long deviceId : SdlGamepad.deviceIds()) {
             Integer assigned = ASSIGNED_SLOTS.get(deviceId);
-            if ((assigned == null && slotId == KEYBOARD_MOUSE_SLOT)
+            if ((assigned == null
+                && slotId == KEYBOARD_MOUSE_SLOT
+                && !NEUTRALIZATION_PENDING.contains(deviceId))
                 || (assigned != null && assigned == slotId)) {
                 result.add(deviceId);
             }
@@ -75,7 +82,16 @@ public final class InputDeviceRouter {
     }
 
     public static int effectiveSlot(long deviceId) {
+        refreshNeutralizationState();
+        if (NEUTRALIZATION_PENDING.contains(deviceId)) {
+            return UNASSIGNED_SLOT;
+        }
         return ASSIGNED_SLOTS.getOrDefault(deviceId, KEYBOARD_MOUSE_SLOT);
+    }
+
+    public static boolean isAwaitingNeutral(long deviceId) {
+        refreshNeutralizationState();
+        return NEUTRALIZATION_PENDING.contains(deviceId);
     }
 
     public static void assignGamepad(long deviceId, int slotId) {
@@ -83,26 +99,48 @@ public final class InputDeviceRouter {
         if (!SdlGamepad.isConnected(deviceId)) {
             throw new IllegalArgumentException("Cannot assign disconnected gamepad " + deviceId);
         }
+        NEUTRALIZATION_PENDING.remove(deviceId);
         ASSIGNED_SLOTS.put(deviceId, slotId);
         ClientRuntime.INSTANCE.slots().slot(slotId).inputState().markGamepadInput();
     }
 
     public static void unassignGamepad(long deviceId) {
-        ASSIGNED_SLOTS.remove(deviceId);
+        if (ASSIGNED_SLOTS.remove(deviceId) != null) {
+            requireNeutralBeforePrimaryFallback(deviceId);
+        }
     }
 
     public static void unassignSlot(int slotId) {
         LocalClientSlotRegistry.requireSlotId(slotId);
+        List<Long> releasedDevices = ASSIGNED_SLOTS.entrySet().stream()
+            .filter(entry -> entry.getValue() == slotId)
+            .map(Map.Entry::getKey)
+            .toList();
         ASSIGNED_SLOTS.entrySet().removeIf(entry -> entry.getValue() == slotId);
+        releasedDevices.forEach(InputDeviceRouter::requireNeutralBeforePrimaryFallback);
     }
 
     public static void pruneDisconnectedDevices() {
         List<Long> connected = SdlGamepad.deviceIds();
         ASSIGNED_SLOTS.keySet().removeIf(deviceId -> !connected.contains(deviceId));
+        NEUTRALIZATION_PENDING.removeIf(deviceId -> !connected.contains(deviceId));
+        refreshNeutralizationState();
     }
 
     public static void resetGamepadAssignment() {
         ASSIGNED_SLOTS.clear();
+        NEUTRALIZATION_PENDING.clear();
+    }
+
+    private static void requireNeutralBeforePrimaryFallback(long deviceId) {
+        if (SdlGamepad.isConnected(deviceId)) {
+            NEUTRALIZATION_PENDING.add(deviceId);
+        }
+    }
+
+    private static void refreshNeutralizationState() {
+        NEUTRALIZATION_PENDING.removeIf(deviceId -> !SdlGamepad.isConnected(deviceId)
+            || !SdlGamepad.calibrationInputActive(deviceId));
     }
 
     public record GamepadDevice(

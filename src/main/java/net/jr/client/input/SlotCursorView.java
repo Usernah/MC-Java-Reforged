@@ -3,12 +3,6 @@ package net.jr.client.input;
 import net.jr.client.input.cursor.CursorHider;
 import net.jr.client.input.runtime.GamepadInputProcessor;
 
-/**
- * Slot-bound view of the UI cursor.
- *
- * <p>This keeps cursor questions behind the local-client facade instead of
- * making UI code ask static input helpers which slot they should use.</p>
- */
 public final class SlotCursorView {
     private final int slotId;
 

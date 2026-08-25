@@ -140,10 +140,6 @@ public abstract class MixinMusicManager implements MusicManagerBridge {
             : Component.literal(this.currentMusic.getIdentifier().toString());
     }
 
-    /**
-     * @author Java Reforged
-     * @reason Preserve the original fade transition scheduler while adapting it to Minecraft 26.2 music signatures.
-     */
     @Overwrite
     public void tick() {
         MusicTransitionManager.tickMusicContinuityProtection();
@@ -196,23 +192,22 @@ public abstract class MixinMusicManager implements MusicManagerBridge {
         }
 
         if (this.currentMusic == null) {
-            if (this.initialMusicPlayback) {
-                this.nextSongDelay = 0;
-                this.configuredStartDelayArmed = true;
-            } else if (this.resumeMusicAfterWorldExit) {
-                SoundEngineBridge soundEngine = (SoundEngineBridge) soundManager;
-                if (soundEngine.moods$hasFadingMusic()) {
-                    return;
-                }
+            if (!this.initialMusicPlayback) {
+                if (this.resumeMusicAfterWorldExit) {
+                    SoundEngineBridge soundEngine = (SoundEngineBridge) soundManager;
+                    if (soundEngine.moods$hasFadingMusic()) {
+                        return;
+                    }
 
-                if (!this.worldExitIntervalArmed) {
+                    if (!this.worldExitIntervalArmed) {
+                        this.nextSongDelay = this.javareforged$deriveNextSongDelay(false);
+                        this.configuredStartDelayArmed = true;
+                        this.worldExitIntervalArmed = true;
+                    }
+                } else if (!this.configuredStartDelayArmed) {
                     this.nextSongDelay = this.javareforged$deriveNextSongDelay(false);
                     this.configuredStartDelayArmed = true;
-                    this.worldExitIntervalArmed = true;
                 }
-            } else if (!this.configuredStartDelayArmed) {
-                this.nextSongDelay = this.javareforged$deriveNextSongDelay(false);
-                this.configuredStartDelayArmed = true;
             }
 
             if (this.nextSongDelay > 0) {
@@ -291,10 +286,6 @@ public abstract class MixinMusicManager implements MusicManagerBridge {
         this.stopGraceTicks = Math.max(this.stopGraceTicks, SoundTransitionConfig.fadeOutTicks);
     }
 
-    /**
-     * @author Java Reforged
-     * @reason Construct the managed music instance used by the original fade system.
-     */
     @Overwrite
     public void startPlaying(Music music) {
         if (music != null) {
