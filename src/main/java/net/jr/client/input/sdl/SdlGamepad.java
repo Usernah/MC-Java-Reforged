@@ -19,6 +19,8 @@ import dev.isxander.sdl3java.api.joystick.SdlJoystick;
 import dev.isxander.sdl3java.jna.SdlNativeLibraryLoader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -978,7 +980,7 @@ public final class SdlGamepad {
 
             Path nativePath = resolveNativePath();
             Files.createDirectories(nativePath.getParent());
-            Files.copy(input, nativePath, StandardCopyOption.REPLACE_EXISTING);
+            extractNativeIfMissing(input, nativePath);
             try {
                 SdlNativeLibraryLoader.loadLibSDL3FromFilePathNow(nativePath.toAbsolutePath().toString());
                 Java_reforged.LOGGER.debug("SDL3 nativo cargado desde {}.", nativePath.toAbsolutePath());
@@ -995,13 +997,30 @@ public final class SdlGamepad {
             ? Path.of(System.getProperty("java.io.tmpdir"))
             : minecraft.gameDirectory.toPath();
 
-        String processId = Long.toString(ProcessHandle.current().pid());
         return baseDir.resolve(".javareforged")
             .resolve("natives")
-            .resolve("sdl3")
-            .resolve("instances")
-            .resolve(processId)
             .resolve(SDL_NATIVE_FILE_NAME);
+    }
+
+    private static void extractNativeIfMissing(InputStream input, Path nativePath) throws IOException {
+        if (Files.isRegularFile(nativePath)) {
+            return;
+        }
+
+        Path temporaryPath = Files.createTempFile(nativePath.getParent(), "SDL3-", ".tmp");
+        try {
+            Files.copy(input, temporaryPath, StandardCopyOption.REPLACE_EXISTING);
+            try {
+                try {
+                    Files.move(temporaryPath, nativePath, StandardCopyOption.ATOMIC_MOVE);
+                } catch (AtomicMoveNotSupportedException exception) {
+                    Files.move(temporaryPath, nativePath);
+                }
+            } catch (FileAlreadyExistsException ignored) {
+            }
+        } finally {
+            Files.deleteIfExists(temporaryPath);
+        }
     }
 
     private static void logSlowCall(String callName, long startNanos) {

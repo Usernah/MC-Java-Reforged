@@ -49,6 +49,19 @@ sourceSets {
     }
 }
 
+def transformServiceJar = tasks.register('transformServiceJar', Jar) {
+    archiveBaseName.set("${mod_id}-runtime-transform")
+    archiveVersion.set(mod_version)
+    destinationDirectory.set(layout.buildDirectory.dir('runtime-transform'))
+    from(sourceSets.transformService.output)
+    manifest {
+        attributes([
+                'Automatic-Module-Name': 'java_reforged.runtime_transform',
+                'FMLModType'         : 'LIBRARY'
+        ])
+    }
+}
+
 neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
@@ -145,6 +158,7 @@ dependencies {
     // FML 11 replaced ModLauncher's launch plugins with class processors.
     // The loader is already supplied by NeoForge at runtime; this is API-only.
     transformServiceCompileOnly "net.neoforged.fancymodloader:loader:11.0.13"
+    jarJar files(transformServiceJar)
 
     // Video decoder. Kept at the exact versions used by Reforged API.
     def javacpp_ver = "1.5.10"
@@ -212,7 +226,8 @@ shadowJar {
     configurations = [project.configurations.bundleShadow]
     dependsOn tasks.named('copySdlNatives')
 
-    from(sourceSets.transformService.output)
+    dependsOn tasks.named('jarJar')
+    from(tasks.named('jarJar'))
 
     manifest {
         attributes(['Multi-Release': 'true'])
@@ -226,7 +241,6 @@ shadowJar {
 tasks.assemble.dependsOn tasks.shadowJar
 
 tasks.named('jar', Jar) {
-    from sourceSets.transformService.output
     finalizedBy('shadowJar')
 }
 

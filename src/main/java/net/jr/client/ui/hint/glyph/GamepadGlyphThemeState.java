@@ -49,11 +49,11 @@ public final class GamepadGlyphThemeState {
         int product = identity.product();
 
         if (vendor == 0x28de || containsAny(text, "steam", "valve")) {
-            return ControllerGlyphTheme.STEAM;
+            return ControllerGlyphTheme.XBOX;
         }
 
         if (vendor == 0x057e || containsAny(text, "nintendo", "switch", "joy-con", "joycon", "pro controller")) {
-            return ControllerGlyphTheme.SWITCH;
+            return ControllerGlyphTheme.XBOX;
         }
 
         if (vendor == 0x054c || containsAny(text, "sony", "playstation", "dualshock", "dualsense", "ps3", "ps4", "ps5", "wireless controller")) {
@@ -61,7 +61,7 @@ public final class GamepadGlyphThemeState {
         }
 
         if (containsAny(text, "xbox 360", "360 controller") || (vendor == 0x045e && isXbox360(product))) {
-            return ControllerGlyphTheme.XBOX_OLD;
+            return ControllerGlyphTheme.XBOX;
         }
 
         if (vendor == 0x045e || containsAny(text, "xbox series", "xbox one", "xbox wireless controller", "microsoft")) {
@@ -69,10 +69,10 @@ public final class GamepadGlyphThemeState {
         }
 
         if (containsAny(text, "xinput", "x-input", "xbox")) {
-            return ControllerGlyphTheme.XBOX_OLD;
+            return ControllerGlyphTheme.XBOX;
         }
 
-        return ControllerGlyphTheme.STEAM;
+        return ControllerGlyphTheme.XBOX;
     }
 
     private static boolean isPlayStation5(String text, int product) {
