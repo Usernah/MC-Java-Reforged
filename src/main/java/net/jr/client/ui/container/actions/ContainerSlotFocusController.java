@@ -9,7 +9,7 @@ import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.runtime.state.UiNavigationState;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
+import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.inventory.ContainerInput;
@@ -96,8 +96,8 @@ public final class ContainerSlotFocusController {
         }
         List<Slot> slots = activeSlots(screen);
         if (slots.isEmpty()) return false;
-        int left = accessor(screen).javareforged$getLeftPos();
-        int top = accessor(screen).javareforged$getTopPos();
+        int left = accessor(screen).javaReforged$getLeftPos();
+        int top = accessor(screen).javaReforged$getTopPos();
         Slot nearest = slots.stream().min(Comparator.comparingDouble(slot -> {
             double dx = left + slot.x + 8 - mouseGuiX;
             double dy = top + slot.y + 8 - mouseGuiY;
@@ -163,8 +163,8 @@ public final class ContainerSlotFocusController {
         if (slot == null) return null;
         AbstractContainerScreenAccessor access = accessor(screen);
         return new FocusedSlotCenter(
-            access.javareforged$getLeftPos() + slot.x + 8,
-            access.javareforged$getTopPos() + slot.y + 8
+            access.javaReforged$getLeftPos() + slot.x + 8,
+            access.javaReforged$getTopPos() + slot.y + 8
         );
     }
 
@@ -246,7 +246,7 @@ public final class ContainerSlotFocusController {
 
     private static boolean click(AbstractContainerScreen<?> screen, Slot slot, int button, ContainerInput input) {
         if (!hasLocalInventoryAccess() || slot == null || !slot.isActive()) return false;
-        accessor(screen).javareforged$invokeSlotClicked(slot, slot.index, button, input);
+        accessor(screen).javaReforged$invokeSlotClicked(slot, slot.index, button, input);
         return true;
     }
 
@@ -278,13 +278,13 @@ public final class ContainerSlotFocusController {
     }
 
     private static Slot hovered(AbstractContainerScreen<?> screen) {
-        return accessor(screen).javareforged$getHoveredSlot();
+        return accessor(screen).javaReforged$getHoveredSlot();
     }
 
     private static List<Slot> activeSlots(AbstractContainerScreen<?> screen) {
         AbstractContainerScreenAccessor access = accessor(screen);
-        int width = access.javareforged$getImageWidth();
-        int height = access.javareforged$getImageHeight();
+        int width = access.javaReforged$getImageWidth();
+        int height = access.javaReforged$getImageHeight();
         return screen.getMenu().slots.stream()
             .filter(Slot::isActive)
             .filter(slot -> slot.x >= 0 && slot.y >= 0 && slot.x <= width - 16 && slot.y <= height - 16)

@@ -1,7 +1,7 @@
 package net.jr.client.runtime.state;
 
 import javax.annotation.Nullable;
-import net.jr.mixin.runtime.HudSSAccessor;
+import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -29,46 +29,46 @@ public final class HudState {
     private int lastBubblePopSoundPlayed;
     private float scopeScale;
 
-    public void install(HudSSAccessor hud) {
-        hud.splitTest$setTickCount(this.tickCount);
-        hud.splitTest$setOverlayMessage(this.overlayMessage);
-        hud.splitTest$setOverlayMessageTime(this.overlayMessageTime);
-        hud.splitTest$setAnimateOverlayMessageColor(this.animateOverlayMessageColor);
-        hud.splitTest$setToolHighlightTimer(this.toolHighlightTimer);
-        hud.splitTest$setLastToolHighlight(this.lastToolHighlight);
-        hud.splitTest$setTitleTime(this.titleTime);
-        hud.splitTest$setTitle(this.title);
-        hud.splitTest$setSubtitle(this.subtitle);
-        hud.splitTest$setTitleFadeInTime(this.titleFadeInTime);
-        hud.splitTest$setTitleStayTime(this.titleStayTime);
-        hud.splitTest$setTitleFadeOutTime(this.titleFadeOutTime);
-        hud.splitTest$setLastHealth(this.lastHealth);
-        hud.splitTest$setDisplayHealth(this.displayHealth);
-        hud.splitTest$setLastHealthTime(this.lastHealthTime);
-        hud.splitTest$setHealthBlinkTime(this.healthBlinkTime);
-        hud.splitTest$setLastBubblePopSoundPlayed(this.lastBubblePopSoundPlayed);
-        hud.splitTest$setScopeScale(this.scopeScale);
+    public void install(HudAccessor hud) {
+        hud.javaReforged$setTickCount(this.tickCount);
+        hud.javaReforged$setOverlayMessage(this.overlayMessage);
+        hud.javaReforged$setOverlayMessageTime(this.overlayMessageTime);
+        hud.javaReforged$setAnimateOverlayMessageColor(this.animateOverlayMessageColor);
+        hud.javaReforged$setToolHighlightTimer(this.toolHighlightTimer);
+        hud.javaReforged$setLastToolHighlight(this.lastToolHighlight);
+        hud.javaReforged$setTitleTime(this.titleTime);
+        hud.javaReforged$setTitle(this.title);
+        hud.javaReforged$setSubtitle(this.subtitle);
+        hud.javaReforged$setTitleFadeInTime(this.titleFadeInTime);
+        hud.javaReforged$setTitleStayTime(this.titleStayTime);
+        hud.javaReforged$setTitleFadeOutTime(this.titleFadeOutTime);
+        hud.javaReforged$setLastHealth(this.lastHealth);
+        hud.javaReforged$setDisplayHealth(this.displayHealth);
+        hud.javaReforged$setLastHealthTime(this.lastHealthTime);
+        hud.javaReforged$setHealthBlinkTime(this.healthBlinkTime);
+        hud.javaReforged$setLastBubblePopSoundPlayed(this.lastBubblePopSoundPlayed);
+        hud.javaReforged$setScopeScale(this.scopeScale);
     }
 
-    public void capture(HudSSAccessor hud) {
-        this.tickCount = hud.splitTest$getTickCount();
-        this.overlayMessage = hud.splitTest$getOverlayMessage();
-        this.overlayMessageTime = hud.splitTest$getOverlayMessageTime();
-        this.animateOverlayMessageColor = hud.splitTest$getAnimateOverlayMessageColor();
-        this.toolHighlightTimer = hud.splitTest$getToolHighlightTimer();
-        this.lastToolHighlight = hud.splitTest$getLastToolHighlight();
-        this.titleTime = hud.splitTest$getTitleTime();
-        this.title = hud.splitTest$getTitle();
-        this.subtitle = hud.splitTest$getSubtitle();
-        this.titleFadeInTime = hud.splitTest$getTitleFadeInTime();
-        this.titleStayTime = hud.splitTest$getTitleStayTime();
-        this.titleFadeOutTime = hud.splitTest$getTitleFadeOutTime();
-        this.lastHealth = hud.splitTest$getLastHealth();
-        this.displayHealth = hud.splitTest$getDisplayHealth();
-        this.lastHealthTime = hud.splitTest$getLastHealthTime();
-        this.healthBlinkTime = hud.splitTest$getHealthBlinkTime();
-        this.lastBubblePopSoundPlayed = hud.splitTest$getLastBubblePopSoundPlayed();
-        this.scopeScale = hud.splitTest$getScopeScale();
+    public void capture(HudAccessor hud) {
+        this.tickCount = hud.javaReforged$getTickCount();
+        this.overlayMessage = hud.javaReforged$getOverlayMessage();
+        this.overlayMessageTime = hud.javaReforged$getOverlayMessageTime();
+        this.animateOverlayMessageColor = hud.javaReforged$getAnimateOverlayMessageColor();
+        this.toolHighlightTimer = hud.javaReforged$getToolHighlightTimer();
+        this.lastToolHighlight = hud.javaReforged$getLastToolHighlight();
+        this.titleTime = hud.javaReforged$getTitleTime();
+        this.title = hud.javaReforged$getTitle();
+        this.subtitle = hud.javaReforged$getSubtitle();
+        this.titleFadeInTime = hud.javaReforged$getTitleFadeInTime();
+        this.titleStayTime = hud.javaReforged$getTitleStayTime();
+        this.titleFadeOutTime = hud.javaReforged$getTitleFadeOutTime();
+        this.lastHealth = hud.javaReforged$getLastHealth();
+        this.displayHealth = hud.javaReforged$getDisplayHealth();
+        this.lastHealthTime = hud.javaReforged$getLastHealthTime();
+        this.healthBlinkTime = hud.javaReforged$getHealthBlinkTime();
+        this.lastBubblePopSoundPlayed = hud.javaReforged$getLastBubblePopSoundPlayed();
+        this.scopeScale = hud.javaReforged$getScopeScale();
     }
 
     public void clear() {

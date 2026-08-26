@@ -64,6 +64,22 @@ public final class GuiViewportScope implements AutoCloseable {
         return mapping == null ? scale : scale * Math.min(mapping.scaleX(), mapping.scaleY());
     }
 
+    public static PictureInPictureBounds mapPictureInPicture(
+            int x0,
+            int y0,
+            int x1,
+            int y1,
+            float scale
+    ) {
+        return new PictureInPictureBounds(
+                mapPictureInPictureX(x0),
+                mapPictureInPictureY(y0),
+                mapPictureInPictureX(x1),
+                mapPictureInPictureY(y1),
+                mapPictureInPictureScale(scale)
+        );
+    }
+
     public static int mapScissorTestX(int x) {
         CoordinateMapping mapping = currentMappingOrNull();
         return mapping == null ? x : Math.round(mapping.x() + x * mapping.scaleX());
@@ -99,5 +115,8 @@ public final class GuiViewportScope implements AutoCloseable {
     }
 
     private record CoordinateMapping(float x, float y, float scaleX, float scaleY) {
+    }
+
+    public record PictureInPictureBounds(int x0, int y0, int x1, int y1, float scale) {
     }
 }

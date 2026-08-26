@@ -13,26 +13,24 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 public final class LocalScreenTransitionHandler {
     private LocalScreenTransitionHandler() {
     }
 
-    public static void onSetScreen(@Nullable Screen screen, CallbackInfo callback) {
+    public static boolean shouldCancelSetScreen(@Nullable Screen screen) {
         Integer slotId = SlotScope.idOrNull();
         if (slotId == null || slotId == 0) {
-            return;
+            return false;
         }
         if (screen instanceof LevelLoadingScreen) {
             var session = ClientRuntime.INSTANCE.clients().sessionOrNull(slotId);
             if (session != null) {
                 session.setJoiningInProgress(true);
             }
-            callback.cancel();
-        } else if (screen instanceof DisconnectedScreen) {
-            callback.cancel();
+            return true;
         }
+        return screen instanceof DisconnectedScreen;
     }
 
     public static void onSlotScreenChanged(Minecraft minecraft, int slotId, @Nullable Screen screen) {
@@ -56,6 +54,13 @@ public final class LocalScreenTransitionHandler {
         if (LocalClientReadinessPolicy.gameplayBound(0)) {
             SlotExecution.runPrimary(minecraft, () -> minecraft.gui.setScreen(null));
         }
+    }
+
+    public static void closeCompletedPrimaryJoiningScreen(Minecraft minecraft) {
+        closeCompletedPrimaryJoiningScreen(
+                minecraft,
+                ClientRuntime.INSTANCE.slots().primary().screenState().screen()
+        );
     }
 
     private static boolean shouldSeedControllerCursor(int slotId) {

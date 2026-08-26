@@ -1,6 +1,6 @@
 package net.jr.client.runtime.state;
 
-import net.jr.mixin.runtime.ItemInHandRendererSSAccessor;
+import net.jr.mixin.accessors.ItemInHandRendererAccessor;
 import net.minecraft.world.item.ItemStack;
 
 public final class HandState {
@@ -11,22 +11,22 @@ public final class HandState {
     private float offHandHeight;
     private float oldOffHandHeight;
 
-    public void install(ItemInHandRendererSSAccessor renderer) {
-        renderer.splitTest$setMainHandItem(this.mainHandItem);
-        renderer.splitTest$setOffHandItem(this.offHandItem);
-        renderer.splitTest$setMainHandHeight(this.mainHandHeight);
-        renderer.splitTest$setOldMainHandHeight(this.oldMainHandHeight);
-        renderer.splitTest$setOffHandHeight(this.offHandHeight);
-        renderer.splitTest$setOldOffHandHeight(this.oldOffHandHeight);
+    public void install(ItemInHandRendererAccessor renderer) {
+        renderer.javaReforged$setMainHandItem(this.mainHandItem);
+        renderer.javaReforged$setOffHandItem(this.offHandItem);
+        renderer.javaReforged$setMainHandHeight(this.mainHandHeight);
+        renderer.javaReforged$setOldMainHandHeight(this.oldMainHandHeight);
+        renderer.javaReforged$setOffHandHeight(this.offHandHeight);
+        renderer.javaReforged$setOldOffHandHeight(this.oldOffHandHeight);
     }
 
-    public void capture(ItemInHandRendererSSAccessor renderer) {
-        this.mainHandItem = renderer.splitTest$getMainHandItem();
-        this.offHandItem = renderer.splitTest$getOffHandItem();
-        this.mainHandHeight = renderer.splitTest$getMainHandHeight();
-        this.oldMainHandHeight = renderer.splitTest$getOldMainHandHeight();
-        this.offHandHeight = renderer.splitTest$getOffHandHeight();
-        this.oldOffHandHeight = renderer.splitTest$getOldOffHandHeight();
+    public void capture(ItemInHandRendererAccessor renderer) {
+        this.mainHandItem = renderer.javaReforged$getMainHandItem();
+        this.offHandItem = renderer.javaReforged$getOffHandItem();
+        this.mainHandHeight = renderer.javaReforged$getMainHandHeight();
+        this.oldMainHandHeight = renderer.javaReforged$getOldMainHandHeight();
+        this.offHandHeight = renderer.javaReforged$getOffHandHeight();
+        this.oldOffHandHeight = renderer.javaReforged$getOldOffHandHeight();
     }
 
     public void clear() {

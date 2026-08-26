@@ -6,17 +6,17 @@ import net.minecraft.sounds.SoundEvent;
 import org.jetbrains.annotations.NotNull;
 
 public interface MusicManagerBridge {
-    boolean moods$intrudeMusic(@NotNull Music music);
+    boolean javaReforged$intrudeMusic(@NotNull Music music);
 
-    boolean moods$isCurrentlyPlaying(SoundEvent soundEvent);
+    boolean javaReforged$isCurrentlyPlaying(SoundEvent soundEvent);
 
-    Component moods$getCurrentMusicName();
+    Component javaReforged$getCurrentMusicName();
 
-    void moods$setStopGraceTicks(int ticks);
+    void javaReforged$setStopGraceTicks(int ticks);
 
-    void moods$setLoadingMode(boolean loading);
+    void javaReforged$setLoadingMode(boolean loading);
 
-    void moods$fadeOutCurrentMusic();
+    void javaReforged$fadeOutCurrentMusic();
 
-    void moods$resetAfterWorldExit();
+    void javaReforged$resetAfterWorldExit();
 }

@@ -2,7 +2,7 @@ package net.jr.client.ui.container.slots;
 
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
-import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
+import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -670,7 +670,7 @@ public final class VanillaSlotLayer {
             slotId = slot.index;
         }
         if (this.hostScreen instanceof AbstractContainerScreenAccessor accessor) {
-            accessor.javareforged$invokeSlotClicked(slot, slotId, mouseButton, input);
+            accessor.javaReforged$invokeSlotClicked(slot, slotId, mouseButton, input);
             return;
         }
         LocalPlayer player = this.minecraft.player;
@@ -688,10 +688,10 @@ public final class VanillaSlotLayer {
         if (!(this.hostScreen instanceof AbstractContainerScreenAccessor accessor)) {
             return;
         }
-        accessor.javareforged$setHoveredSlot(this.getHoveredSlot());
-        accessor.javareforged$setQuickCrafting(this.isQuickCrafting);
-        accessor.javareforged$setQuickCraftingRemainder(this.quickCraftingRemainder);
-        Set<Slot> screenQuickCraftSlots = accessor.javareforged$getQuickCraftSlots();
+        accessor.javaReforged$setHoveredSlot(this.getHoveredSlot());
+        accessor.javaReforged$setQuickCrafting(this.isQuickCrafting);
+        accessor.javaReforged$setQuickCraftingRemainder(this.quickCraftingRemainder);
+        Set<Slot> screenQuickCraftSlots = accessor.javaReforged$getQuickCraftSlots();
         screenQuickCraftSlots.clear();
         screenQuickCraftSlots.addAll(this.quickCraftSlots);
     }

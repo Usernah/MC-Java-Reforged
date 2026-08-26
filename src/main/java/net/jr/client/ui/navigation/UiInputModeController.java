@@ -11,7 +11,7 @@ import net.jr.client.input.runtime.MappedActionProcessor;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
-import net.jr.mixin.uifocus.MouseHandlerAccessor;
+import net.jr.mixin.accessors.MouseHandlerAccessor;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
@@ -331,11 +331,11 @@ public final class UiInputModeController {
     }
 
     private static double getRawMouseX(Minecraft minecraft) {
-        return mouseAccessor(minecraft).javareforged$getXpos();
+        return mouseAccessor(minecraft).javaReforged$getXpos();
     }
 
     private static double getRawMouseY(Minecraft minecraft) {
-        return mouseAccessor(minecraft).javareforged$getYpos();
+        return mouseAccessor(minecraft).javaReforged$getYpos();
     }
 
     private static Screen currentScreen() {

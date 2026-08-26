@@ -1,5 +1,6 @@
 package net.jr.client.runtime.viewport;
 
+import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -57,6 +58,24 @@ public final class GuiScissorBounds {
             }
         }
         return new PixelRectangle(left, top, right, bottom);
+    }
+
+    @Nullable
+    public static PixelRectangle resolvePrecise(ScreenRectangle rectangle, WindowRenderState window) {
+        PreciseGuiScissor precise = ((PreciseScissorAccess) (Object) rectangle).javaReforged$preciseScissor();
+        if (precise == null) {
+            return null;
+        }
+
+        int left = clamp((int) Math.floor(precise.left()), window.width);
+        int top = clamp((int) Math.floor(precise.top()), window.height);
+        int right = clamp((int) Math.ceil(precise.right()), window.width);
+        int bottom = clamp((int) Math.ceil(precise.bottom()), window.height);
+        return right > left && bottom > top ? new PixelRectangle(left, top, right, bottom) : null;
+    }
+
+    private static int clamp(int value, int maximum) {
+        return Math.max(0, Math.min(value, maximum));
     }
 
     public record PixelRectangle(int left, int top, int right, int bottom) {

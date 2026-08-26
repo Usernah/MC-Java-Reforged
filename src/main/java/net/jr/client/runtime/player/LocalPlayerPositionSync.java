@@ -2,7 +2,7 @@ package net.jr.client.runtime.player;
 
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.context.LocalClientScope;
-import net.jr.mixin.runtime.LocalPlayerSSAccessor;
+import net.jr.mixin.accessors.LocalPlayerAccessor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 
@@ -30,7 +30,7 @@ public final class LocalPlayerPositionSync {
         }
 
         if (force || !level.hasChunkAt(player.getBlockX(), player.getBlockZ())) {
-            ((LocalPlayerSSAccessor)player).splitTest$sendPosition();
+            ((LocalPlayerAccessor)player).javaReforged$sendPosition();
         }
     }
 }

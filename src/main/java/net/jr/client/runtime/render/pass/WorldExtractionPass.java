@@ -8,9 +8,9 @@ import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.terrain.TerrainCoordinator;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.mixin.runtime.GameRendererSSAccessor;
-import net.jr.mixin.runtime.LightmapRenderStateExtractorSSAccessor;
-import net.jr.mixin.runtime.MinecraftActionSSAccessor;
+import net.jr.mixin.accessors.GameRendererAccessor;
+import net.jr.mixin.accessors.LightmapRenderStateExtractorAccessor;
+import net.jr.mixin.accessors.MinecraftAccessor;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -35,13 +35,13 @@ public final class WorldExtractionPass {
     }
 
     public static void pickVisibleSlots(Minecraft minecraft, float partialTicks) {
-        MinecraftActionSSAccessor actions = (MinecraftActionSSAccessor)(Object)minecraft;
+        MinecraftAccessor actions = (MinecraftAccessor)(Object)minecraft;
         for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
             if (!canExtract(slot)) {
                 continue;
             }
             try (LocalClientExecution.Scope ignored = LocalClientExecution.enterForClient(minecraft, slot.id())) {
-                actions.splitTest$pick(partialTicks);
+                actions.javaReforged$pick(partialTicks);
             }
         }
     }
@@ -53,8 +53,8 @@ public final class WorldExtractionPass {
         float worldPartialTicks
     ) {
         Minecraft minecraft = Minecraft.getInstance();
-        GameRendererSSAccessor renderer = (GameRendererSSAccessor)(Object)gameRenderer;
-        LightmapRenderStateExtractor lightmapExtractor = renderer.splitTest$getLightmapExtractor();
+        GameRendererAccessor renderer = (GameRendererAccessor)(Object)gameRenderer;
+        LightmapRenderStateExtractor lightmapExtractor = renderer.javaReforged$getLightmapExtractor();
         List<LocalClientSlot> extractionSlots = ClientRuntime.INSTANCE.viewports().drawableSlots().stream()
             .filter(WorldExtractionPass::canExtract)
             .toList();
@@ -85,8 +85,8 @@ public final class WorldExtractionPass {
                                 .client(slot.id())
                                 .camera();
 
-                ((LightmapRenderStateExtractorSSAccessor)(Object)lightmapExtractor)
-                        .splitTest$setNeedsUpdate(true);
+                ((LightmapRenderStateExtractorAccessor)(Object)lightmapExtractor)
+                        .javaReforged$setNeedsUpdate(true);
 
                 lightmapExtractor.extract(
                         slot.renderState().lightmapRenderState(),
@@ -96,7 +96,7 @@ public final class WorldExtractionPass {
                 float cameraPartialTicks =
                         camera.getCameraEntityPartialTicks(deltaTracker);
 
-                renderer.splitTest$extractCamera(
+                renderer.javaReforged$extractCamera(
                         deltaTracker,
                         worldPartialTicks,
                         cameraPartialTicks

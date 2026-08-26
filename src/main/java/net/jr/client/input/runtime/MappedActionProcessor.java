@@ -30,7 +30,7 @@ import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
-import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
+import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.jr.screens.controller.ControllerBindingsScreen;
 import net.jr.screens.controller.ControllerMenuCaptureAware;
 import net.jr.screens.crafting.AbstractJavaCraftingScreen;
@@ -348,7 +348,7 @@ public final class MappedActionProcessor {
     ) {
         Slot cachedHoveredSlot =
                 ((AbstractContainerScreenAccessor) screen)
-                        .javareforged$getHoveredSlot();
+                        .javaReforged$getHoveredSlot();
         Slot hoveredSlot = cachedHoveredSlot;
         if (screen instanceof CustomSlotLayout layout) {
             hoveredSlot = layout.slotLayer().getSlotAt(layout.slotGrid(), mouseX, mouseY);
@@ -860,7 +860,7 @@ public final class MappedActionProcessor {
 
     private static boolean shouldBypassUiActionHandling(Screen screen) {
         if (screen instanceof ControllerMenuCaptureAware captureAware
-            && captureAware.javareforged$isCapturingControllerBinding()) {
+            && captureAware.javaReforged$isCapturingControllerBinding()) {
             return true;
         }
         return screen instanceof ControllerBindingsScreen bindingsScreen

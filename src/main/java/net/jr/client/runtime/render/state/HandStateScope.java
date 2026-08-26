@@ -4,7 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.state.HandState;
-import net.jr.mixin.runtime.ItemInHandRendererSSAccessor;
+import net.jr.mixin.accessors.ItemInHandRendererAccessor;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 
 public final class HandStateScope implements AutoCloseable {
@@ -15,7 +15,7 @@ public final class HandStateScope implements AutoCloseable {
 
     private HandStateScope(ItemInHandRenderer renderer) {
         this.renderer = renderer;
-        ItemInHandRendererSSAccessor accessor = (ItemInHandRendererSSAccessor)renderer;
+        ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor)renderer;
         HandState previousEngineState = new HandState();
         previousEngineState.capture(accessor);
         HandState clientState = LocalClientScope.currentClient().render().hands();
@@ -25,6 +25,12 @@ public final class HandStateScope implements AutoCloseable {
 
     public static HandStateScope enter(ItemInHandRenderer renderer) {
         return new HandStateScope(renderer);
+    }
+
+    public static void run(ItemInHandRenderer renderer, Runnable action) {
+        try (HandStateScope ignored = enter(renderer)) {
+            action.run();
+        }
     }
 
     @Override
@@ -38,7 +44,7 @@ public final class HandStateScope implements AutoCloseable {
             throw new IllegalStateException("ItemInHandRenderer state scope is unbalanced");
         }
         Binding binding = bindings.pop();
-        ItemInHandRendererSSAccessor accessor = (ItemInHandRendererSSAccessor)this.renderer;
+        ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor)this.renderer;
         binding.clientState().capture(accessor);
         binding.previousEngineState().install(accessor);
         if (bindings.isEmpty()) {

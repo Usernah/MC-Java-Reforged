@@ -262,7 +262,7 @@ public class ControllerBindingsScreen extends OptionsSubScreen implements Contro
     }
 
     @Override
-    public boolean javareforged$isCapturingControllerBinding() {
+    public boolean javaReforged$isCapturingControllerBinding() {
         return selectedControllerKey != null;
     }
 

@@ -1,7 +1,7 @@
 package net.jr.client.ui.container.actions;
 
 import net.jr.mixin.accessors.CreativeModeInventoryScreenAccessor;
-import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
+import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -105,7 +105,7 @@ public final class CreativeContainerActions {
     }
 
     private static void clickSlot(AbstractContainerScreen<?> screen, @Nullable Slot slot, int mouseButton, ContainerInput clickType) {
-        ((AbstractContainerScreenAccessor) screen).javareforged$invokeSlotClicked(
+        ((AbstractContainerScreenAccessor) screen).javaReforged$invokeSlotClicked(
                 slot,
                 slot == null ? -1 : slot.index,
                 mouseButton,

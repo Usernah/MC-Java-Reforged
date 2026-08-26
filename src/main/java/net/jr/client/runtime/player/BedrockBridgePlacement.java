@@ -1,7 +1,7 @@
 package net.jr.client.runtime.player;
 
 import javax.annotation.Nullable;
-import net.jr.mixin.accessors.BlockItemPlacementAccessor;
+import net.jr.mixin.accessors.BlockItemAccessor;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -97,8 +97,8 @@ public final class BedrockBridgePlacement {
         }
 
         BlockState placementState =
-                ((BlockItemPlacementAccessor) blockItem)
-                        .javareforged$getPlacementState(updatedContext);
+                ((BlockItemAccessor) blockItem)
+                        .javaReforged$getPlacementState(updatedContext);
 
         if (placementState == null) {
             return null;

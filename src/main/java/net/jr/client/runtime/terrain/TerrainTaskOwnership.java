@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
-import net.jr.client.runtime.bridge.LevelRendererStateAccess;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.world.phys.Vec3;
 
@@ -25,11 +24,11 @@ public final class TerrainTaskOwnership {
     }
 
     public static void taskCreated(SectionRenderDispatcher.RenderSection section, Object task) {
-        Vec3 cameraPosition = LevelRendererStateAccess.terrain().nullableCameraPosition();
+        Vec3 cameraPosition = TerrainStateStore.terrain().nullableCameraPosition();
         if (cameraPosition == null) {
             throw new IllegalStateException("Cannot create terrain task without an active player camera");
         }
-        SharedTerrainStore store = LevelRendererStateAccess.nullableTerrainStore();
+        SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
         if (store != null) {
             store.taskStarted(section);
         }

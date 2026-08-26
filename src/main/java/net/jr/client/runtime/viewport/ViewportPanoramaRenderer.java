@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.CubeMap;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.client.renderer.state.gui.PanoramaRenderState;
+import com.mojang.blaze3d.systems.RenderPass;
 
 public final class ViewportPanoramaRenderer {
     private static final List<Request> PENDING = new ArrayList<>();
@@ -53,6 +54,16 @@ public final class ViewportPanoramaRenderer {
 
     public static boolean isRendering() {
         return rendering;
+    }
+
+    public static RenderPass constrain(RenderPass renderPass) {
+        if (!rendering || !ViewportRenderScope.hasActiveViewport()) {
+            return renderPass;
+        }
+        ViewportArea viewport = ViewportRenderScope.activeViewport();
+        renderPass.setViewport(viewport.glX(), viewport.glY(), viewport.glWidth(), viewport.glHeight());
+        renderPass.enableScissor(viewport.glX(), viewport.glY(), viewport.glWidth(), viewport.glHeight());
+        return renderPass;
     }
 
     private record Request(ViewportArea viewport, PanoramaRenderState state) {

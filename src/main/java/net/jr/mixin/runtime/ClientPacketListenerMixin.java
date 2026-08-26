@@ -3,15 +3,11 @@ package net.jr.mixin.runtime;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import java.util.UUID;
-import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.context.LocalClientExecution;
-import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.network.ClientPacketHandler;
+import net.jr.client.runtime.network.PacketExecutionRouter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.DeathScreen;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.server.IntegratedServer;
-import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
@@ -26,98 +22,67 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerMixin {
     @WrapMethod(method = "handleLogin")
-    private void splitTest$handleLoginForListenerClient(ClientboundLoginPacket packet, Operation<Void> original) {
-        this.splitTest$runPacketForListener(() -> original.call(packet));
+    private void javaReforged$handleLoginForListenerClient(ClientboundLoginPacket packet, Operation<Void> original) {
+        this.javaReforged$runPacketForListener(() -> original.call(packet));
     }
 
     @WrapMethod(method = "handleOpenScreen")
-    private void splitTest$openScreenForListenerClient(ClientboundOpenScreenPacket packet, Operation<Void> original) {
-        this.splitTest$runPacketForListener(() -> original.call(packet));
+    private void javaReforged$openScreenForListenerClient(ClientboundOpenScreenPacket packet, Operation<Void> original) {
+        this.javaReforged$runPacketForListener(() -> original.call(packet));
     }
 
     @WrapMethod(method = "handlePlayerCombatKill")
-    private void splitTest$openDeathScreenForListenerClient(ClientboundPlayerCombatKillPacket packet, Operation<Void> original) {
-        this.splitTest$runPacketForListener(() -> original.call(packet));
+    private void javaReforged$openDeathScreenForListenerClient(ClientboundPlayerCombatKillPacket packet, Operation<Void> original) {
+        this.javaReforged$runPacketForListener(() -> original.call(packet));
     }
 
     @WrapMethod(method = "handleRespawn")
-    private void splitTest$handleRespawnForListenerClient(ClientboundRespawnPacket packet, Operation<Void> original) {
-        this.splitTest$runPacketForListener(() -> original.call(packet));
+    private void javaReforged$handleRespawnForListenerClient(ClientboundRespawnPacket packet, Operation<Void> original) {
+        this.javaReforged$runPacketForListener(() -> original.call(packet));
     }
 
     @Inject(method = "handleLogin", at = @At("HEAD"))
-    private void splitTest$bindConnectionOnLogin(CallbackInfo ci) {
-        this.splitTest$bindCurrentConnectionToActiveSlot();
+    private void javaReforged$bindConnectionOnLogin(CallbackInfo ci) {
+        ClientPacketHandler.bindConnection((ClientPacketListener) (Object) this);
     }
 
     @Inject(method = "handleRespawn", at = @At("HEAD"))
-    private void splitTest$bindConnectionOnRespawn(ClientboundRespawnPacket packet, CallbackInfo ci) {
-        this.splitTest$bindCurrentConnectionToActiveSlot();
+    private void javaReforged$bindConnectionOnRespawn(ClientboundRespawnPacket packet, CallbackInfo ci) {
+        ClientPacketHandler.bindConnection((ClientPacketListener) (Object) this);
     }
 
     @Inject(method = "handleRespawn", at = @At("TAIL"))
-    private void splitTest$closeLocalDeathScreenAfterRespawn(ClientboundRespawnPacket packet, CallbackInfo ci) {
-        int slotId = SlotScope.requireId();
-        Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
-        if (screen instanceof DeathScreen || screen instanceof DeathScreen.TitleConfirmScreen) {
-            Minecraft.getInstance().gui.setScreen(null);
-        }
+    private void javaReforged$closeLocalDeathScreenAfterRespawn(ClientboundRespawnPacket packet, CallbackInfo ci) {
+        ClientPacketHandler.closeDeathScreenAfterRespawn(Minecraft.getInstance());
     }
 
     @Inject(method = "clearLevel", at = @At("HEAD"))
-    private void splitTest$clearSlotLevel(CallbackInfo ci) {
-        ClientRuntime.INSTANCE.clients().onClientLevelCleared((ClientPacketListener)(Object)this);
+    private void javaReforged$clearSlotLevel(CallbackInfo ci) {
+        ClientPacketHandler.clearLevel((ClientPacketListener) (Object) this);
     }
 
     @Redirect(
         method = "handleLogin",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/server/IntegratedServer;setUUID(Ljava/util/UUID;)V")
     )
-    private void splitTest$skipIntegratedServerOwnerUuidForSecondary(IntegratedServer server, UUID uuid) {
-        Integer slotId = SlotScope.idOrNull();
-        if (slotId == null || slotId == 0) {
-            server.setUUID(uuid);
-        }
+    private void javaReforged$skipIntegratedServerOwnerUuidForSecondary(IntegratedServer server, UUID uuid) {
+        ClientPacketHandler.setIntegratedServerOwner(server, uuid);
     }
 
     @Redirect(
         method = "handleLogin",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;getConnection()Lnet/minecraft/client/multiplayer/ClientPacketListener;")
     )
-    private ClientPacketListener splitTest$useCurrentListenerForSecondaryLogin(Minecraft minecraft) {
-        Integer slotId = SlotScope.idOrNull();
-        if (slotId != null && slotId != 0) {
-            return (ClientPacketListener)(Object)this;
-        }
-        return minecraft.getConnection();
-    }
-
-    private void splitTest$bindCurrentConnectionToActiveSlot() {
-        Connection connection = ((ClientPacketListener)(Object)this).getConnection();
-        if (connection == null) {
-            throw new IllegalStateException("ClientPacketListener has no connection");
-        }
-        Integer mappedSlotId = ClientRuntime.INSTANCE.connections().slotOrNull(connection);
-        Integer activeSlotId = SlotScope.idOrNull();
-        int slotId = mappedSlotId != null
-            ? mappedSlotId
-            : activeSlotId != null
-                ? activeSlotId
-                : ClientRuntime.INSTANCE.clients().slotForClientPacketListener((ClientPacketListener)(Object)this);
-        ClientRuntime.INSTANCE.connections().bind(connection, slotId);
+    private ClientPacketListener javaReforged$useCurrentListenerForSecondaryLogin(Minecraft minecraft) {
+        return ClientPacketHandler.loginListener(minecraft, (ClientPacketListener) (Object) this);
     }
 
     @Inject(method = "handleMovePlayer", at = @At("TAIL"))
-    private void splitTest$markInitialPositionSynchronized(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
-        ClientRuntime.INSTANCE.clients().onInitialPositionSynchronized((ClientPacketListener)(Object)this);
+    private void javaReforged$markInitialPositionSynchronized(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
+        ClientPacketHandler.markInitialPositionSynchronized((ClientPacketListener) (Object) this);
     }
 
-    private void splitTest$runPacketForListener(Runnable action) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (!minecraft.isSameThread()) {
-            action.run();
-            return;
-        }
-        LocalClientExecution.runForListener((ClientPacketListener)(Object)this, action);
+    private void javaReforged$runPacketForListener(Runnable action) {
+        PacketExecutionRouter.runForListener((ClientPacketListener) (Object) this, action);
     }
 }

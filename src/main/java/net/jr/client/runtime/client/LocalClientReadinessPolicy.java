@@ -2,12 +2,18 @@ package net.jr.client.runtime.client;
 
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.context.LocalClientScope;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 
 public final class LocalClientReadinessPolicy {
     private LocalClientReadinessPolicy() {
+    }
+
+    public static boolean currentGameplayReady() {
+        LocalClient client = LocalClientScope.currentClientOrNull();
+        return client != null && gameplayReady(client);
     }
 
     public static boolean worldBound(int slotId) {

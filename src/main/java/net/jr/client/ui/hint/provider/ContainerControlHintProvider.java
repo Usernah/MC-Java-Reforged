@@ -5,7 +5,7 @@ import net.jr.client.ui.hint.model.ControlHintRequest;
 import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.client.ui.navigation.UiInputModeController;
-import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
+import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.jr.client.ui.container.actions.CreativeContainerActions;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
 import net.jr.client.components.navigation.UiAction;
@@ -165,6 +165,6 @@ public final class ContainerControlHintProvider implements ControlHintProvider {
                 return screen.getMenu().slots.get(focusedIndex);
             }
         }
-        return ((AbstractContainerScreenAccessor) screen).javareforged$getHoveredSlot();
+        return ((AbstractContainerScreenAccessor) screen).javaReforged$getHoveredSlot();
     }
 }

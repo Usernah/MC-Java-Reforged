@@ -8,14 +8,13 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.bridge.LevelRendererRuntimeAccessor;
+import net.jr.mixin.accessors.LevelRendererAccessor;
 import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
-import net.jr.client.runtime.bridge.LevelRendererStateAccess;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.runtime.state.TerrainState;
@@ -52,8 +51,20 @@ public final class TerrainCoordinator {
         return terrain.ensureViewArea(store, level, viewDistance, slotId);
     }
 
+    public static ViewArea createActiveViewArea(
+            SectionRenderDispatcher dispatcher,
+            int viewDistance,
+            SectionOcclusionGraph graph
+    ) {
+        ClientLevel level = LocalClientScope.currentClient().level();
+        if (level == null) {
+            throw new IllegalStateException("Cannot create terrain ViewArea without an active ClientLevel");
+        }
+        return createViewArea(dispatcher, level, viewDistance, graph);
+    }
+
     public static void captureViewArea(@Nullable ViewArea viewArea) {
-        TerrainState terrain = LevelRendererStateAccess.terrain();
+        TerrainState terrain = TerrainStateStore.terrain();
         if (viewArea == null) {
             terrain.setViewArea(null);
             return;
@@ -65,7 +76,21 @@ public final class TerrainCoordinator {
     }
 
     public static void resetActiveSlotTerrain() {
-        LevelRendererStateAccess.terrain().releaseViewArea();
+        TerrainStateStore.terrain().releaseViewArea();
+    }
+
+    public static boolean resetActiveSlotTerrainIfScoped() {
+        if (SlotScope.idOrNull() == null) {
+            return false;
+        }
+        resetActiveSlotTerrain();
+        return true;
+    }
+
+    public static void uploadSharedTerrain(SectionRenderDispatcher dispatcher) {
+        if (TerrainWorkPhase.canUpdateTerrain()) {
+            dispatcher.uploadTerrainBuffersToGpu();
+        }
     }
 
     public static void beginExtractionFrame(List<LocalClientSlot> extractionSlots) {
@@ -74,7 +99,7 @@ public final class TerrainCoordinator {
         sharedCompileQueueClearedThisExtraction = false;
 
         int viewDistance = Minecraft.getInstance().options.getEffectiveRenderDistance();
-        SharedTerrainStore store = LevelRendererStateAccess.nullableTerrainStore();
+        SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
         Set<ClientLevel> clearedLevels = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
 
         for (LocalClientSlot slot : extractionSlots) {
@@ -176,7 +201,7 @@ public final class TerrainCoordinator {
         }
         sharedGeometryInvalidatedThisExtraction = true;
 
-        SharedTerrainStore store = LevelRendererStateAccess.nullableTerrainStore();
+        SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
         if (store == null) {
             return;
         }
@@ -194,7 +219,7 @@ public final class TerrainCoordinator {
     }
 
     public static void prepareFrame() {
-        SharedTerrainStore store = LevelRendererStateAccess.nullableTerrainStore();
+        SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
         if (store != null) {
             store.beginFrame();
         }
@@ -204,8 +229,8 @@ public final class TerrainCoordinator {
         if (!TerrainWorkPhase.canUpdateTerrain()) {
             return;
         }
-        LevelRendererRuntimeAccessor renderer = (LevelRendererRuntimeAccessor)levelRenderer;
-        SectionRenderDispatcher dispatcher = renderer.splitTest$getSectionRenderDispatcher();
+        LevelRendererAccessor renderer = (LevelRendererAccessor)levelRenderer;
+        SectionRenderDispatcher dispatcher = renderer.javaReforged$getSectionRenderDispatcher();
         if (dispatcher == null) {
             return;
         }
@@ -233,8 +258,8 @@ public final class TerrainCoordinator {
                 ) {
                     var cameraState = slot.renderState().levelRenderState().cameraRenderState;
                     slot.renderState().terrain().setCameraPosition(cameraState.pos);
-                    renderer.splitTest$repositionCamera(cameraState);
-                    renderer.splitTest$compileSections(cameraState);
+                    renderer.javaReforged$repositionCamera(cameraState);
+                    renderer.javaReforged$compileSections(cameraState);
                 }
             }
         } finally {
@@ -274,7 +299,7 @@ public final class TerrainCoordinator {
     }
 
     private static SharedTerrainStore ensureStore(SectionRenderDispatcher dispatcher) {
-        SharedTerrainStore current = LevelRendererStateAccess.nullableTerrainStore();
+        SharedTerrainStore current = TerrainStateStore.nullableTerrainStore();
         if (current != null && current.dispatcher() == dispatcher) {
             return current;
         }
@@ -283,18 +308,18 @@ public final class TerrainCoordinator {
             current.close();
         }
         SharedTerrainStore created = new SharedTerrainStore(dispatcher);
-        LevelRendererStateAccess.setTerrainStore(created);
+        TerrainStateStore.setTerrainStore(created);
         return created;
     }
 
     public static void closeSharedTerrain() {
-        SharedTerrainStore current = LevelRendererStateAccess.nullableTerrainStore();
+        SharedTerrainStore current = TerrainStateStore.nullableTerrainStore();
         if (current == null) {
             return;
         }
         releaseAllViews();
         current.close();
-        LevelRendererStateAccess.setTerrainStore(null);
+        TerrainStateStore.setTerrainStore(null);
     }
 
     private static void releaseAllViews() {

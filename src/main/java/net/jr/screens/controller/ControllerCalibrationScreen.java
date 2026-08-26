@@ -222,7 +222,7 @@ public final class ControllerCalibrationScreen extends Screen implements Control
     }
 
     @Override
-    public boolean javareforged$isCapturingControllerBinding() {
+    public boolean javaReforged$isCapturingControllerBinding() {
         return true;
     }
 

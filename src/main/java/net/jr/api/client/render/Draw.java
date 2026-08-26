@@ -635,7 +635,7 @@ public final class Draw {
                 return;
             }
 
-            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javareforged$getGuiRenderState();
+            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javaReforged$getGuiRenderState();
             var scissor = ((GuiGraphicsExtractorBridge) graphics).javaReforged$currentScissor();
             renderState.addGuiElement(new TiledBlitRenderState(
                 RenderPipelines.GUI_TEXTURED,
@@ -764,7 +764,7 @@ public final class Draw {
                 return;
             }
 
-            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javareforged$getGuiRenderState();
+            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javaReforged$getGuiRenderState();
             var scissor = ((GuiGraphicsExtractorBridge) graphics).javaReforged$currentScissor();
             renderState.addGuiElement(new AnimatedTextureRenderState(
                 this.textureSetup(),
@@ -813,7 +813,7 @@ public final class Draw {
                 return;
             }
 
-            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javareforged$getGuiRenderState();
+            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javaReforged$getGuiRenderState();
             var scissor = ((GuiGraphicsExtractorBridge) graphics).javaReforged$currentScissor();
             renderState.addGuiElement(new BlitRenderState(
                 RenderPipelines.GUI_TEXTURED,

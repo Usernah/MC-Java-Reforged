@@ -4,7 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.state.HudState;
-import net.jr.mixin.runtime.HudSSAccessor;
+import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.gui.Hud;
 
 public final class HudStateScope implements AutoCloseable {
@@ -16,7 +16,7 @@ public final class HudStateScope implements AutoCloseable {
 
     private HudStateScope(Hud hud) {
         this.hud = hud;
-        HudSSAccessor accessor = (HudSSAccessor)hud;
+        HudAccessor accessor = (HudAccessor)hud;
         HudState previousEngineState = new HudState();
         previousEngineState.capture(accessor);
         HudState clientState = LocalClientScope.currentClient().render().hud();
@@ -55,7 +55,7 @@ public final class HudStateScope implements AutoCloseable {
             throw new IllegalStateException("Hud state scope is unbalanced");
         }
         Binding binding = bindings.pop();
-        HudSSAccessor accessor = (HudSSAccessor)this.hud;
+        HudAccessor accessor = (HudAccessor)this.hud;
         binding.clientState().capture(accessor);
         binding.previousEngineState().install(accessor);
         if (bindings.isEmpty()) {

@@ -13,7 +13,7 @@ import net.jr.client.runtime.viewport.ViewportRenderScope;
 import net.jr.client.ui.hint.ControlHintPipeline;
 import net.jr.client.ui.hud.MinimapHudOverlay;
 import net.jr.client.ui.hud.PlayerNameHudOverlay;
-import net.jr.mixin.accessors.HudCameraEffectsAccessor;
+import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -63,7 +63,7 @@ public final class HudRenderPass {
         Screen screen = client.screen();
         if (screen != null) {
             try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-                ((HudCameraEffectsAccessor)hud).javaReforged$extractCameraEffects(
+                ((HudAccessor)hud).javaReforged$extractCameraEffects(
                         graphics,
                         deltaTracker
                 );

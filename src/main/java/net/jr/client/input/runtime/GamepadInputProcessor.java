@@ -18,8 +18,8 @@ import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionFeedback;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.components.widgets.ScrollPanelElement;
-import net.jr.mixin.controls.ClientInputAccessor;
-import net.jr.mixin.uifocus.MouseHandlerAccessor;
+import net.jr.mixin.accessors.ClientInputAccessor;
+import net.jr.mixin.accessors.MouseHandlerAccessor;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.input.cursor.CursorHider;
@@ -516,8 +516,8 @@ public class GamepadInputProcessor {
         GLFW.glfwSetCursorPos(minecraft.getWindow().handle(), windowX, windowY);
 
         MouseHandlerAccessor mouse = (MouseHandlerAccessor)minecraft.mouseHandler;
-        mouse.javareforged$setXpos(windowX);
-        mouse.javareforged$setYpos(windowY);
+        mouse.javaReforged$setXpos(windowX);
+        mouse.javaReforged$setYpos(windowY);
 
         CursorState state = cursorState(slotId);
         state.lastObservedRawMouseX = windowX;

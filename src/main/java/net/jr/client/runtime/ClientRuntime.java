@@ -6,7 +6,7 @@ import net.jr.client.runtime.input.InputFocus;
 import net.jr.client.runtime.minimap.MinimapEngine;
 import net.jr.client.runtime.network.ConnectionSlotRegistry;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
-import net.jr.client.runtime.state.PlayerOptionsStorage;
+import net.jr.client.runtime.options.PlayerOptionsStorage;
 import net.jr.client.runtime.viewport.ViewportManager;
 import net.jr.client.runtime.viewport.ViewportResizeHandler;
 

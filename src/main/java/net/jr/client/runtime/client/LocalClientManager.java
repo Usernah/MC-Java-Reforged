@@ -12,7 +12,7 @@ import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.session.LocalClientSession;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
-import net.jr.mixin.runtime.MinecraftActionSSAccessor;
+import net.jr.mixin.accessors.MinecraftAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -285,7 +285,7 @@ public final class LocalClientManager {
         if (minecraft.gui.overlay() != null || client.screen() != null) {
             return;
         }
-        ((MinecraftActionSSAccessor)minecraft).splitTest$handleKeybinds();
+        ((MinecraftAccessor)minecraft).javaReforged$handleKeybinds();
         if (client.gameplay().missTime() > 0) {
             client.gameplay().setMissTime(client.gameplay().missTime() - 1);
         }

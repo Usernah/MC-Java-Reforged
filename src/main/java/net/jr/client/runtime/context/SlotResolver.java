@@ -29,6 +29,11 @@ public final class SlotResolver {
         return ClientRuntime.INSTANCE.slots().slot(SlotScope.requireId());
     }
 
+    public static LocalClientSlot requireActiveOrPrimary() {
+        Integer slotId = SlotScope.idOrNull();
+        return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0);
+    }
+
     public static LocalClientSlot requireScreen(Screen screen) {
         if (screen == null) {
             throw new IllegalArgumentException("screen cannot be null");

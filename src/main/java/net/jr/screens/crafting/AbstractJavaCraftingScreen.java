@@ -25,7 +25,7 @@ import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
-import net.jr.mixin.controlhints.AbstractContainerScreenAccessor;
+import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -676,7 +676,7 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
 
         this.pendingDirectCraft = false;
         this.pendingCraftStateId = -1;
-        ((AbstractContainerScreenAccessor)this).javareforged$invokeSlotClicked(
+        ((AbstractContainerScreenAccessor)this).javaReforged$invokeSlotClicked(
                 result,
                 result.index,
                 0,

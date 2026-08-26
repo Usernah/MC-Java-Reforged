@@ -14,7 +14,7 @@ import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
-import net.jr.mixin.runtime.GameRendererSSAccessor;
+import net.jr.mixin.accessors.GameRendererAccessor;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.TextureFilteringMethod;
@@ -58,7 +58,7 @@ public final class WorldRenderPass {
             ViewportRenderScope.Scope ignoredViewport = ViewportRenderScope.enter(viewport);
             WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bind(minecraft, slot)
         ) {
-            GameRendererSSAccessor renderer = (GameRendererSSAccessor)(Object)gameRenderer;
+            GameRendererAccessor renderer = (GameRendererAccessor)(Object)gameRenderer;
             var gameState = gameRenderer.gameRenderState();
             var optionsState = gameState.optionsRenderState;
 
@@ -68,7 +68,7 @@ public final class WorldRenderPass {
             optionsState.fov =
                     slot.optionsState().fov().get();
 
-            renderer.splitTest$getGlobalSettingsUniform().update(
+            renderer.javaReforged$getGlobalSettingsUniform().update(
                     viewport.width(),
                     viewport.height(),
                     optionsState.glintStrength,
@@ -78,7 +78,7 @@ public final class WorldRenderPass {
                     slot.renderState().levelRenderState().cameraRenderState.pos,
                     optionsState.textureFiltering == TextureFilteringMethod.RGSS
             );
-            renderer.splitTest$getGlobalSettingsUniform().update(
+            renderer.javaReforged$getGlobalSettingsUniform().update(
                 viewport.width(),
                 viewport.height(),
                 optionsState.glintStrength,
@@ -88,16 +88,16 @@ public final class WorldRenderPass {
                 slot.renderState().levelRenderState().cameraRenderState.pos,
                 optionsState.textureFiltering == TextureFilteringMethod.RGSS
             );
-            renderer.splitTest$getLightmap().render(slot.renderState().lightmapRenderState());
+            renderer.javaReforged$getLightmap().render(slot.renderState().lightmapRenderState());
             RenderTarget globalTarget = gameRenderer.mainRenderTarget();
             try (ViewportRenderTargets.Scope ignoredTargets = ViewportRenderTargets.enter(slot.id(), viewport, globalTarget)) {
                 gameRenderer.renderLevel(deltaTracker);
                 minecraft.levelRenderer.doEntityOutline();
                 Identifier postEffect = gameRenderer.currentPostEffect();
-                if (postEffect != null && renderer.splitTest$isPostEffectActive()) {
+                if (postEffect != null && renderer.javaReforged$isPostEffectActive()) {
                     PostChain chain = minecraft.getShaderManager().getPostChain(postEffect, LevelTargetBundle.MAIN_TARGETS);
                     if (chain != null) {
-                        chain.process(gameRenderer.mainRenderTarget(), renderer.splitTest$getResourcePool());
+                        chain.process(gameRenderer.mainRenderTarget(), renderer.javaReforged$getResourcePool());
                     }
                 }
                 ignoredTargets.present();

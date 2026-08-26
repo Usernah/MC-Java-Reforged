@@ -26,12 +26,12 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
     private static final String LEVEL_RENDERER_OWNER = "net/minecraft/client/renderer/LevelRenderer";
     private static final String PARTICLE_ENGINE_OWNER = "net/minecraft/client/particle/ParticleEngine";
     private static final String PARTICLE_ENGINE_FIELDS_OWNER =
-        "net/jr/client/runtime/bridge/ParticleEngineStateAccess";
+        "net/jr/client/runtime/render/state/ParticleStateRouter";
     private static final String TOAST_MANAGER_OWNER =
             "net/minecraft/client/gui/components/toasts/ToastManager";
 
     private static final String TOAST_MANAGER_STATE_OWNER =
-            "net/jr/client/runtime/bridge/ToastManagerStateAccess";
+            "net/jr/client/runtime/render/state/ToastStateScope";
 
     private static final String TOAST_INSTANCE_OWNER =
             TOAST_MANAGER_OWNER + "$ToastInstance";
@@ -537,7 +537,7 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
     }
 
     private static boolean shouldSkipMethod(ClassNode classNode, MethodNode method) {
-        return method.name.startsWith("splitTest$")
+        return method.name.startsWith("javaReforged$")
             || method.name.startsWith("handler$")
             || method.name.startsWith("redirect$")
             || (GAME_RENDERER_OWNER.equals(classNode.name) && "mainCamera".equals(method.name))

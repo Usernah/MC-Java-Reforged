@@ -57,7 +57,7 @@ public final class UILayoutRenderTarget implements AutoCloseable {
         int alphaChannel = Math.clamp(Math.round(alpha * 255.0F), 0, 255);
         int premultipliedTint = ARGB.color(alphaChannel, alphaChannel, alphaChannel, alphaChannel);
         Matrix3x2f pose = new Matrix3x2f().translation(offsetX, offsetY);
-        GuiRenderState parentState = ((GuiGraphicsExtractorAccessor) parentGraphics).javareforged$getGuiRenderState();
+        GuiRenderState parentState = ((GuiGraphicsExtractorAccessor) parentGraphics).javaReforged$getGuiRenderState();
         parentState.addBlitToCurrentLayer(
             new BlitRenderState(
                 RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
@@ -113,7 +113,7 @@ public final class UILayoutRenderTarget implements AutoCloseable {
         Matrix3x2f pose = new Matrix3x2f(parentGraphics.pose())
             .translate(destinationX, destinationY)
             .scale(destinationScaleX, destinationScaleY);
-        GuiRenderState parentState = ((GuiGraphicsExtractorAccessor) parentGraphics).javareforged$getGuiRenderState();
+        GuiRenderState parentState = ((GuiGraphicsExtractorAccessor) parentGraphics).javaReforged$getGuiRenderState();
         parentState.addGuiElement(
             new PixelArtCompositeRenderState(
                 TextureSetup.singleTexture(

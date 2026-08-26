@@ -3,30 +3,30 @@ package net.jr.client.sound.bridge;
 import net.jr.client.sound.config.SoundTransitionConfig;
 
 public interface SoundEngineBridge {
-    void moods$stopMusic();
+    void javaReforged$stopMusic();
 
-    void moods$stopSounds();
+    void javaReforged$stopSounds();
 
-    void moods$fadeSounds(float ticks);
+    void javaReforged$fadeSounds(float ticks);
 
-    void moods$clearQueued();
+    void javaReforged$clearQueued();
 
-    boolean moods$hasFadingMusic();
+    boolean javaReforged$hasFadingMusic();
 
-    default boolean moods$onInterceptStop() {
+    default boolean javaReforged$onInterceptStop() {
         if (!SoundTransitionConfig.seamlessTransitions && SoundTransitionConfig.seamlessSoundTransitions == 0) {
             return true;
         }
 
-        this.moods$clearQueued();
+        this.javaReforged$clearQueued();
         if (SoundTransitionConfig.seamlessSoundTransitions == 0) {
-            this.moods$stopSounds();
+            this.javaReforged$stopSounds();
         } else {
-            this.moods$fadeSounds((float) SoundTransitionConfig.seamlessSoundTransitions);
+            this.javaReforged$fadeSounds((float) SoundTransitionConfig.seamlessSoundTransitions);
         }
 
         if (!SoundTransitionConfig.seamlessTransitions) {
-            this.moods$stopMusic();
+            this.javaReforged$stopMusic();
         }
 
         return false;

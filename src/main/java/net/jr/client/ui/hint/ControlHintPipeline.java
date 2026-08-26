@@ -57,7 +57,7 @@ public final class ControlHintPipeline {
         }
 
         if (context.screen() instanceof ControllerMenuCaptureAware captureAware
-            && captureAware.javareforged$isCapturingControllerBinding()) {
+            && captureAware.javaReforged$isCapturingControllerBinding()) {
             return;
         }
 

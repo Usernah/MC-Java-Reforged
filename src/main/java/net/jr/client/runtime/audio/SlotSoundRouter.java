@@ -8,8 +8,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
-import net.jr.mixin.runtime.SoundEngineActiveSoundsAccessor;
-import net.jr.mixin.runtime.SoundManagerEngineAccessor;
+import net.jr.mixin.accessors.SoundEngineAccessor;
+import net.jr.mixin.accessors.SoundManagerAccessor;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.slot.LocalClientSlot;
@@ -67,8 +67,40 @@ public final class SlotSoundRouter {
         return new RoutedSoundInstance(slotId, sound, transformSpatially);
     }
 
+    public static PlayRoute play(SoundEngine soundEngine, SoundInstance sound) {
+        SoundInstance routed = route(sound);
+        if (routed == sound) {
+            return new PlayRoute(false, null);
+        }
+        return new PlayRoute(true, routed != null ? soundEngine.play(routed) : null);
+    }
+
+    public static boolean playDelayed(SoundEngine soundEngine, SoundInstance sound, int delay) {
+        SoundInstance routed = route(sound);
+        if (routed == sound) {
+            return false;
+        }
+        if (routed != null) {
+            soundEngine.playDelayed(routed, delay);
+        }
+        return true;
+    }
+
+    public static boolean queueTicking(SoundEngine soundEngine, TickableSoundInstance sound) {
+        SoundInstance routed = route(sound);
+        if (routed == sound) {
+            return false;
+        }
+        if (routed instanceof TickableSoundInstance routedTickable) {
+            soundEngine.queueTickingSound(routedTickable);
+        } else if (routed != null) {
+            throw new IllegalStateException("Routed ticking sound lost tickable type");
+        }
+        return true;
+    }
+
     public static void stopExact(SoundManager soundManager, SoundInstance sound) {
-        SoundEngine soundEngine = ((SoundManagerEngineAccessor)soundManager).splitTest$soundEngine();
+        SoundEngine soundEngine = ((SoundManagerAccessor)soundManager).javaReforged$soundEngine();
         Integer slotId = currentSlotId();
         if (slotId == null) {
             soundEngine.stop(sound);
@@ -96,7 +128,7 @@ public final class SlotSoundRouter {
         @Nullable Identifier soundName,
         @Nullable SoundSource source
     ) {
-        SoundEngine soundEngine = ((SoundManagerEngineAccessor)soundManager).splitTest$soundEngine();
+        SoundEngine soundEngine = ((SoundManagerAccessor)soundManager).javaReforged$soundEngine();
         Integer slotId = currentSlotId();
         if (slotId == null) {
             soundEngine.stop(soundName, source);
@@ -112,7 +144,7 @@ public final class SlotSoundRouter {
     }
 
     public static void stopSlotSounds(SoundManager soundManager, int slotId) {
-        SoundEngine soundEngine = ((SoundManagerEngineAccessor)soundManager).splitTest$soundEngine();
+        SoundEngine soundEngine = ((SoundManagerAccessor)soundManager).javaReforged$soundEngine();
         for (SoundInstance activeSound : activeSounds(soundEngine)) {
             if (belongsToSlot(activeSound, slotId)) {
                 soundEngine.stop(activeSound);
@@ -159,7 +191,7 @@ public final class SlotSoundRouter {
 
     private static boolean belongsToSlot(SoundInstance sound, int slotId) {
         if (sound instanceof SlotWrappedSoundInstance wrappedSound) {
-            return wrappedSound.splitTest$slotId() == slotId;
+            return wrappedSound.javaReforged$slotId() == slotId;
         }
         return slotId == 0;
     }
@@ -167,19 +199,19 @@ public final class SlotSoundRouter {
     @Nullable
     private static SoundInstance delegateOf(SoundInstance sound) {
         if (sound instanceof SlotWrappedSoundInstance wrappedSound) {
-            return wrappedSound.splitTest$delegate();
+            return wrappedSound.javaReforged$delegate();
         }
         return null;
     }
 
     private static List<SoundInstance> activeSounds(SoundEngine soundEngine) {
-        return new ArrayList<>(((SoundEngineActiveSoundsAccessor)soundEngine).splitTest$instanceToChannel().keySet());
+        return new ArrayList<>(((SoundEngineAccessor)soundEngine).javaReforged$instanceToChannel().keySet());
     }
 
     private static boolean removeQueuedExact(SoundEngine soundEngine, int slotId, SoundInstance sound) {
         boolean removed = false;
-        SoundEngineActiveSoundsAccessor accessor = (SoundEngineActiveSoundsAccessor)soundEngine;
-        Iterator<SoundInstance> queuedSounds = accessor.splitTest$queuedSounds().keySet().iterator();
+        SoundEngineAccessor accessor = (SoundEngineAccessor)soundEngine;
+        Iterator<SoundInstance> queuedSounds = accessor.javaReforged$queuedSounds().keySet().iterator();
         while (queuedSounds.hasNext()) {
             SoundInstance queuedSound = queuedSounds.next();
             if (belongsToSlot(queuedSound, slotId) && (queuedSound == sound || delegateOf(queuedSound) == sound)) {
@@ -188,7 +220,7 @@ public final class SlotSoundRouter {
             }
         }
 
-        Iterator<TickableSoundInstance> queuedTickableSounds = accessor.splitTest$queuedTickableSounds().iterator();
+        Iterator<TickableSoundInstance> queuedTickableSounds = accessor.javaReforged$queuedTickableSounds().iterator();
         while (queuedTickableSounds.hasNext()) {
             TickableSoundInstance queuedSound = queuedTickableSounds.next();
             if (belongsToSlot(queuedSound, slotId) && (queuedSound == sound || delegateOf(queuedSound) == sound)) {
@@ -205,15 +237,15 @@ public final class SlotSoundRouter {
         @Nullable Identifier soundName,
         @Nullable SoundSource source
     ) {
-        SoundEngineActiveSoundsAccessor accessor = (SoundEngineActiveSoundsAccessor)soundEngine;
-        Iterator<SoundInstance> queuedSounds = accessor.splitTest$queuedSounds().keySet().iterator();
+        SoundEngineAccessor accessor = (SoundEngineAccessor)soundEngine;
+        Iterator<SoundInstance> queuedSounds = accessor.javaReforged$queuedSounds().keySet().iterator();
         while (queuedSounds.hasNext()) {
             if (matches(queuedSounds.next(), slotId, soundName, source)) {
                 queuedSounds.remove();
             }
         }
 
-        Iterator<TickableSoundInstance> queuedTickableSounds = accessor.splitTest$queuedTickableSounds().iterator();
+        Iterator<TickableSoundInstance> queuedTickableSounds = accessor.javaReforged$queuedTickableSounds().iterator();
         while (queuedTickableSounds.hasNext()) {
             if (matches(queuedTickableSounds.next(), slotId, soundName, source)) {
                 queuedTickableSounds.remove();
@@ -277,8 +309,11 @@ public final class SlotSoundRouter {
     }
 
     private interface SlotWrappedSoundInstance {
-        int splitTest$slotId();
-        SoundInstance splitTest$delegate();
+        int javaReforged$slotId();
+        SoundInstance javaReforged$delegate();
+    }
+
+    public record PlayRoute(boolean handled, @Nullable SoundEngine.PlayResult result) {
     }
 
     private abstract static class RoutedSoundBase implements SoundInstance, SlotWrappedSoundInstance {
@@ -293,12 +328,12 @@ public final class SlotSoundRouter {
         }
 
         @Override
-        public int splitTest$slotId() {
+        public int javaReforged$slotId() {
             return this.slotId;
         }
 
         @Override
-        public SoundInstance splitTest$delegate() {
+        public SoundInstance javaReforged$delegate() {
             return this.delegate;
         }
 
@@ -367,18 +402,18 @@ public final class SlotSoundRouter {
             return this.delegate.getAttenuation();
         }
 
-        protected boolean splitTest$slotCanPlay() {
+        protected boolean javaReforged$slotCanPlay() {
             return this.transformSpatially ? isSpatialSlotAlive(this.slotId) : isClientAlive(this.slotId);
         }
 
         @Override
         public boolean canStartSilent() {
-            return this.splitTest$slotCanPlay() && this.delegate.canStartSilent();
+            return this.javaReforged$slotCanPlay() && this.delegate.canStartSilent();
         }
 
         @Override
         public boolean canPlaySound() {
-            return this.splitTest$slotCanPlay() && this.delegate.canPlaySound();
+            return this.javaReforged$slotCanPlay() && this.delegate.canPlaySound();
         }
 
         @Override
@@ -403,7 +438,7 @@ public final class SlotSoundRouter {
 
         @Override
         public boolean isStopped() {
-            return !this.splitTest$slotCanPlay() || this.delegate.isStopped();
+            return !this.javaReforged$slotCanPlay() || this.delegate.isStopped();
         }
 
         @Override
