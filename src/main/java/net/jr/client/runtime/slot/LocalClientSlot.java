@@ -1,6 +1,6 @@
 package net.jr.client.runtime.slot;
 
-import net.jr.client.input.SlotCursorView;
+import net.jr.client.runtime.input.SlotCursorView;
 import net.jr.client.runtime.state.ChatState;
 import net.jr.client.runtime.state.ClientRenderState;
 import net.jr.client.runtime.state.GameplayState;

@@ -5,7 +5,7 @@ import net.jr.api.client.resource.Asset;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.compact.CompactGridEntry;
 import net.jr.client.components.widgets.compact.CompactSlotElement;
-import net.jr.client.render.ItemRenderOpacity;
+import net.jr.client.render.item.ItemRenderOpacity;
 import net.jr.client.ui.container.slots.SlotHighlightRenderer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.util.function.BooleanSupplier;

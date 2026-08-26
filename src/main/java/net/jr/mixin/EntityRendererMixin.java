@@ -1,7 +1,7 @@
 package net.jr.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.jr.client.render.LegacyNameTagRenderPass;
+import net.jr.client.render.nametag.LegacyNameTagRenderPass;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;

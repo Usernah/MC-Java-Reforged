@@ -16,8 +16,7 @@ public final class PauseMenuControlHintProvider implements ControlHintProvider {
             return false;
         }
 
-        return context.screen() instanceof PauseScreen
-            || context.screen().getClass().getSimpleName().contains("PauseScreen");
+        return context.screen() instanceof PauseScreen;
     }
 
     @Override

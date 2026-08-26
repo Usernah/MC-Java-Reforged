@@ -1,6 +1,6 @@
 package net.jr.mixin;
 
-import net.jr.client.input.runtime.MouseInputHandler;
+import net.jr.client.input.MouseInputHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.input.MouseButtonInfo;

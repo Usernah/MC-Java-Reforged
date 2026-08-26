@@ -10,10 +10,10 @@ import net.jr.client.components.widgets.TabBarElement;
 import net.jr.client.components.widgets.TabElement;
 import net.jr.client.components.widgets.item.CreativeItemGridElement;
 import net.jr.client.components.widgets.item.CreativeItemSlotElement;
-import net.jr.client.input.binding.UiInputBinding;
-import net.jr.client.input.cursor.CursorMagnetTarget;
+import net.jr.client.ui.navigation.UiInputBinding;
+import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
-import net.jr.client.input.runtime.GamepadInputProcessor;
+import net.jr.client.runtime.input.LocalGamepadInputHandler;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
@@ -483,8 +483,8 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         return this.itemGrid == null
                 ? null
                 : this.itemGrid.previewedSlot(
-                        GamepadInputProcessor.cursorX(),
-                        GamepadInputProcessor.cursorY(),
+                        LocalGamepadInputHandler.cursorX(),
+                        LocalGamepadInputHandler.cursorY(),
                         false
                 );
     }
@@ -505,8 +505,8 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
                 ? null
                 : this.slotLayer.getSlotAt(
                         this.slotGrid,
-                        GamepadInputProcessor.cursorX(),
-                        GamepadInputProcessor.cursorY()
+                        LocalGamepadInputHandler.cursorX(),
+                        LocalGamepadInputHandler.cursorY()
                 );
     }
 

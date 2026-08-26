@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.annotation.Nullable;
-import net.jr.client.input.InputJsonFiles;
+import net.jr.util.JsonFileStore;
 import net.minecraft.client.Minecraft;
 
 public final class GamepadCalibrationRegistry {
@@ -73,11 +73,11 @@ public final class GamepadCalibrationRegistry {
         }
         root.add("profiles", profilesJson);
 
-        InputJsonFiles.write(this.filePath, root);
+        JsonFileStore.write(this.filePath, root);
     }
 
     private void loadFromDisk() {
-        JsonObject root = InputJsonFiles.read(this.filePath);
+        JsonObject root = JsonFileStore.read(this.filePath);
         if (root == null) {
             return;
         }

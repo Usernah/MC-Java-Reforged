@@ -1,7 +1,5 @@
 package net.jr.client.input.sdl;
 
-import com.sun.jna.ptr.ByteByReference;
-import com.sun.jna.ptr.FloatByReference;
 import dev.isxander.sdl3java.api.SdlInit;
 import dev.isxander.sdl3java.api.SdlSubSystemConst;
 import dev.isxander.sdl3java.api.error.SdlError;
@@ -10,21 +8,11 @@ import dev.isxander.sdl3java.api.events.SdlEventTypes;
 import dev.isxander.sdl3java.api.events.SdlEvents;
 import dev.isxander.sdl3java.api.gamepad.SDL_Gamepad;
 import dev.isxander.sdl3java.api.gamepad.SDL_GamepadButton;
-import dev.isxander.sdl3java.api.guid.SDL_GUID;
 import dev.isxander.sdl3java.api.hints.SdlHintConsts;
 import dev.isxander.sdl3java.api.hints.SdlHints;
 import dev.isxander.sdl3java.api.joystick.SDL_Joystick;
 import dev.isxander.sdl3java.api.joystick.SDL_JoystickID;
 import dev.isxander.sdl3java.api.joystick.SdlJoystick;
-import dev.isxander.sdl3java.jna.SdlNativeLibraryLoader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -33,10 +21,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import net.jr.Java_reforged;
 import net.jr.client.input.gamepad.GamepadAxis;
-import net.jr.client.input.gamepad.GamepadCalibrationRegistry;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.input.gamepad.GamepadIdentity;
 import net.jr.client.input.gamepad.RawGamepadInput;
@@ -45,41 +31,29 @@ import net.minecraft.client.Minecraft;
 
 public final class SdlGamepad {
     private static final long EVENT_POLL_INTERVAL_MS = 8L;
-    private static final long TOUCHPAD_TAP_COORDINATE_GRACE_NANOS = 50_000_000L;
     private static final long DEVICE_SETTLE_DELAY_MS = 1200L;
     private static final long INVENTORY_SCAN_INTERVAL_MS = 2000L;
     private static final long HOTPLUG_RETRY_WINDOW_MS = 6000L;
     private static final long STARTUP_SCAN_DELAY_MS = 150L;
     private static final long INIT_RETRY_DELAY_MS = 2000L;
     private static final long SLOW_NATIVE_CALL_MS = 50L;
-    private static final float RAW_AXIS_DIGITAL_THRESHOLD = 0.55F;
     private static final int AXIS_COUNT = 6;
     private static final int BUTTON_COUNT = SDL_GamepadButton.SDL_GAMEPAD_BUTTON_COUNT;
     private static final int MAX_OPEN_DEVICES = 4;
     private static final long FULL_SCAN_DEVICE_ID = -2L;
     private static final long NO_PENDING_DEVICE_ID = -1L;
     private static final boolean LOG_SDL_INVENTORY = Boolean.getBoolean("split.sdlInventoryLog");
-    private static final boolean LOG_SDL_RAW_INPUT = Boolean.getBoolean("split.sdlRawInputLog");
-    private static final String SDL_NATIVE_RESOURCE = "/natives/windows-x86_64/SDL3.dll";
-    private static final String SDL_NATIVE_FILE_NAME = "SDL3.dll";
 
     private static final Object SDL_LOCK = new Object();
-    private static final ConcurrentLinkedQueue<RawGamepadInputPress> rawInputPresses = new ConcurrentLinkedQueue<>();
     private static final Map<Long, OpenDevice> openDevices = new LinkedHashMap<>();
-    private static final Map<Long, TouchpadState> touchpadStates = new LinkedHashMap<>();
-    private static volatile Map<Long, Snapshot> snapshots = Map.of();
-    private static final Map<Long, Snapshot> rawInputBaselines = new LinkedHashMap<>();
+    private static final Map<Long, SdlTouchpadState> touchpadStates = new LinkedHashMap<>();
+    private static volatile Map<Long, SdlGamepadSnapshot> snapshots = Map.of();
     private static volatile boolean initialized = false;
-    private static volatile boolean nativeLibraryPrepared = false;
     private static volatile String initializationFailureReason = "";
     private static volatile long nextInitializationRetryMs = 0L;
     private static volatile boolean workerRunning = false;
     private static volatile Thread workerThread;
     private static volatile boolean splitTouchpad = true;
-
-    private static final int TOUCHPAD_SIDE_NONE = 0;
-    private static final int TOUCHPAD_SIDE_LEFT = 1;
-    private static final int TOUCHPAD_SIDE_RIGHT = 2;
 
     private static boolean printedDebug = false;
     private static boolean startupScanPending = false;
@@ -151,7 +125,7 @@ public final class SdlGamepad {
             }
 
             try {
-                loadNativeLibraryIfNeeded();
+                SdlNativeLibrary.prepare();
                 configureJoystickHints();
 
                 SdlError.SDL_ClearError();
@@ -200,7 +174,7 @@ public final class SdlGamepad {
     }
 
     public static boolean isConnected(long deviceId) {
-        Snapshot value = snapshots.get(deviceId);
+        SdlGamepadSnapshot value = snapshots.get(deviceId);
         return value != null && value.connected();
     }
 
@@ -222,7 +196,7 @@ public final class SdlGamepad {
         }
 
         List<String> names = snapshots.values().stream()
-            .map(Snapshot::identity)
+            .map(SdlGamepadSnapshot::identity)
             .map(identity -> identity == null ? "desconocido" : identity.displayName())
             .toList();
         return "SDL: connected=" + !snapshots.isEmpty()
@@ -308,73 +282,17 @@ public final class SdlGamepad {
         return input(snapshot(deviceId), input, triggerThreshold);
     }
 
-    private static boolean input(Snapshot currentSnapshot, GamepadDigitalInput input, float triggerThreshold) {
-        if (splitTouchpad && input == GamepadDigitalInput.TOUCHPAD_BUTTON) {
-
-            return currentSnapshot.button(BUTTON_TOUCHPAD)
-                && currentSnapshot.touchpadPressSide() == TOUCHPAD_SIDE_NONE;
-        }
-        if (!splitTouchpad
-            && (input == GamepadDigitalInput.TOUCHPAD_LEFT_BUTTON
-                || input == GamepadDigitalInput.TOUCHPAD_RIGHT_BUTTON)) {
-            return false;
-        }
-
-        RawGamepadInput calibratedInput = calibratedInput(currentSnapshot.identity(), input);
-        if (calibratedInput != null) {
-            return currentSnapshot.rawInput(calibratedInput);
-        }
-
-        return switch (input) {
-            case BUTTON_DOWN -> currentSnapshot.button(BUTTON_A);
-            case BUTTON_RIGHT -> currentSnapshot.button(BUTTON_B);
-            case BUTTON_LEFT -> currentSnapshot.button(BUTTON_X);
-            case BUTTON_UP -> currentSnapshot.button(BUTTON_Y);
-            case BUTTON_START -> currentSnapshot.button(BUTTON_START);
-            case BUTTON_SELECT -> currentSnapshot.button(BUTTON_BACK);
-            case BUTTON_GUIDE -> currentSnapshot.button(BUTTON_GUIDE);
-            case BUTTON_SHARE -> currentSnapshot.button(BUTTON_MISC1);
-            case MISC_1 -> currentSnapshot.button(BUTTON_MISC1);
-            case MISC_2 -> currentSnapshot.button(BUTTON_MISC2);
-            case MISC_3 -> currentSnapshot.button(BUTTON_MISC3);
-            case MISC_4 -> currentSnapshot.button(BUTTON_MISC4);
-            case MISC_5 -> currentSnapshot.button(BUTTON_MISC5);
-            case MISC_6 -> currentSnapshot.button(BUTTON_MISC6);
-            case TOUCHPAD_BUTTON -> currentSnapshot.button(BUTTON_TOUCHPAD);
-            case TOUCHPAD_LEFT_BUTTON -> currentSnapshot.touchpadPressSide() == TOUCHPAD_SIDE_LEFT;
-            case TOUCHPAD_RIGHT_BUTTON -> currentSnapshot.touchpadPressSide() == TOUCHPAD_SIDE_RIGHT;
-            case STICK_LEFT_BUTTON -> currentSnapshot.button(BUTTON_LEFTSTICK);
-            case STICK_RIGHT_BUTTON -> currentSnapshot.button(BUTTON_RIGHTSTICK);
-            case BUMPER_LEFT -> currentSnapshot.button(BUTTON_LEFTSHOULDER);
-            case BUMPER_RIGHT -> currentSnapshot.button(BUTTON_RIGHTSHOULDER);
-            case PADDLE_RIGHT_1 -> currentSnapshot.button(BUTTON_RIGHT_PADDLE1);
-            case PADDLE_LEFT_1 -> currentSnapshot.button(BUTTON_LEFT_PADDLE1);
-            case PADDLE_RIGHT_2 -> currentSnapshot.button(BUTTON_RIGHT_PADDLE2);
-            case PADDLE_LEFT_2 -> currentSnapshot.button(BUTTON_LEFT_PADDLE2);
-            case DPAD_UP -> currentSnapshot.button(BUTTON_DPAD_UP);
-            case DPAD_DOWN -> currentSnapshot.button(BUTTON_DPAD_DOWN);
-            case DPAD_LEFT -> currentSnapshot.button(BUTTON_DPAD_LEFT);
-            case DPAD_RIGHT -> currentSnapshot.button(BUTTON_DPAD_RIGHT);
-            case TRIGGER_LEFT -> axis01(currentSnapshot, AXIS_TRIGGERLEFT, triggerThreshold) > 0.5F;
-            case TRIGGER_RIGHT -> axis01(currentSnapshot, AXIS_TRIGGERRIGHT, triggerThreshold) > 0.5F;
-            case STICK_LEFT_MOVE_UP -> isAxisDirectionPressed(currentSnapshot, AXIS_LEFTY, triggerThreshold, -1);
-            case STICK_LEFT_MOVE_DOWN -> isAxisDirectionPressed(currentSnapshot, AXIS_LEFTY, triggerThreshold, 1);
-            case STICK_LEFT_MOVE_LEFT -> isAxisDirectionPressed(currentSnapshot, AXIS_LEFTX, triggerThreshold, -1);
-            case STICK_LEFT_MOVE_RIGHT -> isAxisDirectionPressed(currentSnapshot, AXIS_LEFTX, triggerThreshold, 1);
-            case STICK_RIGHT_MOVE_UP -> isAxisDirectionPressed(currentSnapshot, AXIS_RIGHTY, triggerThreshold, -1);
-            case STICK_RIGHT_MOVE_DOWN -> isAxisDirectionPressed(currentSnapshot, AXIS_RIGHTY, triggerThreshold, 1);
-            case STICK_RIGHT_MOVE_LEFT -> isAxisDirectionPressed(currentSnapshot, AXIS_RIGHTX, triggerThreshold, -1);
-            case STICK_RIGHT_MOVE_RIGHT -> isAxisDirectionPressed(currentSnapshot, AXIS_RIGHTX, triggerThreshold, 1);
-        };
+    private static boolean input(SdlGamepadSnapshot currentSnapshot, GamepadDigitalInput input, float triggerThreshold) {
+        return SdlGamepadInputMapper.isPressed(currentSnapshot, input, triggerThreshold, splitTouchpad);
     }
 
     public static void clearRawInputPresses() {
-        rawInputPresses.clear();
+        SdlRawInputTracker.clearPresses();
     }
 
     public static RawGamepadInputPress pollRawInputPress() {
         initIfNeeded();
-        return rawInputPresses.poll();
+        return SdlRawInputTracker.pollPress();
     }
 
     public static boolean rawInputActive(RawGamepadInput input) {
@@ -386,7 +304,7 @@ public final class SdlGamepad {
     }
 
     public static boolean anyCalibrationInputActive() {
-        return snapshots.values().stream().anyMatch(Snapshot::anyCalibrationInputActive);
+        return snapshots.values().stream().anyMatch(SdlGamepadSnapshot::anyCalibrationInputActive);
     }
 
     public static boolean calibrationInputActive(long deviceId) {
@@ -428,7 +346,7 @@ public final class SdlGamepad {
             lastInventoryScanAt = 0L;
             lastJoystickCount = -1;
             snapshots = Map.of();
-            rawInputBaselines.clear();
+            SdlRawInputTracker.clear();
             touchpadStates.clear();
         }
     }
@@ -449,7 +367,7 @@ public final class SdlGamepad {
         SdlEventTypes.SDL_Event event = new SdlEventTypes.SDL_Event();
         while (workerRunning) {
             boolean snapshotDirty = false;
-            Map<Long, Snapshot> nextSnapshots = new LinkedHashMap<>();
+            Map<Long, SdlGamepadSnapshot> nextSnapshots = new LinkedHashMap<>();
             try {
                 synchronized (SDL_LOCK) {
                     if (!initialized) {
@@ -487,7 +405,7 @@ public final class SdlGamepad {
         }
 
         snapshots = Map.of();
-        rawInputBaselines.clear();
+        SdlRawInputTracker.clear();
     }
 
     private static void runMainThreadMaintenance() {
@@ -495,7 +413,7 @@ public final class SdlGamepad {
             return;
         }
 
-        Map<Long, Snapshot> nextSnapshots = null;
+        Map<Long, SdlGamepadSnapshot> nextSnapshots = null;
         synchronized (SDL_LOCK) {
             if (!initialized) {
                 return;
@@ -562,7 +480,7 @@ public final class SdlGamepad {
         if (!openDevices.containsKey(deviceId)) {
             return false;
         }
-        touchpadStates.computeIfAbsent(deviceId, ignored -> new TouchpadState()).handleFingerEvent(type, event.x);
+        touchpadStates.computeIfAbsent(deviceId, ignored -> new SdlTouchpadState()).handleFingerEvent(type, event.x);
         return true;
     }
 
@@ -602,7 +520,7 @@ public final class SdlGamepad {
     }
 
     private static void configureJoystickHints() {
-        if (!isWindows()) {
+        if (!SdlNativeLibrary.isWindows()) {
             return;
         }
 
@@ -767,7 +685,7 @@ public final class SdlGamepad {
         return joystickId == null ? -1L : joystickId.longValue();
     }
 
-    private static Snapshot readSnapshot(long deviceId, SDL_Gamepad gameController, SDL_Joystick joystick) {
+    private static SdlGamepadSnapshot readSnapshot(long deviceId, SDL_Gamepad gameController, SDL_Joystick joystick) {
         float[] axes = new float[AXIS_COUNT];
         boolean[] buttons = new boolean[BUTTON_COUNT];
 
@@ -799,23 +717,23 @@ public final class SdlGamepad {
             rawHats[rawHat] = Byte.toUnsignedInt(SdlJoystick.SDL_GetJoystickHat(joystick, rawHat));
         }
 
-        TouchpadState touchpadState = touchpadStates.computeIfAbsent(deviceId, ignored -> new TouchpadState());
+        SdlTouchpadState touchpadState = touchpadStates.computeIfAbsent(deviceId, ignored -> new SdlTouchpadState());
         touchpadState.refreshFinger(gameController);
         touchpadState.syncButton(gameController != null && buttons[BUTTON_TOUCHPAD]);
-        return new Snapshot(
+        return new SdlGamepadSnapshot(
             true,
             axes,
             buttons,
             rawButtons,
             rawHats,
-            touchpadState.pressedSide,
-            identityFromJoystick(joystick),
+            touchpadState.pressedSide(),
+            SdlGamepadIdentity.fromJoystick(joystick),
             System.nanoTime()
         );
     }
 
-    private static Map<Long, Snapshot> readAllSnapshots() {
-        Map<Long, Snapshot> result = new LinkedHashMap<>();
+    private static Map<Long, SdlGamepadSnapshot> readAllSnapshots() {
+        Map<Long, SdlGamepadSnapshot> result = new LinkedHashMap<>();
         SdlJoystick.SDL_UpdateJoysticks();
         dev.isxander.sdl3java.api.gamepad.SdlGamepad.SDL_UpdateGamepads();
         for (OpenDevice device : openDevices.values()) {
@@ -824,64 +742,11 @@ public final class SdlGamepad {
         return result;
     }
 
-    private static void publishSnapshots(Map<Long, Snapshot> nextSnapshots) {
+    private static void publishSnapshots(Map<Long, SdlGamepadSnapshot> nextSnapshots) {
         synchronized (SDL_LOCK) {
-            for (Map.Entry<Long, Snapshot> entry : nextSnapshots.entrySet()) {
-                queueRawInputEdges(entry.getKey(), entry.getValue());
-            }
-            rawInputBaselines.keySet().removeIf(id -> !nextSnapshots.containsKey(id));
+            SdlRawInputTracker.publish(nextSnapshots);
             snapshots = Collections.unmodifiableMap(new LinkedHashMap<>(nextSnapshots));
         }
-    }
-
-    private static void queueRawInputEdges(long deviceId, Snapshot nextSnapshot) {
-        Snapshot previousSnapshot = rawInputBaselines.getOrDefault(deviceId, Snapshot.disconnected());
-        if (!nextSnapshot.connected() || nextSnapshot.identity() == null) {
-            rawInputBaselines.put(deviceId, nextSnapshot);
-            return;
-        }
-
-        if (!previousSnapshot.connected()
-            || previousSnapshot.identity() == null
-            || !previousSnapshot.identity().key().equals(nextSnapshot.identity().key())) {
-            rawInputBaselines.put(deviceId, nextSnapshot);
-            return;
-        }
-
-        GamepadIdentity identity = nextSnapshot.identity();
-        int gamepadButtonCount = Math.min(previousSnapshot.buttons().length, nextSnapshot.buttons().length);
-        for (int button = 0; button < gamepadButtonCount; button++) {
-            if (nextSnapshot.buttons()[button] && !previousSnapshot.buttons()[button]) {
-                recordRawInput(deviceId, identity, RawGamepadInput.gamepadButton(button));
-            }
-        }
-
-        int rawButtonCount = Math.min(previousSnapshot.rawButtons().length, nextSnapshot.rawButtons().length);
-        for (int button = 0; button < rawButtonCount; button++) {
-            if (nextSnapshot.rawButtons()[button] && !previousSnapshot.rawButtons()[button]) {
-                recordRawInput(deviceId, identity, RawGamepadInput.button(button));
-            }
-        }
-
-        int rawHatCount = Math.min(previousSnapshot.rawHats().length, nextSnapshot.rawHats().length);
-        for (int hat = 0; hat < rawHatCount; hat++) {
-            int previousValue = previousSnapshot.rawHats()[hat];
-            int nextValue = nextSnapshot.rawHats()[hat];
-            if (nextValue != 0 && nextValue != previousValue) {
-                recordRawInput(deviceId, identity, RawGamepadInput.hat(hat, nextValue));
-            }
-        }
-
-        int axisCount = Math.min(previousSnapshot.axes().length, nextSnapshot.axes().length);
-        for (int axis = 0; axis < axisCount; axis++) {
-            int previousDirection = axisDirection(previousSnapshot, axis);
-            int nextDirection = axisDirection(nextSnapshot, axis);
-            if (nextDirection != 0 && nextDirection != previousDirection) {
-                recordRawInput(deviceId, identity, RawGamepadInput.axis(axis, nextDirection));
-            }
-        }
-
-        rawInputBaselines.put(deviceId, nextSnapshot);
     }
 
     private static boolean pollEvent(SdlEventTypes.SDL_Event event) {
@@ -896,10 +761,10 @@ public final class SdlGamepad {
         for (SDL_JoystickID joystickId : joystickIds) {
             try {
                 String name = safeString(SdlJoystick.SDL_GetJoystickNameForID(joystickId), "SDL Controller");
-                String guid = guidToString(SdlJoystick.SDL_GetJoystickGUIDForID(joystickId));
-                int vendor = unsigned(SdlJoystick.SDL_GetJoystickVendorForID(joystickId));
-                int product = unsigned(SdlJoystick.SDL_GetJoystickProductForID(joystickId));
-                int productVersion = unsigned(SdlJoystick.SDL_GetJoystickProductVersionForID(joystickId));
+                String guid = SdlGamepadIdentity.guid(SdlJoystick.SDL_GetJoystickGUIDForID(joystickId));
+                int vendor = SdlGamepadIdentity.unsigned(SdlJoystick.SDL_GetJoystickVendorForID(joystickId));
+                int product = SdlGamepadIdentity.unsigned(SdlJoystick.SDL_GetJoystickProductForID(joystickId));
+                int productVersion = SdlGamepadIdentity.unsigned(SdlJoystick.SDL_GetJoystickProductVersionForID(joystickId));
                 boolean gameController = isGameController(joystickId);
 
                 Java_reforged.LOGGER.info(
@@ -947,9 +812,9 @@ public final class SdlGamepad {
             SdlJoystick.SDL_CloseJoystick(device.joystick());
         }
         Java_reforged.LOGGER.info("[SplitSDL] Closed gamepad instance={}", instanceId);
-        rawInputBaselines.remove(instanceId);
+        SdlRawInputTracker.remove(instanceId);
         touchpadStates.remove(instanceId);
-        Map<Long, Snapshot> remaining = new LinkedHashMap<>(snapshots);
+        Map<Long, SdlGamepadSnapshot> remaining = new LinkedHashMap<>(snapshots);
         remaining.remove(instanceId);
         snapshots = Collections.unmodifiableMap(remaining);
     }
@@ -959,68 +824,6 @@ public final class SdlGamepad {
             closeDevice(instanceId);
         }
         printedDebug = false;
-    }
-
-    private static void loadNativeLibraryIfNeeded() throws IOException {
-        if (nativeLibraryPrepared) {
-            return;
-        }
-
-        if (!isWindows()) {
-            nativeLibraryPrepared = true;
-            return;
-        }
-
-        try (InputStream input = SdlGamepad.class.getResourceAsStream(SDL_NATIVE_RESOURCE)) {
-            if (input == null) {
-                Java_reforged.LOGGER.warn("No se encontro {} en el classpath. libsdl4j intentara cargar SDL3 desde el sistema.", SDL_NATIVE_RESOURCE);
-                nativeLibraryPrepared = true;
-                return;
-            }
-
-            Path nativePath = resolveNativePath();
-            Files.createDirectories(nativePath.getParent());
-            extractNativeIfMissing(input, nativePath);
-            try {
-                SdlNativeLibraryLoader.loadLibSDL3FromFilePathNow(nativePath.toAbsolutePath().toString());
-                Java_reforged.LOGGER.debug("SDL3 nativo cargado desde {}.", nativePath.toAbsolutePath());
-            } catch (IllegalStateException alreadyLoaded) {
-                Java_reforged.LOGGER.debug("SDL3 ya estaba cargado antes de JavaReforged: {}", safeString(alreadyLoaded.getMessage(), "sin detalle"));
-            }
-            nativeLibraryPrepared = true;
-        }
-    }
-
-    private static Path resolveNativePath() {
-        Minecraft minecraft = Minecraft.getInstance();
-        Path baseDir = minecraft == null
-            ? Path.of(System.getProperty("java.io.tmpdir"))
-            : minecraft.gameDirectory.toPath();
-
-        return baseDir.resolve(".javareforged")
-            .resolve("natives")
-            .resolve(SDL_NATIVE_FILE_NAME);
-    }
-
-    private static void extractNativeIfMissing(InputStream input, Path nativePath) throws IOException {
-        if (Files.isRegularFile(nativePath)) {
-            return;
-        }
-
-        Path temporaryPath = Files.createTempFile(nativePath.getParent(), "SDL3-", ".tmp");
-        try {
-            Files.copy(input, temporaryPath, StandardCopyOption.REPLACE_EXISTING);
-            try {
-                try {
-                    Files.move(temporaryPath, nativePath, StandardCopyOption.ATOMIC_MOVE);
-                } catch (AtomicMoveNotSupportedException exception) {
-                    Files.move(temporaryPath, nativePath);
-                }
-            } catch (FileAlreadyExistsException ignored) {
-            }
-        } finally {
-            Files.deleteIfExists(temporaryPath);
-        }
     }
 
     private static void logSlowCall(String callName, long startNanos) {
@@ -1035,10 +838,6 @@ public final class SdlGamepad {
         return error == null || error.isBlank() ? "sin detalle" : error;
     }
 
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
-    }
-
     private static boolean isMinecraftThread() {
         Minecraft minecraft = Minecraft.getInstance();
         return minecraft == null || minecraft.isSameThread();
@@ -1048,25 +847,9 @@ public final class SdlGamepad {
         return Math.max(min, Math.min(max, value));
     }
 
-    private static float axis01(Snapshot snapshot, int axisConst, float deadzone) {
+    private static float axis01(SdlGamepadSnapshot snapshot, int axisConst, float deadzone) {
         float value = snapshot.axis(axisConst);
         return Math.abs(value) < deadzone ? 0f : value;
-    }
-
-    private static int axisDirection(Snapshot snapshot, int axis) {
-        float value = snapshot.axis(axis);
-        if (value >= RAW_AXIS_DIGITAL_THRESHOLD) {
-            return 1;
-        }
-        if (value <= -RAW_AXIS_DIGITAL_THRESHOLD) {
-            return -1;
-        }
-        return 0;
-    }
-
-    private static boolean isAxisDirectionPressed(Snapshot snapshot, int axisConst, float deadzone, int direction) {
-        float value = axis01(snapshot, axisConst, deadzone);
-        return direction < 0 ? value < -0.5F : value > 0.5F;
     }
 
     private static int toSdlAxis(GamepadAxis axis) {
@@ -1080,45 +863,20 @@ public final class SdlGamepad {
         };
     }
 
-    private static RawGamepadInput calibratedInput(GamepadIdentity identity, GamepadDigitalInput input) {
-        if (identity == null) {
-            return null;
-        }
-
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null) {
-            return null;
-        }
-
-        GamepadCalibrationRegistry registry = GamepadCalibrationRegistry.get();
-        registry.ensureLoaded(minecraft);
-        return registry.getInput(identity, input);
-    }
-
-    private static void recordRawInput(long deviceId, GamepadIdentity identity, RawGamepadInput input) {
-        if (identity == null || input == null) {
-            return;
-        }
-        rawInputPresses.offer(new RawGamepadInputPress(deviceId, identity, input, System.currentTimeMillis()));
-        if (LOG_SDL_RAW_INPUT) {
-            Java_reforged.LOGGER.info("SDL raw input capturado: {} desde {}.", input.displayName(), identity.displayName());
-        }
-    }
-
     private static GamepadIdentity resolveIdentity(SDL_JoystickID instanceId) {
         long instance = instanceId == null ? -1L : instanceId.longValue();
         SDL_JoystickID deviceId = findDeviceId(instance);
         if (deviceId != null) {
-            return identityFromDeviceId(deviceId);
+            return SdlGamepadIdentity.fromDeviceId(deviceId);
         }
 
         OpenDevice open = openDevices.get(instance);
         if (open != null) {
-            return identityFromJoystick(open.joystick());
+            return SdlGamepadIdentity.fromJoystick(open.joystick());
         }
 
         String fallbackName = instance >= 0L ? "SDL Controller " + instance : "Unknown SDL Controller";
-        return createIdentity(fallbackName, 0, 0, 0, "");
+        return SdlGamepadIdentity.fallback(fallbackName);
     }
 
     private static SDL_JoystickID findDeviceId(long instance) {
@@ -1135,275 +893,20 @@ public final class SdlGamepad {
         return null;
     }
 
-    private static GamepadIdentity identityFromDeviceId(SDL_JoystickID deviceId) {
-        String name = safeString(SdlJoystick.SDL_GetJoystickNameForID(deviceId), "SDL Controller");
-        String guid = guidToString(SdlJoystick.SDL_GetJoystickGUIDForID(deviceId));
-        int vendor = unsigned(SdlJoystick.SDL_GetJoystickVendorForID(deviceId));
-        int product = unsigned(SdlJoystick.SDL_GetJoystickProductForID(deviceId));
-        int productVersion = unsigned(SdlJoystick.SDL_GetJoystickProductVersionForID(deviceId));
-        return createIdentity(name, vendor, product, productVersion, guid);
-    }
-
-    private static GamepadIdentity identityFromJoystick(SDL_Joystick joystick) {
-        if (joystick == null) {
-            return createIdentity("SDL Controller", 0, 0, 0, "");
-        }
-
-        SDL_JoystickID joystickId = SdlJoystick.SDL_GetJoystickID(joystick);
-        String name = safeString(SdlJoystick.SDL_GetJoystickName(joystick), "SDL Controller");
-        String guid = joystickId == null ? "" : guidToString(SdlJoystick.SDL_GetJoystickGUIDForID(joystickId));
-        int vendor = unsigned(SdlJoystick.SDL_GetJoystickVendor(joystick));
-        int product = unsigned(SdlJoystick.SDL_GetJoystickProduct(joystick));
-        int productVersion = unsigned(SdlJoystick.SDL_GetJoystickProductVersion(joystick));
-        return createIdentity(name, vendor, product, productVersion, guid);
-    }
-
-    private static GamepadIdentity createIdentity(String name, int vendor, int product, int productVersion, String guid) {
-        String safeName = safeString(name, "SDL Controller");
-        String sanitizedName = sanitize(safeName);
-        String base = vendor != 0 || product != 0
-            ? String.format(Locale.ROOT, "vid_%04x_pid_%04x_ver_%04x", vendor, product, productVersion)
-            : (!guid.isBlank() ? "guid_" + sanitize(guid) : "name_" + sanitizedName);
-        return new GamepadIdentity(base + "_" + sanitizedName, safeName, vendor, product, productVersion, guid);
-    }
-
-    private static String guidToString(SDL_GUID guid) {
-        if (guid == null || guid.data == null || guid.data.length == 0) {
-            return "";
-        }
-
-        StringBuilder builder = new StringBuilder(guid.data.length * 2);
-        for (byte value : guid.data) {
-            builder.append(String.format(Locale.ROOT, "%02x", Byte.toUnsignedInt(value)));
-        }
-        return builder.toString();
-    }
-
-    private static int unsigned(short value) {
-        return Short.toUnsignedInt(value);
-    }
-
-    private static int unsigned(char value) {
-        return value & 0xFFFF;
-    }
-
     private static String safeString(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
 
-    private static String sanitize(String value) {
-        String sanitized = value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
-        return sanitized.isBlank() ? "unknown" : sanitized;
+    private static SdlGamepadSnapshot firstSnapshot() {
+        return snapshots.values().stream().findFirst().orElseGet(SdlGamepadSnapshot::disconnected);
     }
 
-    private static Snapshot firstSnapshot() {
-        return snapshots.values().stream().findFirst().orElseGet(Snapshot::disconnected);
-    }
-
-    private static Snapshot snapshot(long deviceId) {
-        return snapshots.getOrDefault(deviceId, Snapshot.disconnected());
+    private static SdlGamepadSnapshot snapshot(long deviceId) {
+        return snapshots.getOrDefault(deviceId, SdlGamepadSnapshot.disconnected());
     }
 
     private record OpenDevice(long instanceId, SDL_Gamepad gamepad, SDL_Joystick joystick) {
     }
 
-    private static final class TouchpadState {
-        private final ByteByReference polledFingerState = new ByteByReference();
-        private final FloatByReference polledX = new FloatByReference();
-        private final FloatByReference polledY = new FloatByReference();
-        private final FloatByReference polledPressure = new FloatByReference();
-        private float currentX;
-        private float lastCoordinateX;
-        private long lastCoordinateNanos;
-        private long lastButtonReleaseNanos;
-        private boolean fingerDown;
-        private boolean coordinateValid;
-        private boolean buttonDown;
-        private int pressedSide = TOUCHPAD_SIDE_NONE;
-
-        private void handleFingerEvent(int type, float x) {
-            if (type == SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_UP) {
-
-                this.recordCoordinate(x);
-                this.clearActiveFinger();
-                return;
-            }
-
-            this.fingerDown = true;
-            if (validCoordinate(x)) {
-                this.recordCoordinate(x);
-            } else {
-                this.coordinateValid = false;
-            }
-        }
-
-        private void refreshFinger(SDL_Gamepad gamepad) {
-            if (gamepad == null) {
-                this.clearActiveFinger();
-                return;
-            }
-
-            int touchpadCount = dev.isxander.sdl3java.api.gamepad.SdlGamepad.SDL_GetNumGamepadTouchpads(gamepad);
-            if (touchpadCount <= 0) {
-                this.clearActiveFinger();
-                return;
-            }
-
-            int fingerCount = dev.isxander.sdl3java.api.gamepad.SdlGamepad.SDL_GetNumGamepadTouchpadFingers(gamepad, 0);
-            if (fingerCount <= 0) {
-                this.clearActiveFinger();
-                return;
-            }
-
-            boolean read = dev.isxander.sdl3java.api.gamepad.SdlGamepad.SDL_GetGamepadTouchpadFinger(
-                gamepad,
-                0,
-                0,
-                this.polledFingerState,
-                this.polledX,
-                this.polledY,
-                this.polledPressure
-            );
-            if (!read) {
-
-                return;
-            }
-
-            if (this.polledFingerState.getValue() == 0) {
-                this.clearActiveFinger();
-                return;
-            }
-
-            float x = this.polledX.getValue();
-            this.fingerDown = true;
-            if (validCoordinate(x)) {
-                this.recordCoordinate(x);
-            } else {
-                this.coordinateValid = false;
-            }
-        }
-
-        private void syncButton(boolean down) {
-            long now = System.nanoTime();
-            if (down && !this.buttonDown) {
-                this.pressedSide = this.resolvePressedSide(now);
-            } else if (!down) {
-                if (this.buttonDown) {
-                    this.lastButtonReleaseNanos = now;
-                }
-                this.pressedSide = TOUCHPAD_SIDE_NONE;
-            }
-            this.buttonDown = down;
-        }
-
-        private int resolvePressedSide(long now) {
-            if (this.fingerDown && this.coordinateValid) {
-                return sideFor(this.currentX);
-            }
-
-            boolean belongsToCurrentPress = this.lastCoordinateNanos > this.lastButtonReleaseNanos;
-            boolean recentEnough = now - this.lastCoordinateNanos <= TOUCHPAD_TAP_COORDINATE_GRACE_NANOS;
-            if (belongsToCurrentPress && recentEnough) {
-                return sideFor(this.lastCoordinateX);
-            }
-
-            return TOUCHPAD_SIDE_NONE;
-        }
-
-        private void recordCoordinate(float x) {
-            if (!validCoordinate(x)) {
-                this.coordinateValid = false;
-                return;
-            }
-            this.currentX = x;
-            this.lastCoordinateX = x;
-            this.lastCoordinateNanos = System.nanoTime();
-            this.coordinateValid = true;
-        }
-
-        private void clearActiveFinger() {
-            this.fingerDown = false;
-            this.coordinateValid = false;
-        }
-
-        private static int sideFor(float x) {
-            return x < 0.5F ? TOUCHPAD_SIDE_LEFT : TOUCHPAD_SIDE_RIGHT;
-        }
-
-        private static boolean validCoordinate(float coordinate) {
-            return Float.isFinite(coordinate) && coordinate >= 0.0F && coordinate <= 1.0F;
-        }
-    }
-
-    private record Snapshot(
-        boolean connected,
-        float[] axes,
-        boolean[] buttons,
-        boolean[] rawButtons,
-        int[] rawHats,
-        int touchpadPressSide,
-        GamepadIdentity identity,
-        long readNanos
-    ) {
-        private static Snapshot disconnected() {
-            return new Snapshot(false, new float[AXIS_COUNT], new boolean[BUTTON_COUNT], new boolean[0], new int[0], TOUCHPAD_SIDE_NONE, null, 0L);
-        }
-
-        private float axis(int axis) {
-            return axis >= 0 && axis < this.axes.length ? this.axes[axis] : 0f;
-        }
-
-        private boolean button(int button) {
-            return button >= 0 && button < this.buttons.length && this.buttons[button];
-        }
-
-        private boolean rawInput(RawGamepadInput input) {
-            return switch (input.type()) {
-                case "controller_button" -> this.button(input.index());
-                case "button" -> input.index() >= 0 && input.index() < this.rawButtons.length && this.rawButtons[input.index()];
-                case "hat" -> input.index() >= 0 && input.index() < this.rawHats.length && (this.rawHats[input.index()] & input.value()) == input.value();
-                case "axis" -> axisDirection(this, input.index()) == input.value();
-                default -> false;
-            };
-        }
-
-        private boolean anyCalibrationInputActive() {
-            for (boolean button : this.buttons) {
-                if (button) {
-                    return true;
-                }
-            }
-            for (boolean button : this.rawButtons) {
-                if (button) {
-                    return true;
-                }
-            }
-            for (int hat : this.rawHats) {
-                if (hat != 0) {
-                    return true;
-                }
-            }
-            for (int axis = 0; axis < this.axes.length; axis++) {
-                if (axisDirection(this, axis) != 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public String toString() {
-            return "Snapshot{"
-                + "connected=" + this.connected
-                + ", axes=" + Arrays.toString(this.axes)
-                + ", buttons=" + Arrays.toString(this.buttons)
-                + ", rawButtons=" + Arrays.toString(this.rawButtons)
-                + ", rawHats=" + Arrays.toString(this.rawHats)
-                + ", touchpadPressSide=" + this.touchpadPressSide
-                + ", identity=" + this.identity
-                + ", readNanos=" + this.readNanos
-                + '}';
-        }
-    }
 }
 

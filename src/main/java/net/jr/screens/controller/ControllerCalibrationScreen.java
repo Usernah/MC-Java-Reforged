@@ -12,6 +12,7 @@ import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
 import net.jr.client.ui.hint.glyph.GamepadGlyphThemeState;
 import net.jr.client.ui.hint.render.GlyphTextureBounds;
 import net.jr.client.ui.hint.render.GlyphTextureBoundsCache;
+import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Renderable;
@@ -21,7 +22,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 import org.jspecify.annotations.Nullable;
 
-public final class ControllerCalibrationScreen extends Screen implements ControllerMenuCaptureAware {
+public final class ControllerCalibrationScreen extends Screen implements ControllerBindingCaptureHost {
     private static final Component TITLE = Component.literal("Calibracion de mando");
     private static final String DEBUG_VERSION = "calibration-screen-v2";
     private static final long CAPTURE_COOLDOWN_MS = 250L;
@@ -222,7 +223,7 @@ public final class ControllerCalibrationScreen extends Screen implements Control
     }
 
     @Override
-    public boolean javaReforged$isCapturingControllerBinding() {
+    public boolean isCapturingControllerBinding() {
         return true;
     }
 

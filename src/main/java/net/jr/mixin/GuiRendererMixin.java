@@ -1,7 +1,7 @@
 package net.jr.mixin;
 
-import net.jr.client.render.GuiItemFrameState;
-import net.jr.client.render.GuiItemRenderPass;
+import net.jr.client.render.item.GuiItemFrameState;
+import net.jr.client.render.item.GuiItemRenderPass;
 import net.jr.client.ui.layout.render.UILayoutRenderQueue;
 import net.minecraft.client.gui.render.GuiItemAtlas;
 import net.minecraft.client.gui.render.GuiRenderer;

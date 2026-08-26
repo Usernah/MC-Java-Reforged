@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
-import net.jr.client.input.InputJsonFiles;
+import net.jr.util.JsonFileStore;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -218,7 +218,7 @@ public final class GamepadBindingRegistry {
     }
 
     private void loadFromDisk() {
-        JsonObject root = InputJsonFiles.read(this.filePath);
+        JsonObject root = JsonFileStore.read(this.filePath);
         if (root == null) {
             return;
         }
@@ -261,7 +261,7 @@ public final class GamepadBindingRegistry {
             root.add(playerKey(slotId), this.writeBindings(this.playerBindings[slotId]));
         }
 
-        InputJsonFiles.write(this.filePath, root);
+        JsonFileStore.write(this.filePath, root);
     }
 
     private JsonObject writeBindings(PlayerBindings bindings) {

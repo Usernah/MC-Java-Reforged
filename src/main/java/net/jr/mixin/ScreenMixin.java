@@ -1,6 +1,6 @@
 package net.jr.mixin;
 
-import net.jr.client.input.cursor.ScreenMousePositionResolver;
+import net.jr.client.ui.cursor.ScreenMousePositionResolver;
 import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

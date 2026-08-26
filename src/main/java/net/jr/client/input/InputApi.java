@@ -8,29 +8,22 @@ import net.jr.client.input.binding.GamepadInputChord;
 import net.jr.client.input.gamepad.GamepadAxis;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.input.gamepad.GamepadIdentity;
+import net.jr.client.input.gamepad.GamepadInput;
 import net.jr.client.input.gamepad.RawGamepadInput;
 import net.jr.client.input.gamepad.RawGamepadInputPress;
 import net.jr.client.input.mode.InputMode;
-import net.jr.client.input.sdl.SdlGamepad;
-import net.jr.client.input.simulation.InputSimulation;
-import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.input.GamepadJoinTicker;
-import net.jr.client.runtime.input.InputDeviceRouter;
-import net.jr.client.runtime.input.binding.KeyMappingState;
-import net.jr.client.runtime.state.InputState;
+import net.jr.client.runtime.input.LocalInputContext;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
 public final class InputApi {
-    public static final float DIGITAL_PRESS_THRESHOLD = 0.2F;
-    private static volatile boolean splitTouchpadButtons = true;
+    public static final float DIGITAL_PRESS_THRESHOLD = GamepadInput.DIGITAL_PRESS_THRESHOLD;
 
     private InputApi() {
     }
 
     public static InputMode mode() {
-        return inputState().mode();
+        return LocalInputContext.mode();
     }
 
     public static boolean isGamepadMode() {
@@ -38,14 +31,14 @@ public final class InputApi {
     }
 
     public static void markKeyboardMouseInput() {
-        if (InputSimulation.isActive()) {
+        if (GamepadInput.isSimulationActive()) {
             return;
         }
-        inputState(InputDeviceRouter.KEYBOARD_MOUSE_SLOT).markKeyboardMouseInput();
+        LocalInputContext.markKeyboardMouseInput();
     }
 
     public static void markGamepadInput() {
-        inputState().markGamepadInput();
+        LocalInputContext.markGamepadInput();
     }
 
     public static void markMouseMove(double rawX, double rawY) {
@@ -53,11 +46,11 @@ public final class InputApi {
     }
 
     public static long lastKeyboardMouseInputNanos() {
-        return inputState().lastKeyboardMouseInputNanos();
+        return LocalInputContext.lastKeyboardMouseInputNanos();
     }
 
     public static long lastGamepadInputNanos() {
-        return inputState().lastGamepadInputNanos();
+        return LocalInputContext.lastGamepadInputNanos();
     }
 
     public static boolean isGamepadConnected() {
@@ -65,28 +58,27 @@ public final class InputApi {
     }
 
     public static int keyboardMouseSlotId() {
-        return InputDeviceRouter.keyboardMouseSlotId();
+        return LocalInputContext.keyboardMouseSlotId();
     }
 
     public static boolean canPhysicalMouseDriveSlot(int slotId) {
-        return InputDeviceRouter.canPhysicalMouseDriveSlot(slotId);
+        return LocalInputContext.canPhysicalMouseDriveSlot(slotId);
     }
 
     public static boolean canPhysicalKeyboardDriveSlot(int slotId) {
-        return InputDeviceRouter.canPhysicalKeyboardDriveSlot(slotId);
+        return LocalInputContext.canPhysicalKeyboardDriveSlot(slotId);
     }
 
     public static boolean hasGamepadForSlot(int slotId) {
-        return InputDeviceRouter.hasGamepadForSlot(slotId);
+        return LocalInputContext.hasGamepadForSlot(slotId);
     }
 
     public static boolean splitTouchpadButtons() {
-        return splitTouchpadButtons;
+        return GamepadInput.splitTouchpadButtons();
     }
 
     public static void setSplitTouchpadButtons(boolean enabled) {
-        splitTouchpadButtons = enabled;
-        SdlGamepad.setSplitTouchpad(enabled);
+        GamepadInput.setSplitTouchpadButtons(enabled);
     }
 
     public static boolean canPhysicalMouseDrive() {
@@ -102,128 +94,98 @@ public final class InputApi {
     }
 
     public static List<GamepadDevice> gamepads() {
-        return InputDeviceRouter.devices().stream()
+        return LocalInputContext.devices().stream()
             .map(device -> new GamepadDevice(device.deviceId(), device.identity()))
             .toList();
     }
 
     public static void assignGamepad(long deviceId, int slotId) {
-        InputDeviceRouter.assignGamepad(deviceId, slotId);
+        LocalInputContext.assignGamepad(deviceId, slotId);
     }
 
     public static void unassignGamepad(long deviceId) {
-        InputDeviceRouter.unassignGamepad(deviceId);
+        LocalInputContext.unassignGamepad(deviceId);
     }
 
     @Nullable
     public static GamepadIdentity currentGamepadIdentity() {
         List<Long> ids = selectedGamepadIds();
-        return ids.isEmpty() ? null : SdlGamepad.identity(ids.getFirst());
+        return ids.isEmpty() ? null : GamepadInput.identity(ids.getFirst());
     }
 
     public static void initializeGamepads() {
-        SdlGamepad.initIfNeeded();
+        GamepadInput.initialize();
     }
 
     public static void updateGamepads() {
-        InputSimulation.update();
-        SdlGamepad.update();
+        GamepadInput.update();
     }
 
     public static void maintainGamepads() {
-        SdlGamepad.maintenanceTick();
+        GamepadInput.maintain();
     }
 
     public static void requestGamepadRescan() {
-        SdlGamepad.requestDeviceRescan();
+        GamepadInput.requestRescan();
     }
 
     public static String gamepadDebugStatus() {
-        if (InputSimulation.isActive()) {
-            return InputSimulation.debugStatus();
-        }
-        return SdlGamepad.debugStatus();
+        return GamepadInput.debugStatus();
     }
 
     public static boolean isPressed(GamepadDigitalInput input) {
-        if (InputSimulation.isActive()) {
-            return InputSimulation.isPressed(input);
+        if (GamepadInput.isSimulationActive()) {
+            return GamepadInput.isPressed(List.of(), input);
         }
-        for (long deviceId : selectedGamepadIds()) {
-            if (GamepadJoinTicker.suppressForJoinChord(deviceId, input)) {
+        List<Long> selected = selectedGamepadIds();
+        for (long deviceId : selected) {
+            if (LocalInputContext.suppressForJoinChord(deviceId, input)) {
                 continue;
             }
-            if (SdlGamepad.input(deviceId, input, DIGITAL_PRESS_THRESHOLD)) {
-                return true;
-            }
+            if (GamepadInput.isPressed(List.of(deviceId), input)) return true;
         }
         return false;
     }
 
     public static boolean isPressed(long deviceId, GamepadDigitalInput input) {
-        return SdlGamepad.input(deviceId, input, DIGITAL_PRESS_THRESHOLD);
+        return GamepadInput.isPressed(deviceId, input);
     }
 
     public static float axis(GamepadAxis axis, float deadzone) {
-        if (InputSimulation.isActive()) {
-            return InputSimulation.axis(axis, deadzone);
-        }
-        float strongest = 0.0F;
-        for (long deviceId : selectedGamepadIds()) {
-            float value = SdlGamepad.axis01(deviceId, axis, deadzone);
-            if (Math.abs(value) > Math.abs(strongest)) {
-                strongest = value;
-            }
-        }
-        return strongest;
+        return GamepadInput.axis(selectedGamepadIds(), axis, deadzone);
     }
 
     public static float axis(long deviceId, GamepadAxis axis, float deadzone) {
-        return SdlGamepad.axis01(deviceId, axis, deadzone);
+        return GamepadInput.axis(deviceId, axis, deadzone);
     }
 
     public static float rawAxis(GamepadAxis axis) {
-        if (InputSimulation.isActive()) {
-            return InputSimulation.rawAxis(axis);
-        }
-        float strongest = 0.0F;
-        for (long deviceId : selectedGamepadIds()) {
-            float value = SdlGamepad.rawAxis(deviceId, axis);
-            if (Math.abs(value) > Math.abs(strongest)) {
-                strongest = value;
-            }
-        }
-        return strongest;
+        return GamepadInput.rawAxis(selectedGamepadIds(), axis);
     }
 
     public static float rawAxis(long deviceId, GamepadAxis axis) {
-        return SdlGamepad.rawAxis(deviceId, axis);
+        return GamepadInput.rawAxis(deviceId, axis);
     }
 
     public static void clearCalibrationPresses() {
-        InputSimulation.clearCalibrationPresses();
-        SdlGamepad.clearRawInputPresses();
+        GamepadInput.clearCalibrationPresses();
     }
 
     @Nullable
     public static RawGamepadInputPress pollCalibrationPress() {
-        RawGamepadInputPress simulatedPress = InputSimulation.pollCalibrationPress();
-        if (simulatedPress != null) {
-            return simulatedPress;
-        }
-        return SdlGamepad.pollRawInputPress();
+        return GamepadInput.pollCalibrationPress();
     }
 
     public static boolean hasActiveCalibrationInput() {
-        return InputSimulation.hasActiveCalibrationInput() || SdlGamepad.anyCalibrationInputActive();
+        return GamepadInput.hasActiveCalibrationInput();
     }
 
     public static boolean hasActiveCalibrationInput(long deviceId) {
-        return SdlGamepad.calibrationInputActive(deviceId);
+        return GamepadInput.hasActiveCalibrationInput(deviceId);
     }
 
     public static boolean isRawInputActive(long deviceId, RawGamepadInput input) {
-        return SdlGamepad.rawInputActive(deviceId, input);
+        return GamepadInput.isRawInputActive(deviceId, input);
     }
 
     public static void ensureBindingsLoaded(Minecraft minecraft) {
@@ -248,59 +210,43 @@ public final class InputApi {
     }
 
     public static void resetSlotInputState(int slotId) {
-        SlotScope.run(slotId, () -> {
-            GamepadBindingRegistry.get().resetAppliedBindings();
-            inputState(slotId).clear();
-        });
+        LocalInputContext.resetSlot(slotId);
     }
 
     public static boolean isDown(KeyMapping keyMapping) {
-        return state(keyMapping).isDown();
+        return LocalInputContext.isDown(keyMapping);
     }
 
     public static void setDown(KeyMapping keyMapping, boolean down) {
-        state(keyMapping).setDown(down);
+        LocalInputContext.setDown(keyMapping, down);
     }
 
     public static void click(KeyMapping keyMapping) {
-        state(keyMapping).incrementClickCount();
+        LocalInputContext.click(keyMapping);
     }
 
     public static boolean consumeClick(KeyMapping keyMapping) {
-        return state(keyMapping).consumeClick();
+        return LocalInputContext.consumeClick(keyMapping);
     }
 
     public static void release(KeyMapping keyMapping) {
-        state(keyMapping).release();
+        LocalInputContext.release(keyMapping);
     }
 
     public static int clickCount(KeyMapping keyMapping) {
-        return state(keyMapping).clickCount();
+        return LocalInputContext.clickCount(keyMapping);
     }
 
     public static void setClickCount(KeyMapping keyMapping, int clickCount) {
-        state(keyMapping).setClickCount(clickCount);
+        LocalInputContext.setClickCount(keyMapping, clickCount);
     }
 
     public static int currentSlotId() {
-        Integer slotId = SlotScope.idOrNull();
-        return slotId != null ? slotId : InputDeviceRouter.KEYBOARD_MOUSE_SLOT;
-    }
-
-    private static KeyMappingState state(KeyMapping keyMapping) {
-        return inputState().state(keyMapping);
-    }
-
-    private static InputState inputState() {
-        return inputState(currentSlotId());
-    }
-
-    private static InputState inputState(int slotId) {
-        return ClientRuntime.INSTANCE.slots().slot(slotId).inputState();
+        return LocalInputContext.currentSlotId();
     }
 
     private static List<Long> selectedGamepadIds() {
-        return InputDeviceRouter.gamepadsForSlot(currentSlotId());
+        return LocalInputContext.selectedGamepadIds();
     }
 
     public record GamepadDevice(long deviceId, @Nullable GamepadIdentity identity) {

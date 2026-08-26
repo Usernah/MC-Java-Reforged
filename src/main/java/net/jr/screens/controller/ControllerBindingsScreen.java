@@ -6,6 +6,7 @@ import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -27,7 +28,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Set;
 
-public class ControllerBindingsScreen extends OptionsSubScreen implements ControllerMenuCaptureAware {
+public class ControllerBindingsScreen extends OptionsSubScreen implements ControllerBindingCaptureHost {
     private static final Component TITLE = Component.translatable("controls.keybinds.title");
     private static final Component MODE_LABEL = Component.translatable("controls.java_reforged.mode");
     private static final Component CAPTURE_HINT = Component.translatable("controls.java_reforged.capture_hint");
@@ -262,7 +263,7 @@ public class ControllerBindingsScreen extends OptionsSubScreen implements Contro
     }
 
     @Override
-    public boolean javaReforged$isCapturingControllerBinding() {
+    public boolean isCapturingControllerBinding() {
         return selectedControllerKey != null;
     }
 

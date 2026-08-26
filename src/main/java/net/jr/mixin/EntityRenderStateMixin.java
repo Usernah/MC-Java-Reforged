@@ -1,6 +1,6 @@
 package net.jr.mixin;
 
-import net.jr.client.render.LegacyNameTagRenderState;
+import net.jr.client.render.nametag.LegacyNameTagRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;

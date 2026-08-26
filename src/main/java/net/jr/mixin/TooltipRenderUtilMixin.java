@@ -1,6 +1,6 @@
 package net.jr.mixin;
 
-import net.jr.client.render.TooltipBackgroundPass;
+import net.jr.client.ui.tooltip.TooltipBackgroundPass;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
 import net.minecraft.resources.Identifier;

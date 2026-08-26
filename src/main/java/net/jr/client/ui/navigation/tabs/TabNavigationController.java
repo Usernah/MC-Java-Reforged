@@ -8,7 +8,7 @@ import javax.annotation.Nullable;
 import net.jr.client.components.navigation.TabNavigator;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.GamepadInputChord;
-import net.jr.client.input.binding.UiInputBinding;
+import net.jr.client.ui.navigation.UiInputBinding;
 import net.jr.client.ui.hint.model.ControlHintRequest;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.input.KeyEvent;

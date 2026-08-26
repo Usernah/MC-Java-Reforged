@@ -1,6 +1,6 @@
 package net.jr.client.ui.container.slots;
 
-import net.jr.client.input.cursor.CursorMagnetTarget;
+import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.Nullable;
 

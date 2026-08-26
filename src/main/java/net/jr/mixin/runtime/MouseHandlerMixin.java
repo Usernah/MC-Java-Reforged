@@ -4,7 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import java.nio.file.Path;
 import java.util.List;
-import net.jr.client.input.runtime.MappedActionProcessor;
+import net.jr.client.runtime.input.LocalInputActionHandler;
 import net.jr.client.runtime.input.LocalScreenInput;
 import net.jr.client.runtime.context.SlotExecution;
 import net.minecraft.client.MouseHandler;
@@ -70,7 +70,7 @@ public abstract class MouseHandlerMixin {
         MouseButtonEvent event,
         boolean doubleClick
     ) {
-        MappedActionProcessor.playPhysicalMouseContainerActionFeedback(screen, event);
+        LocalInputActionHandler.playPhysicalMouseContainerActionFeedback(screen, event);
         return screen.mouseClicked(event, doubleClick);
     }
 }

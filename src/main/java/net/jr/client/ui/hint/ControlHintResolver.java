@@ -5,7 +5,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.GamepadInputChord;
-import net.jr.client.input.binding.UiInputBinding;
+import net.jr.client.ui.navigation.UiInputBinding;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;

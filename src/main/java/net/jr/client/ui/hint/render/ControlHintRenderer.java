@@ -22,14 +22,14 @@ public final class ControlHintRenderer {
     private ControlHintRenderer() {
     }
 
-    private static MetricsResolver metrics() {
+    private static ControlHintMetrics metrics() {
         return SplitScreen.isActive()
-                ? MetricsResolver.HD
-                : MetricsResolver.DEFAULT;
+                ? ControlHintMetrics.HD
+                : ControlHintMetrics.DEFAULT;
     }
 
     public static int reservedScreenBottomHeight() {
-        MetricsResolver metrics = metrics();
+        ControlHintMetrics metrics = metrics();
 
         return (int)Math.ceil(
                 metrics.barHeight()
@@ -37,29 +37,7 @@ public final class ControlHintRenderer {
         );
     }
 
-    public static void render(
-            ControlHintContext context,
-            GuiGraphicsExtractor graphics,
-            List<ResolvedControlHint> hints
-    ) {
-        if (hints.isEmpty()) {
-            return;
-        }
-
-        if (ControlHintCompositor.render(context, graphics, hints)) {
-            return;
-        }
-
-        renderDirect(
-                context,
-                graphics,
-                hints,
-                graphics.guiWidth(),
-                graphics.guiHeight()
-        );
-    }
-
-    static void renderDirect(
+    public static void renderDirect(
             ControlHintContext context,
             GuiGraphicsExtractor graphics,
             List<ResolvedControlHint> hints,
@@ -77,7 +55,7 @@ public final class ControlHintRenderer {
         );
     }
 
-    static void renderIcons(
+    public static void renderIcons(
             ControlHintContext context,
             GuiGraphicsExtractor graphics,
             List<ResolvedControlHint> hints,
@@ -95,7 +73,7 @@ public final class ControlHintRenderer {
         );
     }
 
-    static void renderText(
+    public static void renderText(
             ControlHintContext context,
             GuiGraphicsExtractor graphics,
             List<ResolvedControlHint> hints,
@@ -122,7 +100,7 @@ public final class ControlHintRenderer {
             boolean drawIcons,
             boolean drawText
     ) {
-        MetricsResolver metrics = metrics();
+        ControlHintMetrics metrics = metrics();
 
         renderMenu(
                 graphics,
@@ -140,7 +118,7 @@ public final class ControlHintRenderer {
             float canvasHeight,
             boolean renderIcons,
             boolean renderText,
-            MetricsResolver metrics
+            ControlHintMetrics metrics
     ) {
         float rowHeight = rowHeight(hints, metrics);
 
@@ -220,7 +198,7 @@ public final class ControlHintRenderer {
             float canvasHeight,
             boolean renderIcons,
             boolean renderText,
-            MetricsResolver metrics
+            ControlHintMetrics metrics
     ) {
         List<ResolvedControlHint> left = new ArrayList<>();
         List<ResolvedControlHint> right = new ArrayList<>();
@@ -335,7 +313,7 @@ public final class ControlHintRenderer {
             float centerY,
             boolean rightAligned,
             float alpha,
-            MetricsResolver metrics
+            ControlHintMetrics metrics
     ) {
         Draw.TextBuilder labelText = Draw.text(label)
                 .scale(metrics.hudTextScale())
@@ -477,7 +455,7 @@ public final class ControlHintRenderer {
 
     private static float rowHeight(
             List<ResolvedControlHint> hints,
-            MetricsResolver metrics
+            ControlHintMetrics metrics
     ) {
         float height =
                 metrics.hintBoxSize();
@@ -494,7 +472,7 @@ public final class ControlHintRenderer {
 
     private static float rowHeight(
             ResolvedControlHint hint,
-            MetricsResolver metrics
+            ControlHintMetrics metrics
     ) {
         return Math.max(
                 metrics.hintBoxSize(),
@@ -502,11 +480,11 @@ public final class ControlHintRenderer {
         );
     }
 
-    static int compositionHeight(
+    public static int compositionHeight(
             ControlHintContext context,
             List<ResolvedControlHint> hints
     ) {
-        MetricsResolver metrics = metrics();
+        ControlHintMetrics metrics = metrics();
 
         if (!context.isHud()) {
             return (int)Math.ceil(
@@ -547,7 +525,7 @@ public final class ControlHintRenderer {
     private static float columnHeight(
             List<ResolvedControlHint> hints,
             HintPlacement placement,
-            MetricsResolver metrics
+            ControlHintMetrics metrics
     ) {
         float height = 0F;
         boolean found = false;

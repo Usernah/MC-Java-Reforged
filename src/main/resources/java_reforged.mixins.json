@@ -34,7 +34,6 @@
     "WindowMixin",
     "accessors.CreativeModeInventoryScreenAccessor",
     "accessors.FontAccessor",
-    "accessors.GuiGraphicsExtractorAccessor",
     "accessors.HudAccessor",
     "accessors.AbstractContainerScreenAccessor",
     "accessors.ClientInputAccessor",

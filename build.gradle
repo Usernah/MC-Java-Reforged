@@ -74,7 +74,7 @@ neoForge {
     runs {
         client {
             client()
-            programArguments.addAll '--width', '1707', '--height', '720'
+            programArguments.addAll '--width', '1600', '--height', '720'
             if (project.hasProperty('devUsername')) {
                 programArguments.addAll '--username', project.property('devUsername').toString()
             }

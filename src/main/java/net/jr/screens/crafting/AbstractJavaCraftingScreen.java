@@ -12,8 +12,8 @@ import net.jr.client.components.widgets.recipe.RecipeEntryView;
 import net.jr.client.components.widgets.recipe.RecipeGridElement;
 import net.jr.client.components.widgets.recipe.RecipeSlotElement;
 import net.jr.client.components.widgets.recipe.RecipeVariantView;
-import net.jr.client.input.binding.UiInputBinding;
-import net.jr.client.input.cursor.CursorMagnetTarget;
+import net.jr.client.ui.navigation.UiInputBinding;
+import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
@@ -25,6 +25,7 @@ import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
+import net.jr.client.ui.hint.provider.RecipeControlHintHost;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -56,7 +57,8 @@ import java.util.Map;
 
 public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu>
         extends AbstractContainerScreen<M>
-        implements UiActionHandler, CustomSlotLayout, TabNavigationHost, FocusCursorVisibilityHost {
+        implements UiActionHandler, CustomSlotLayout, TabNavigationHost, FocusCursorVisibilityHost,
+        RecipeControlHintHost {
 
     private static final int CRAFTING_TAB_WIDTH = 32;
     private static final int CRAFTING_TAB_HEIGHT = 27;
@@ -631,6 +633,18 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
         return this.focusRegion == FocusRegion.RECIPES && this.recipeGrid != null
                 ? this.recipeGrid.focusedActivationFeedback(action)
                 : null;
+    }
+
+    @Override
+    public RecipeControlHintHost.Activation controlHintActivation(UiAction action) {
+        RecipeSlotElement.ActivationFeedback feedback = focusedRecipeActivationFeedback(action);
+        if (feedback == RecipeSlotElement.ActivationFeedback.CRAFT) {
+            return RecipeControlHintHost.Activation.CRAFT;
+        }
+        if (feedback == RecipeSlotElement.ActivationFeedback.CLICK) {
+            return RecipeControlHintHost.Activation.VIEW_VARIANTS;
+        }
+        return RecipeControlHintHost.Activation.NONE;
     }
 
     private boolean fitsCraftingGrid(RecipeDisplay display) {

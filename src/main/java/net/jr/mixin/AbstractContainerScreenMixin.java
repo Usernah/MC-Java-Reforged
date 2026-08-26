@@ -1,7 +1,7 @@
 package net.jr.mixin;
 
-import net.jr.client.render.ContainerHighlightPolicy;
-import net.jr.client.render.FloatingItemRenderPass;
+import net.jr.client.ui.container.ContainerHighlightPolicy;
+import net.jr.client.ui.container.slots.FloatingItemRenderPass;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.item.ItemStack;

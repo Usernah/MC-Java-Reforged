@@ -1,17 +1,16 @@
 package net.jr.client.ui.hint;
 
 import net.jr.client.ui.hint.provider.ControlHintProvider;
-import net.jr.client.ui.hint.render.ControlHintRenderer;
 import net.jr.client.ui.hint.model.ControlHintRequest;
 import net.jr.client.ui.hint.model.ResolvedControlHint;
-import net.jr.screens.controller.ControllerMenuCaptureAware;
+import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
 import net.jr.client.ui.hint.provider.ContainerControlHintProvider;
 import net.jr.client.ui.hint.provider.HudControlHintProvider;
 import net.jr.client.ui.hint.provider.PauseMenuControlHintProvider;
 import net.jr.client.ui.hint.provider.TabNavigationControlHintProvider;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -37,28 +36,30 @@ public final class ControlHintPipeline {
         PROVIDERS.addIfAbsent(Objects.requireNonNull(provider, "provider"));
     }
 
-    public static void renderHud(GuiGraphicsExtractor gui) {
+    @Nullable
+    public static Result resolveHud() {
         Minecraft minecraft = Minecraft.getInstance();
         ControlHintContext context = ControlHintContext.hud(minecraft);
         if (context.screen() != null || context.player() == null) {
-            return;
+            return null;
         }
-
-        renderInternal(context, gui);
+        return resolveInternal(context);
     }
 
-    public static void renderScreen(Screen screen, GuiGraphicsExtractor gui) {
-        renderInternal(ControlHintContext.screen(Minecraft.getInstance(), screen), gui);
+    @Nullable
+    public static Result resolveScreen(Screen screen) {
+        return resolveInternal(ControlHintContext.screen(Minecraft.getInstance(), screen));
     }
 
-    private static void renderInternal(ControlHintContext context, GuiGraphicsExtractor gui) {
+    @Nullable
+    private static Result resolveInternal(ControlHintContext context) {
         if (!context.isGamepadMode()) {
-            return;
+            return null;
         }
 
-        if (context.screen() instanceof ControllerMenuCaptureAware captureAware
-            && captureAware.javaReforged$isCapturingControllerBinding()) {
-            return;
+        if (context.screen() instanceof ControllerBindingCaptureHost captureHost
+            && captureHost.isCapturingControllerBinding()) {
+            return null;
         }
 
         List<ControlHintRequest> collected = new ArrayList<>();
@@ -69,15 +70,20 @@ public final class ControlHintPipeline {
         }
 
         if (collected.isEmpty()) {
-            return;
+            return null;
         }
 
         Set<ControlHintRequest> orderedUnique = new LinkedHashSet<>(collected);
         List<ResolvedControlHint> resolved = ControlHintResolver.resolve(context, List.copyOf(orderedUnique));
         if (resolved.isEmpty()) {
-            return;
+            return null;
         }
+        return new Result(context, resolved);
+    }
 
-        ControlHintRenderer.render(context, gui, resolved);
+    public record Result(ControlHintContext context, List<ResolvedControlHint> hints) {
+        public Result {
+            hints = List.copyOf(hints);
+        }
     }
 }

@@ -8,7 +8,7 @@ import net.jr.client.runtime.render.tick.HandRendererTicker;
 import net.jr.client.runtime.render.target.ViewportRenderTargets;
 import net.jr.client.runtime.render.pass.WorldExtractionPass;
 import net.jr.client.runtime.render.pass.WorldRenderPass;
-import net.jr.client.ui.hint.render.ControlHintCompositor;
+import net.jr.client.runtime.render.pass.ControlHintRenderPass;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
@@ -47,7 +47,7 @@ public abstract class GameRendererMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     private void javaReforged$closeSlotRenderTargets(CallbackInfo ci) {
-        ControlHintCompositor.closeAll();
+        ControlHintRenderPass.closeAll();
         ViewportRenderTargets.closeAll();
     }
 

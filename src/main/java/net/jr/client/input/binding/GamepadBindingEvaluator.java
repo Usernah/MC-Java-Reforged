@@ -38,7 +38,7 @@ final class GamepadBindingEvaluator {
                 && !isShadowedByPressedSuperset(sample, samples);
             boolean previous = this.appliedStates.getOrDefault(sample.keyName(), false);
             if (down && !previous) {
-                KeyMappingClickBridge.increment(sample.keyMapping());
+                InputApi.click(sample.keyMapping());
             }
             if (down != previous) {
                 sample.keyMapping().setDown(down);

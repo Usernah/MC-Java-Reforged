@@ -1,6 +1,6 @@
 package net.jr.screens.crafting;
 
-import net.jr.client.render.ItemRenderOpacity;
+import net.jr.client.render.item.ItemRenderOpacity;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
 import net.jr.client.ui.container.slots.SlotGrid;
 import net.jr.client.ui.container.slots.SlotGroup;

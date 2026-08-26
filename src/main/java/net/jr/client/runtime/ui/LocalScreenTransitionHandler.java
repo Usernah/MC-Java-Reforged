@@ -2,9 +2,9 @@ package net.jr.client.runtime.ui;
 
 import javax.annotation.Nullable;
 import net.jr.client.input.InputApi;
-import net.jr.client.input.cursor.CursorHider;
+import net.jr.client.runtime.input.LocalCursorVisibility;
 import net.jr.client.input.mode.InputMode;
-import net.jr.client.input.runtime.GamepadInputProcessor;
+import net.jr.client.runtime.input.LocalGamepadInputHandler;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.SlotExecution;
@@ -35,16 +35,16 @@ public final class LocalScreenTransitionHandler {
 
     public static void onSlotScreenChanged(Minecraft minecraft, int slotId, @Nullable Screen screen) {
         if (screen == null) {
-            CursorHider.clearHiddenForSlot(slotId);
-            CursorHider.clearReplacementHiddenForSlot(slotId);
-            GamepadInputProcessor.releaseFocusedSlotCursor(slotId);
+            LocalCursorVisibility.clearHiddenForSlot(slotId);
+            LocalCursorVisibility.clearReplacementHiddenForSlot(slotId);
+            LocalGamepadInputHandler.releaseFocusedSlotCursor(slotId);
         } else {
             if (shouldSeedControllerCursor(slotId)) {
-                GamepadInputProcessor.centerControllerCursorForScreen(slotId);
+                LocalGamepadInputHandler.centerControllerCursorForScreen(slotId);
             }
-            CursorHider.setReplacementHiddenForSlot(slotId, true);
+            LocalCursorVisibility.setReplacementHiddenForSlot(slotId, true);
         }
-        CursorHider.sync();
+        LocalCursorVisibility.sync();
     }
 
     public static void closeCompletedPrimaryJoiningScreen(Minecraft minecraft, @Nullable Screen screen) {

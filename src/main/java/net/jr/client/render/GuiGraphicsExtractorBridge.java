@@ -2,10 +2,12 @@ package net.jr.client.render;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 public interface GuiGraphicsExtractorBridge {
+    GuiRenderState javaReforged$getGuiRenderState();
 
     void javaReforged$enablePreciseScissor(
             double left,

@@ -1,7 +1,7 @@
 package net.jr.client.runtime.input;
 
 import net.jr.client.input.InputApi;
-import net.jr.client.input.runtime.GamepadInputProcessor;
+import net.jr.client.runtime.input.LocalGamepadInputHandler;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.minecraft.client.MouseHandler;
@@ -20,7 +20,7 @@ public final class LocalScreenInputHandler {
         }
         mouseHandler.releaseMouse();
         if (ClientRuntime.INSTANCE.viewports().presentedCount() > 1) {
-            GamepadInputProcessor.centerPhysicalCursorForScreen(slotId);
+            LocalGamepadInputHandler.centerPhysicalCursorForScreen(slotId);
         }
     }
 

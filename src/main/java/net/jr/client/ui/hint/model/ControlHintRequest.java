@@ -2,7 +2,7 @@ package net.jr.client.ui.hint.model;
 
 import java.util.List;
 import java.util.Objects;
-import net.jr.client.input.binding.UiInputBinding;
+import net.jr.client.ui.navigation.UiInputBinding;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 

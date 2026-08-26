@@ -7,9 +7,8 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import java.util.function.Consumer;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
-import net.jr.client.render.PixelArtCompositeRenderState;
+import net.jr.client.render.state.PixelArtCompositeRenderState;
 import net.jr.client.ui.layout.UILayout;
-import net.jr.mixin.accessors.GuiGraphicsExtractorAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.render.TextureSetup;
@@ -57,7 +56,7 @@ public final class UILayoutRenderTarget implements AutoCloseable {
         int alphaChannel = Math.clamp(Math.round(alpha * 255.0F), 0, 255);
         int premultipliedTint = ARGB.color(alphaChannel, alphaChannel, alphaChannel, alphaChannel);
         Matrix3x2f pose = new Matrix3x2f().translation(offsetX, offsetY);
-        GuiRenderState parentState = ((GuiGraphicsExtractorAccessor) parentGraphics).javaReforged$getGuiRenderState();
+        GuiRenderState parentState = ((GuiGraphicsExtractorBridge) parentGraphics).javaReforged$getGuiRenderState();
         parentState.addBlitToCurrentLayer(
             new BlitRenderState(
                 RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
@@ -113,7 +112,7 @@ public final class UILayoutRenderTarget implements AutoCloseable {
         Matrix3x2f pose = new Matrix3x2f(parentGraphics.pose())
             .translate(destinationX, destinationY)
             .scale(destinationScaleX, destinationScaleY);
-        GuiRenderState parentState = ((GuiGraphicsExtractorAccessor) parentGraphics).javaReforged$getGuiRenderState();
+        GuiRenderState parentState = ((GuiGraphicsExtractorBridge) parentGraphics).javaReforged$getGuiRenderState();
         parentState.addGuiElement(
             new PixelArtCompositeRenderState(
                 TextureSetup.singleTexture(

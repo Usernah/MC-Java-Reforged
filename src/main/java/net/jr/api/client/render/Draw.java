@@ -8,10 +8,9 @@ import net.jr.api.client.render.font.FontHolder;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.video.VideoHolder;
 import net.jr.client.meta.MetaManager;
-import net.jr.client.render.AnimatedTextureRenderState;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
+import net.jr.client.render.state.AnimatedTextureRenderState;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
-import net.jr.mixin.accessors.GuiGraphicsExtractorAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -635,7 +634,7 @@ public final class Draw {
                 return;
             }
 
-            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javaReforged$getGuiRenderState();
+            var renderState = ((GuiGraphicsExtractorBridge) graphics).javaReforged$getGuiRenderState();
             var scissor = ((GuiGraphicsExtractorBridge) graphics).javaReforged$currentScissor();
             renderState.addGuiElement(new TiledBlitRenderState(
                 RenderPipelines.GUI_TEXTURED,
@@ -764,7 +763,7 @@ public final class Draw {
                 return;
             }
 
-            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javaReforged$getGuiRenderState();
+            var renderState = ((GuiGraphicsExtractorBridge) graphics).javaReforged$getGuiRenderState();
             var scissor = ((GuiGraphicsExtractorBridge) graphics).javaReforged$currentScissor();
             renderState.addGuiElement(new AnimatedTextureRenderState(
                 this.textureSetup(),
@@ -813,7 +812,7 @@ public final class Draw {
                 return;
             }
 
-            var renderState = ((GuiGraphicsExtractorAccessor) graphics).javaReforged$getGuiRenderState();
+            var renderState = ((GuiGraphicsExtractorBridge) graphics).javaReforged$getGuiRenderState();
             var scissor = ((GuiGraphicsExtractorBridge) graphics).javaReforged$currentScissor();
             renderState.addGuiElement(new BlitRenderState(
                 RenderPipelines.GUI_TEXTURED,

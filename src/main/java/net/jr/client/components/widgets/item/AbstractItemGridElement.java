@@ -3,7 +3,7 @@ package net.jr.client.components.widgets.item;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.components.widgets.ScrollPanelElement;
-import net.jr.client.input.cursor.CursorMagnetTarget;
+import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 

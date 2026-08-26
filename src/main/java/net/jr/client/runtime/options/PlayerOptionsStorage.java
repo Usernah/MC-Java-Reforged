@@ -4,7 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.nio.file.Path;
 import javax.annotation.Nullable;
-import net.jr.client.input.InputJsonFiles;
+import net.jr.util.JsonFileStore;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.runtime.state.OptionsState;
@@ -29,7 +29,7 @@ public final class PlayerOptionsStorage {
         }
 
         this.filePath = minecraft.gameDirectory.toPath().resolve(FILE_NAME);
-        JsonObject root = InputJsonFiles.read(this.filePath);
+        JsonObject root = JsonFileStore.read(this.filePath);
         if (root != null) {
             for (LocalClientSlot slot : this.slots.all()) {
                 JsonElement element = root.get(playerKey(slot.id()));
@@ -52,7 +52,7 @@ public final class PlayerOptionsStorage {
         for (LocalClientSlot slot : this.slots.all()) {
             root.add(playerKey(slot.id()), this.write(slot.optionsState()));
         }
-        InputJsonFiles.write(this.filePath, root);
+        JsonFileStore.write(this.filePath, root);
     }
 
     private void read(OptionsState state, JsonObject player) {

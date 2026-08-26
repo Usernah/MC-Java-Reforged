@@ -10,7 +10,6 @@ import net.jr.client.runtime.render.state.HudStateScope;
 import net.jr.client.runtime.ui.LocalChatRouter;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
-import net.jr.client.ui.hint.ControlHintPipeline;
 import net.jr.client.ui.hud.MinimapHudOverlay;
 import net.jr.client.ui.hud.PlayerNameHudOverlay;
 import net.jr.mixin.accessors.HudAccessor;
@@ -74,7 +73,7 @@ public final class HudRenderPass {
         try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
             hud.extractRenderState(graphics, deltaTracker);
             // MinimapHudOverlay.extract(graphics);
-            ControlHintPipeline.renderHud(graphics);
+            ControlHintRenderPass.renderHud(graphics);
             if (SplitScreen.isActive()) {
                 PlayerNameHudOverlay.render(graphics);
             }

@@ -6,7 +6,7 @@ import net.jr.client.components.interfaces.IWidgetSoundHandler;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.input.InputApi;
-import net.jr.client.input.runtime.MappedActionProcessor;
+import net.jr.client.runtime.input.LocalInputActionHandler;
 import net.jr.client.sound.action.InputActionSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -23,7 +23,7 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
         switch (event) {
             case FOCUS -> InputActionSounds.playHover();
             case PRESS -> {
-                MappedActionProcessor.suppressNextScreenTransitionSound();
+                LocalInputActionHandler.suppressNextScreenTransitionSound();
                 InputActionSounds.playClick();
             }
             case HOVER, UNHOVER, RELEASE -> {

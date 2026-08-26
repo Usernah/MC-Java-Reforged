@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.client.meta.MetaManager;
-import net.jr.client.render.ModRenderPipelines;
+import net.jr.client.render.pipeline.ModRenderPipelines;
 import net.jr.client.ui.dsl.UiDocumentManager;
 import net.jr.api.client.render.font.FontRegister;
 import net.jr.registry.ModFonts;

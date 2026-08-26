@@ -9,8 +9,6 @@ import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.jr.client.ui.container.actions.CreativeContainerActions;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
 import net.jr.client.components.navigation.UiAction;
-import net.jr.client.components.widgets.recipe.RecipeSlotElement;
-import net.jr.screens.crafting.AbstractJavaCraftingScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.inventory.ChestMenu;
@@ -105,24 +103,23 @@ public final class ContainerControlHintProvider implements ControlHintProvider {
             return hints;
         }
 
-        if (screen instanceof AbstractJavaCraftingScreen<?> craftingScreen
-                && craftingScreen.hasTargetedRecipe()) {
-            RecipeSlotElement.ActivationFeedback primary =
-                    craftingScreen.focusedRecipeActivationFeedback(UiAction.ACCEPT);
-            RecipeSlotElement.ActivationFeedback alternate =
-                    craftingScreen.focusedRecipeActivationFeedback(UiAction.ALTERNATE);
-            if (primary == RecipeSlotElement.ActivationFeedback.CRAFT) {
+        if (screen instanceof RecipeControlHintHost recipeHost) {
+            RecipeControlHintHost.Activation primary =
+                    recipeHost.controlHintActivation(UiAction.ACCEPT);
+            RecipeControlHintHost.Activation alternate =
+                    recipeHost.controlHintActivation(UiAction.ALTERNATE);
+            if (primary == RecipeControlHintHost.Activation.CRAFT) {
                 hints.add(new ControlHintRequest(
                         ModKeyBindings.UI_CONFIRM,
                         Component.translatable("hint.container.java_reforged.craft")
                 ));
-            } else if (primary == RecipeSlotElement.ActivationFeedback.CLICK) {
+            } else if (primary == RecipeControlHintHost.Activation.VIEW_VARIANTS) {
                 hints.add(new ControlHintRequest(
                         ModKeyBindings.UI_CONFIRM,
                         Component.translatable("hint.container.java_reforged.view_variants")
                 ));
             }
-            if (alternate == RecipeSlotElement.ActivationFeedback.CRAFT) {
+            if (alternate == RecipeControlHintHost.Activation.CRAFT) {
                 hints.add(new ControlHintRequest(
                         ModKeyBindings.UI_ALTERNATE,
                         Component.translatable("hint.container.java_reforged.craft")

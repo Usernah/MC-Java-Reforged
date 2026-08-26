@@ -1,7 +1,7 @@
 package net.jr.client.runtime.client;
 
 import javax.annotation.Nullable;
-import net.jr.client.input.SlotCursorView;
+import net.jr.client.runtime.input.SlotCursorView;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.state.*;
 import net.minecraft.client.Camera;
