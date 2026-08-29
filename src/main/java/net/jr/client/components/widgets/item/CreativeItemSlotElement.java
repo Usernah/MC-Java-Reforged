@@ -17,18 +17,21 @@ public class CreativeItemSlotElement extends JavaBaseWidget {
     private final ItemStack stack;
     private final Consumer<ItemStack> selection;
     private final Consumer<ItemStack> focusedPrimarySelection;
+    private final Consumer<ItemStack> focusedAlternateSelection;
 
     public CreativeItemSlotElement(
             int width,
             int height,
             ItemStack stack,
             Consumer<ItemStack> selection,
-            Consumer<ItemStack> focusedPrimarySelection
+            Consumer<ItemStack> focusedPrimarySelection,
+            Consumer<ItemStack> focusedAlternateSelection
     ) {
         super(0, 0, width, height, Component.empty());
         this.stack = stack == null ? ItemStack.EMPTY : stack;
         this.selection = selection == null ? ignored -> {} : selection;
         this.focusedPrimarySelection = focusedPrimarySelection == null ? ignored -> {} : focusedPrimarySelection;
+        this.focusedAlternateSelection = focusedAlternateSelection == null ? ignored -> {} : focusedAlternateSelection;
     }
 
     @Override protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -48,7 +51,7 @@ public class CreativeItemSlotElement extends JavaBaseWidget {
             return true;
         }
         if (action != UiAction.ALTERNATE) return false;
-        this.selection.accept(this.stack);
+        this.focusedAlternateSelection.accept(this.stack);
         return true;
     }
 

@@ -1,7 +1,5 @@
 package net.jr.client.meta;
 
-import net.jr.api.client.meta.Meta;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;

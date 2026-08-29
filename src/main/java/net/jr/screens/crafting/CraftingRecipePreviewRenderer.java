@@ -48,7 +48,8 @@ final class CraftingRecipePreviewRenderer {
             ContextMap displayContext,
             SlotGrid slots,
             AbstractContainerMenu menu,
-            Inventory inventory
+            Inventory inventory,
+            boolean craftable
     ) {
         SlotDisplay[] ingredients = this.placeIngredients(display);
         if (ingredients == null) {
@@ -74,11 +75,26 @@ final class CraftingRecipePreviewRenderer {
             this.renderIngredient(graphics, slots.get(this.craftingGridGroup, index), choice);
         }
 
-        SlotDisplay result = resultOf(display);
-        if (result != null) {
-            ItemStack resultStack = selectDisplayStack(result.resolveForStacks(displayContext), cycle);
-            this.renderResult(graphics, slots.get(this.craftingResultGroup, 0), resultStack);
+        ItemStack resultStack = this.resultStack(display, displayContext);
+        if (!resultStack.isEmpty()) {
+            this.renderResult(
+                    graphics,
+                    slots.get(this.craftingResultGroup, 0),
+                    resultStack,
+                    craftable
+            );
         }
+    }
+
+    ItemStack resultStack(RecipeDisplay display, ContextMap displayContext) {
+        SlotDisplay result = resultOf(display);
+        if (result == null) {
+            return ItemStack.EMPTY;
+        }
+        int cycle = Minecraft.getInstance().level == null
+                ? 0
+                : (int)(Minecraft.getInstance().level.getGameTime() / 30L);
+        return selectDisplayStack(result.resolveForStacks(displayContext), cycle);
     }
 
     private SlotDisplay[] placeIngredients(RecipeDisplay display) {
@@ -120,14 +136,39 @@ final class CraftingRecipePreviewRenderer {
         }
     }
 
-    private void renderResult(GuiGraphicsExtractor graphics, SlotPos slot, ItemStack result) {
+    private void renderResult(
+            GuiGraphicsExtractor graphics,
+            SlotPos slot,
+            ItemStack result,
+            boolean available
+    ) {
         if (slot == null || result.isEmpty()) {
             return;
         }
         int itemSize = Math.min(24, slot.itemSize());
         int x = slot.x() + (slot.width() - itemSize) / 2;
         int y = slot.y() + (slot.height() - itemSize) / 2;
-        drawScaledItem(graphics, result, x, y, itemSize, 1.0F, true);
+        if (!available) {
+            graphics.fill(
+                    slot.x() + 1,
+                    slot.y() + 1,
+                    slot.x() + slot.width() - 1,
+                    slot.y() + slot.height() - 1,
+                    MISSING_BACKGROUND
+            );
+        }
+        drawScaledItem(
+                graphics,
+                result,
+                x,
+                y,
+                itemSize,
+                available ? 1.0F : MISSING_ITEM_ALPHA,
+                true
+        );
+        if (!available) {
+            graphics.fill(x, y, x + itemSize, y + itemSize, MISSING_TINT);
+        }
     }
 
     private static void drawScaledItem(

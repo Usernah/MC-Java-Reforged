@@ -1,4 +1,4 @@
-package net.jr.api.client.ui.dsl;
+package net.jr.client.ui.dsl;
 
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.UiFileType;

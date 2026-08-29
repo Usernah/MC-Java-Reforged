@@ -1,7 +1,7 @@
 package net.jr.client.ui;
 
-import net.jr.api.client.ui.dsl.UiCompiledDocument;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.ButtonDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument;
+import net.jr.client.ui.dsl.UiCompiledDocument.ButtonDefinition;
 import net.jr.client.ui.layout.UILayout;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 

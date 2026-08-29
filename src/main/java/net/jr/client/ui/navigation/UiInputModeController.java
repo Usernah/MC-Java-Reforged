@@ -35,7 +35,11 @@ public final class UiInputModeController {
             state.setObservedScreen(screen);
             observeCurrentRawMouse(minecraft);
             if (isFocusNavigationActive()) {
-                ScreenFocusController.initializeFocusFromPointer(screen, minecraft);
+                if (!ScreenFocusController.hasNavigationFocus(screen)) {
+                    ScreenFocusController.initializeFocusFromPointer(screen, minecraft);
+                } else {
+                    LocalGamepadInputHandler.syncVirtualCursorToFocus(screen);
+                }
             }
         }
 

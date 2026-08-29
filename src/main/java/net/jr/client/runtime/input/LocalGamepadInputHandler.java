@@ -364,17 +364,48 @@ public final class LocalGamepadInputHandler {
     }
 
     public static void moveVirtualCursorToFocusedSlot(int slotId, double guiX, double guiY) {
+        setCursorPosition(slotId, guiX, guiY, true);
+    }
+
+    public static void moveCursorTo(int slotId, double guiX, double guiY) {
+        setCursorPosition(slotId, guiX, guiY, false);
+    }
+
+    private static void setCursorPosition(int slotId, double guiX, double guiY, boolean animate) {
+        LocalClientSlotRegistry.requireSlotId(slotId);
+        Minecraft minecraft = Minecraft.getInstance();
+        Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
+        int width = cursorSpaceWidth(minecraft, slotId, screen);
+        int height = cursorSpaceHeight(minecraft, slotId, screen);
+        double targetX = Math.max(0.0D, Math.min(width, guiX));
+        double targetY = Math.max(0.0D, Math.min(height, guiY));
         LocalCursorState state = cursorState(slotId);
         double visualX = visualCursorX(slotId);
         double visualY = visualCursorY(slotId);
-        state.virtualCursorX = guiX;
-        state.virtualCursorY = guiY;
-        state.focusCursorAnimationStartX = visualX;
-        state.focusCursorAnimationStartY = visualY;
-        state.focusCursorAnimationTargetX = guiX;
-        state.focusCursorAnimationTargetY = guiY;
-        state.focusCursorAnimationActive = true;
+        state.virtualCursorX = targetX;
+        state.virtualCursorY = targetY;
+        state.lastScreen = screen;
         state.cursorInputSource = CursorInputSource.FOCUS_SLOT;
+        if (animate) {
+            state.focusCursorAnimationStartX = visualX;
+            state.focusCursorAnimationStartY = visualY;
+            state.focusCursorAnimationTargetX = targetX;
+            state.focusCursorAnimationTargetY = targetY;
+            state.focusCursorAnimationActive = true;
+        } else {
+            resetFocusCursorAnimation(slotId, targetX, targetY);
+        }
+    }
+
+    public static void centerCursor(int slotId) {
+        LocalClientSlotRegistry.requireSlotId(slotId);
+        Minecraft minecraft = Minecraft.getInstance();
+        Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
+        moveCursorTo(
+            slotId,
+            cursorSpaceWidth(minecraft, slotId, screen) / 2.0D,
+            cursorSpaceHeight(minecraft, slotId, screen) / 2.0D
+        );
     }
 
     public static void releaseFocusedSlotCursor() {

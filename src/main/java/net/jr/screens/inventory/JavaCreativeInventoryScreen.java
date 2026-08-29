@@ -1,7 +1,9 @@
 package net.jr.screens.inventory;
 
 import net.jr.api.client.render.Draw;
+import net.jr.api.client.local.LocalClients;
 import net.jr.api.client.resource.Asset;
+import net.jr.api.client.ui.Cursor;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.components.elements.TextElement;
@@ -102,6 +104,7 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
     private final TabNavigationController tabNavigation = new TabNavigationController();
     private final Map<TabElement, CreativeCategory> categoryByTab = new IdentityHashMap<>();
     private final LocalPlayer player;
+    private final int slotId;
 
     private VanillaSlotLayer slotLayer;
     private SlotGrid slotGrid;
@@ -111,10 +114,12 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
     private EditBoxElement searchEditBox;
     private CreativeCategory selectedCategory = CreativeCategory.CONSTRUCTION_AND_COLORS;
     private FocusRegion focusRegion = FocusRegion.CATALOG;
+    private int pendingCatalogReturnIndex = -1;
 
     public JavaCreativeInventoryScreen(LocalPlayer player, Component title) {
         super(player.inventoryMenu, player.getInventory(), title, 249, 163);
         this.player = player;
+        this.slotId = LocalClients.slotId(player);
 
         player.containerMenu = player.inventoryMenu;
     }
@@ -151,6 +156,8 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         this.itemGrid.setCellSize(SLOT_FRAME_SIZE, SLOT_FRAME_SIZE);
         this.itemGrid.onSelection(this::selectCreativeItem);
         this.itemGrid.onFocusedPrimarySelection(stack -> this.moveCreativeItemToHotbar(stack, 1));
+        this.itemGrid.onFocusedAlternateSelection(stack ->
+                this.moveCreativeItemToHotbar(stack, stack.getMaxStackSize()));
         this.configureItemScrollbar();
 
         this.tabs = this.createTabs();
@@ -169,7 +176,7 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         this.addRenderableWidget(this.tabs);
         this.addRenderableWidget(this.searchEditBox);
         this.reloadItems();
-        this.enterCatalogFocus(false);
+        this.focusFirstCatalogEntryAndMoveCursor();
     }
 
     private void rebuildCreativeTabContents() {
@@ -205,9 +212,14 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         bar.onSelectionChange(tab -> {
             CreativeCategory category = this.categoryByTab.get(tab);
             if (category != null) {
+                boolean refocusCatalog = this.shouldRefocusCatalogAfterTabChange();
                 this.selectedCategory = category;
                 this.reloadItems();
-                this.enterCatalogFocus(false);
+                if (refocusCatalog) {
+                    this.focusFirstCatalogEntryAndMoveCursor();
+                } else if (this.getFocused() == this.itemGrid) {
+                    this.setFocused(null);
+                }
                 this.setSearchBoxVisible(category == CreativeCategory.SEARCH);
             }
         });
@@ -328,6 +340,7 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         if (this.itemGrid == null) {
             return;
         }
+        this.pendingCatalogReturnIndex = -1;
         this.itemGrid.scrollToImmediately(0.0D, 0.0D);
         this.itemGrid.clearEntryFocus();
         this.itemGrid.setEntries(this.collectItems(this.selectedCategory));
@@ -396,10 +409,19 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
             return;
         }
 
-        if (slot != null && this.slotGrid != null && this.slotGrid.has(slot.index)
-                && input == ContainerInput.QUICK_MOVE) {
-            this.clearCreativeHotbarSlot(slot);
-            return;
+        if (this.isCreativeHotbarSlot(slot)) {
+            if (!this.menu.getCarried().isEmpty() && input == ContainerInput.PICKUP) {
+                this.replaceCreativeHotbarSlot(slot);
+                return;
+            }
+            if (input == ContainerInput.QUICK_MOVE) {
+                if (this.menu.getCarried().isEmpty()) {
+                    this.clearCreativeHotbarSlot(slot);
+                } else {
+                    this.replaceCreativeHotbarSlot(slot);
+                }
+                return;
+            }
         }
 
         List<ItemStack> before = this.snapshotCreativeHotbar();
@@ -412,7 +434,9 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
     public boolean handleCreativeQuickMove() {
         return switch (this.creativeCatalogTarget()) {
             case CATALOG_ITEM -> this.moveCatalogItemToHotbar(this.actionCatalogItem());
-            case HOTBAR_ITEM -> this.clearCreativeHotbarSlot(this.actionHotbarSlot());
+            case HOTBAR_ITEM -> this.menu.getCarried().isEmpty()
+                    ? this.clearCreativeHotbarSlot(this.actionHotbarSlot())
+                    : this.replaceCreativeHotbarSlot(this.actionHotbarSlot());
             case NONE -> false;
         };
     }
@@ -424,7 +448,7 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
             return CreativeCatalogActionHost.Target.CATALOG_ITEM;
         }
         Slot hotbarSlot = this.actionHotbarSlot();
-        return hotbarSlot != null && hotbarSlot.hasItem()
+        return hotbarSlot != null && (hotbarSlot.hasItem() || !this.menu.getCarried().isEmpty())
                 ? CreativeCatalogActionHost.Target.HOTBAR_ITEM
                 : CreativeCatalogActionHost.Target.NONE;
     }
@@ -441,8 +465,11 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
             return false;
         }
 
+        boolean fromFocus = UiInputModeController.isFocusNavigationActive();
+
         if (!this.menu.getCarried().isEmpty()) {
             this.menu.setCarried(ItemStack.EMPTY);
+            this.pendingCatalogReturnIndex = -1;
             return true;
         }
 
@@ -450,12 +477,32 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         Slot emptyHotbarSlot = this.firstEmptyCreativeHotbarSlot();
         if (emptyHotbarSlot == null) {
             this.menu.setCarried(stack);
+            if (fromFocus) {
+                this.pendingCatalogReturnIndex = this.itemGrid == null
+                        ? -1
+                        : this.itemGrid.focusedEntryIndex();
+                this.focusHotbarSlotAndMoveCursor(this.firstCreativeHotbarSlot());
+            } else {
+                this.pendingCatalogReturnIndex = -1;
+            }
             return true;
         }
 
         emptyHotbarSlot.setByPlayer(stack);
         this.player.inventoryMenu.broadcastChanges();
         this.sendCreativeHotbarSlot(emptyHotbarSlot);
+        return true;
+    }
+
+    private boolean replaceCreativeHotbarSlot(Slot slot) {
+        if (!this.isCreativeHotbarSlot(slot) || this.menu.getCarried().isEmpty()) {
+            return false;
+        }
+        slot.setByPlayer(this.menu.getCarried().copy());
+        this.menu.setCarried(ItemStack.EMPTY);
+        this.player.inventoryMenu.broadcastChanges();
+        this.sendCreativeHotbarSlot(slot);
+        this.restorePendingCatalogFocus();
         return true;
     }
 
@@ -521,6 +568,61 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
             }
         }
         return null;
+    }
+
+    private Slot firstCreativeHotbarSlot() {
+        if (this.slotGrid == null) {
+            return null;
+        }
+        for (int index = 0; index < 9; index++) {
+            Slot slot = this.menu.slots.get(36 + index);
+            if (this.slotGrid.has(slot.index) && slot.isActive()) {
+                return slot;
+            }
+        }
+        return null;
+    }
+
+    private boolean isCreativeHotbarSlot(Slot slot) {
+        return slot != null && this.slotGrid != null && this.slotGrid.has(slot.index) && slot.isActive();
+    }
+
+    private void focusHotbarSlotAndMoveCursor(Slot slot) {
+        if (!this.isCreativeHotbarSlot(slot)) {
+            return;
+        }
+        this.enterHotbarFocus();
+        this.slotLayer.setFocusedSlot(slot);
+        var position = this.slotGrid.get(slot.index);
+        Cursor.moveTo(
+                this.slotId,
+                position.x() + position.width() / 2.0D,
+                position.y() + position.height() / 2.0D
+        );
+    }
+
+    private void restorePendingCatalogFocus() {
+        int returnIndex = this.pendingCatalogReturnIndex;
+        this.pendingCatalogReturnIndex = -1;
+        if (returnIndex < 0
+                || !UiInputModeController.isFocusNavigationActive()
+                || this.itemGrid == null) {
+            return;
+        }
+        this.focusRegion = FocusRegion.CATALOG;
+        if (this.slotLayer != null) {
+            this.slotLayer.clearFocusedSlot();
+        }
+        this.setFocused(this.itemGrid);
+        if (!this.itemGrid.focusEntry(returnIndex)) {
+            return;
+        }
+        var rectangle = this.itemGrid.getFocused().getRectangle();
+        Cursor.moveTo(
+                this.slotId,
+                rectangle.left() + rectangle.width() / 2.0D,
+                rectangle.top() + rectangle.height() / 2.0D
+        );
     }
 
     private List<ItemStack> snapshotCreativeHotbar() {
@@ -593,7 +695,7 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
                 ? null
                 : this.slotLayer.getSlotAt(this.slotGrid, guiX, guiY);
         if (hotbarSlot == null) {
-            return false;
+            return this.assignFirstCatalogFocusAndMoveCursor();
         }
 
         this.enterHotbarFocus();
@@ -686,6 +788,16 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         if (this.tabs.mouseClicked(event, doubleClick)) {
             return true;
         }
+        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+            CreativeItemSlotElement catalogItem = this.itemGrid.previewedSlot(
+                    event.x(),
+                    event.y(),
+                    false
+            );
+            if (catalogItem != null) {
+                return this.moveCatalogItemToHotbar(catalogItem);
+            }
+        }
         if (this.itemGrid.mouseClicked(event, doubleClick)) {
             this.enterCatalogFocus(false);
             return true;
@@ -705,6 +817,13 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
             this.enterHotbarFocus();
         }
         return handled;
+    }
+
+    @Override
+    public void removed() {
+        this.menu.setCarried(ItemStack.EMPTY);
+        this.pendingCatalogReturnIndex = -1;
+        super.removed();
     }
 
     @Override
@@ -803,6 +922,53 @@ public final class JavaCreativeInventoryScreen extends AbstractContainerScreen<I
         } else {
             this.itemGrid.getFocused().setFocused(true);
         }
+    }
+
+    private boolean focusFirstCatalogEntryAndMoveCursor() {
+        if (!this.assignFirstCatalogFocusAndMoveCursor()) {
+            return false;
+        }
+        UiInputModeController.activateFocusNavigation();
+        return true;
+    }
+
+    private boolean assignFirstCatalogFocusAndMoveCursor() {
+        if (this.itemGrid == null || !this.itemGrid.focusFirstEntry()) {
+            if (this.itemGrid != null) {
+                this.itemGrid.clearEntryFocus();
+            }
+            if (this.getFocused() == this.itemGrid) {
+                this.setFocused(null);
+            }
+            return false;
+        }
+        this.focusRegion = FocusRegion.CATALOG;
+        if (this.slotLayer != null) {
+            this.slotLayer.clearFocusedSlot();
+        }
+        this.setFocused(this.itemGrid);
+        var rectangle = this.itemGrid.getFocused().getRectangle();
+        Cursor.moveTo(
+            this.slotId,
+            rectangle.left() + rectangle.width() / 2.0D,
+            rectangle.top() + rectangle.height() / 2.0D
+        );
+        return true;
+    }
+
+    private boolean shouldRefocusCatalogAfterTabChange() {
+        if (this.itemGrid == null) {
+            return false;
+        }
+        if (this.itemGrid.getFocused() != null) {
+            return true;
+        }
+        double cursorX = Cursor.x(this.slotId);
+        double cursorY = Cursor.y(this.slotId);
+        return cursorX >= this.itemGrid.getX()
+            && cursorY >= this.itemGrid.getY()
+            && cursorX < this.itemGrid.getX() + this.itemGrid.getWidth()
+            && cursorY < this.itemGrid.getY() + this.itemGrid.getHeight();
     }
 
     private void enterHotbarFocus() {

@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 public class CreativeItemGridElement extends AbstractItemGridElement<ItemStack> {
     private Consumer<ItemStack> selection = ignored -> {};
     private Consumer<ItemStack> focusedPrimarySelection = ignored -> {};
+    private Consumer<ItemStack> focusedAlternateSelection = ignored -> {};
 
     public CreativeItemGridElement(int x, int y, int width, int height, int visibleRows, int columns) {
         super(x, y, width, height, visibleRows, columns);
@@ -21,8 +22,19 @@ public class CreativeItemGridElement extends AbstractItemGridElement<ItemStack> 
         this.focusedPrimarySelection = focusedPrimarySelection == null ? ignored -> {} : focusedPrimarySelection;
     }
 
+    public void onFocusedAlternateSelection(Consumer<ItemStack> focusedAlternateSelection) {
+        this.focusedAlternateSelection = focusedAlternateSelection == null ? ignored -> {} : focusedAlternateSelection;
+    }
+
     @Override protected JavaBaseWidget createCell(ItemStack entry, int index, int width, int height) {
-        return new CreativeItemSlotElement(width, height, entry, this.selection, this.focusedPrimarySelection);
+        return new CreativeItemSlotElement(
+                width,
+                height,
+                entry,
+                this.selection,
+                this.focusedPrimarySelection,
+                this.focusedAlternateSelection
+        );
     }
 
     public ItemStack hoveredStack(boolean includeFocused) {

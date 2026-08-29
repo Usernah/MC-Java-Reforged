@@ -1,16 +1,16 @@
 package net.jr.client.ui;
 
 import net.jr.api.client.resource.Asset;
-import net.jr.api.client.ui.dsl.UiCompiledDocument;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.AnimationDefinition;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.ConditionalRenderableDefinition;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.ImageDefinition;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.NineDefinition;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.RenderableDefinition;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.TextDefinition;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.Vector2Definition;
-import net.jr.api.client.ui.dsl.UiCompiledDocument.VideoDefinition;
-import net.jr.api.client.ui.dsl.UiRenderLayer;
+import net.jr.client.ui.dsl.UiCompiledDocument;
+import net.jr.client.ui.dsl.UiCompiledDocument.AnimationDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.ConditionalRenderableDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.ImageDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.NineDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.RenderableDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.TextDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.Vector2Definition;
+import net.jr.client.ui.dsl.UiCompiledDocument.VideoDefinition;
+import net.jr.client.ui.dsl.UiRenderLayer;
 import net.jr.api.client.video.VideoHolder;
 import net.jr.api.client.video.VideoRegister;
 import net.jr.client.components.elements.ImageElement;

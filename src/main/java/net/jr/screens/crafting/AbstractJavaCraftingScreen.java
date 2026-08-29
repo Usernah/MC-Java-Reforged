@@ -2,6 +2,7 @@ package net.jr.screens.crafting;
 
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
+import net.jr.api.client.ui.Cursor;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.components.elements.TextElement;
@@ -13,6 +14,7 @@ import net.jr.client.components.widgets.recipe.RecipeGridElement;
 import net.jr.client.components.widgets.recipe.RecipeSlotElement;
 import net.jr.client.components.widgets.recipe.RecipeVariantView;
 import net.jr.client.ui.navigation.UiInputBinding;
+import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
@@ -96,6 +98,7 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
             Asset.MC("textures/gui/sprites/container/crafting_menu/icons/search.png");
 
     private final Asset background;
+    private final int slotId;
     private final int craftingColumns;
     private final int craftingRows;
     private final CraftingScreenLayout layout;
@@ -120,6 +123,7 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
             M menu,
             Inventory inventory,
             Component title,
+            int slotId,
             Asset background,
             int imageWidth,
             int imageHeight,
@@ -128,6 +132,7 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
             CraftingScreenLayout layout
     ) {
         super(menu, inventory, title, imageWidth, imageHeight);
+        this.slotId = slotId;
         this.background = background;
         this.craftingColumns = craftingColumns;
         this.craftingRows = craftingRows;
@@ -175,7 +180,7 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
         this.addRenderableWidget(this.recipeTabs);
         this.addRenderableWidget(this.searchEditBox);
         this.reloadRecipes();
-        this.enterRecipeFocus(false);
+        this.focusFirstRecipeEntryAndMoveCursor();
     }
 
     private void createSearchBox() {
@@ -310,17 +315,27 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
         if (this.craftingTitleText == null || this.inventoryTitleText == null || this.tabTitleText == null) {
             return;
         }
-        RecipeVariantView targetedRecipe = this.recipeGrid == null
-                ? null
-                : this.recipeGrid.previewedRecipe(
-                        mouseX,
-                        mouseY,
-                        this.focusRegion == FocusRegion.RECIPES
+        ItemStack resultStack = this.menu.slots.isEmpty()
+                ? ItemStack.EMPTY
+                : this.menu.slots.getFirst().getItem();
+        if (resultStack.isEmpty() && this.minecraft != null
+                && this.minecraft.player != null && this.recipeGrid != null) {
+            RecipeVariantView preview = this.recipeGrid.previewedRecipe(
+                    mouseX,
+                    mouseY,
+                    this.focusRegion == FocusRegion.RECIPES
+            );
+            if (preview != null) {
+                resultStack = this.recipePreviewRenderer.resultStack(
+                        preview.recipe().display(),
+                        SlotDisplayContext.fromLevel(this.minecraft.player.level())
                 );
+            }
+        }
         this.craftingTitleText.setText(
-                targetedRecipe == null || targetedRecipe.icon().isEmpty()
+                resultStack.isEmpty()
                         ? Component.empty()
-                        : targetedRecipe.icon().getHoverName()
+                        : resultStack.getHoverName()
         );
         this.tabTitleText.setText(this.craftingTabGroup.selectedTitle());
         this.craftingTitleText.draw(graphics);
@@ -377,15 +392,16 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
                 ? null
                 : this.recipeGrid.previewedRecipeSlot(guiX, guiY, false);
         if (recipeSlot == null) {
-            return false;
+            return this.assignFirstRecipeFocusAndMoveCursor();
         }
 
+        this.recipeGrid.setFocused(recipeSlot);
+        this.returnCraftingGridItemsToInventory();
         this.focusRegion = FocusRegion.RECIPES;
         if (this.slotLayer != null) {
             this.slotLayer.clearFocusedSlot();
         }
         this.setFocused(this.recipeGrid);
-        this.recipeGrid.setFocused(recipeSlot);
         return true;
     }
 
@@ -739,7 +755,8 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
                 SlotDisplayContext.fromLevel(this.minecraft.player.level()),
                 this.slotGrid,
                 this.menu,
-                this.minecraft.player.getInventory()
+                this.minecraft.player.getInventory(),
+                preview.craftable()
         );
     }
 
@@ -772,8 +789,13 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
         if (this.recipeTabs.mouseClicked(event, doubleClick)) {
             return true;
         }
+        RecipeSlotElement.ActivationFeedback recipeFeedback =
+                this.recipeGrid.mouseActivationFeedbackAt(event.x(), event.y(), event.button());
         if (this.recipeGrid.mouseClicked(event, doubleClick)) {
-            this.enterRecipeFocus(false);
+            this.enterRecipeFocus(
+                    false,
+                    recipeFeedback != RecipeSlotElement.ActivationFeedback.CRAFT
+            );
             return true;
         }
         boolean handled = this.slotLayer.mouseClicked(
@@ -881,6 +903,13 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
     }
 
     private void enterRecipeFocus(boolean focusLast) {
+        this.enterRecipeFocus(focusLast, true);
+    }
+
+    private void enterRecipeFocus(boolean focusLast, boolean returnIngredients) {
+        if (returnIngredients) {
+            this.returnCraftingGridItemsToInventory();
+        }
         this.focusRegion = FocusRegion.RECIPES;
         if (this.slotLayer != null) {
             this.slotLayer.clearFocusedSlot();
@@ -895,6 +924,76 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
                 this.recipeGrid.getFocused().setFocused(true);
             }
         }
+    }
+
+    private boolean focusFirstRecipeEntryAndMoveCursor() {
+        if (!this.assignFirstRecipeFocusAndMoveCursor()) {
+            return false;
+        }
+        UiInputModeController.activateFocusNavigation();
+        return true;
+    }
+
+    private boolean assignFirstRecipeFocusAndMoveCursor() {
+        this.returnCraftingGridItemsToInventory();
+        if (this.recipeGrid == null || !this.recipeGrid.focusFirstEntry()) {
+            if (this.recipeGrid != null) {
+                this.recipeGrid.clearEntryFocus();
+            }
+            if (this.getFocused() == this.recipeGrid) {
+                this.setFocused(null);
+            }
+            return false;
+        }
+        this.focusRegion = FocusRegion.RECIPES;
+        if (this.slotLayer != null) {
+            this.slotLayer.clearFocusedSlot();
+        }
+        this.setFocused(this.recipeGrid);
+        var rectangle = this.recipeGrid.getFocused().getRectangle();
+        Cursor.moveTo(
+            this.slotId,
+            rectangle.left() + rectangle.width() / 2.0D,
+            rectangle.top() + rectangle.height() / 2.0D
+        );
+        return true;
+    }
+
+    private void returnCraftingGridItemsToInventory() {
+        int craftingSlotCount = this.craftingColumns * this.craftingRows;
+        int end = Math.min(this.menu.slots.size(), craftingSlotCount + 1);
+        boolean changed = false;
+        for (int index = 1; index < end; index++) {
+            Slot slot = this.menu.slots.get(index);
+            if (!slot.isActive() || !slot.hasItem()) {
+                continue;
+            }
+            ((AbstractContainerScreenAccessor)this).javaReforged$invokeSlotClicked(
+                    slot,
+                    slot.index,
+                    0,
+                    ContainerInput.QUICK_MOVE
+            );
+            changed = true;
+        }
+        if (changed) {
+            this.reloadRecipes();
+        }
+    }
+
+    private boolean shouldRefocusRecipesAfterTabChange() {
+        if (this.recipeGrid == null) {
+            return false;
+        }
+        if (this.recipeGrid.getFocused() != null) {
+            return true;
+        }
+        double cursorX = Cursor.x(this.slotId);
+        double cursorY = Cursor.y(this.slotId);
+        return cursorX >= this.recipeGrid.getX()
+            && cursorY >= this.recipeGrid.getY()
+            && cursorX < this.recipeGrid.getX() + this.recipeGrid.getWidth()
+            && cursorY < this.recipeGrid.getY() + this.recipeGrid.getHeight();
     }
 
     private void enterInventoryFocus() {
@@ -983,22 +1082,16 @@ public abstract class AbstractJavaCraftingScreen<M extends AbstractContainerMenu
         }
 
         private void onSelectionChange(TabElement selectedTab) {
+            boolean refocusRecipes = AbstractJavaCraftingScreen.this
+                    .shouldRefocusRecipesAfterTabChange();
             this.selectedCategory = this.categoryByTab.get(selectedTab);
-
-            AbstractJavaCraftingScreen.this.focusRegion = FocusRegion.RECIPES;
-            if (AbstractJavaCraftingScreen.this.slotLayer != null) {
-                AbstractJavaCraftingScreen.this.slotLayer.clearFocusedSlot();
-            }
-            if (AbstractJavaCraftingScreen.this.recipeGrid != null) {
-                AbstractJavaCraftingScreen.this.recipeGrid.clearEntryFocus();
-            }
-            AbstractJavaCraftingScreen.this.setFocused(null);
             AbstractJavaCraftingScreen.this.reloadRecipes();
-
-            if (AbstractJavaCraftingScreen.this.recipeGrid != null) {
-                AbstractJavaCraftingScreen.this.recipeGrid.focusFirstEntry();
+            if (refocusRecipes) {
+                AbstractJavaCraftingScreen.this.focusFirstRecipeEntryAndMoveCursor();
+            } else if (AbstractJavaCraftingScreen.this.getFocused()
+                    == AbstractJavaCraftingScreen.this.recipeGrid) {
+                AbstractJavaCraftingScreen.this.setFocused(null);
             }
-            AbstractJavaCraftingScreen.this.enterRecipeFocus(false);
             AbstractJavaCraftingScreen.this.setSearchBoxVisible(this.isSearchSelected());
         }
 

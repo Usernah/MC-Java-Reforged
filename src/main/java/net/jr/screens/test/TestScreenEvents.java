@@ -1,6 +1,7 @@
 package net.jr.screens.test;
 
 import net.jr.Java_reforged;
+import net.jr.api.client.local.LocalClients;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CraftingScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -25,7 +26,8 @@ public final class TestScreenEvents {
                 event.setNewScreen(new JavaCrafting3x3Screen(
                         craftingScreen.getMenu(),
                         minecraft.player.getInventory(),
-                        craftingScreen.getTitle()
+                        craftingScreen.getTitle(),
+                        LocalClients.slotId(minecraft.player)
                 ));
             }
             return;

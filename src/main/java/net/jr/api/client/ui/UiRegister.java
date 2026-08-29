@@ -1,113 +1,57 @@
 package net.jr.api.client.ui;
 
+import net.jr.client.ui.registry.UiRegistryStore;
+
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 public final class UiRegister {
-    private static final Object REGISTRY_LOCK = new Object();
-    private static final Map<String, UiRegister> REGISTRIES = new LinkedHashMap<>();
+    private final UiRegistryStore store;
 
-    private final String modId;
-    private final Map<Key, UiFile> entries = new LinkedHashMap<>();
-
-    private UiRegister(String modId) {
-        this.modId = Objects.requireNonNull(modId, "modId");
+    private UiRegister(UiRegistryStore store) {
+        this.store = store;
     }
 
     public static UiRegister create(String modId) {
-        synchronized (REGISTRY_LOCK) {
-            return REGISTRIES.computeIfAbsent(modId, UiRegister::new);
-        }
+        return new UiRegister(UiRegistryStore.create(modId));
     }
 
     public String modId() {
-        return this.modId;
+        return this.store.modId();
     }
 
     public UiScreenFile registerScreen(String path) {
-        return (UiScreenFile)this.register(UiFileType.SCREEN, path);
+        return (UiScreenFile)wrap(this.store.register(UiFileType.SCREEN, path));
     }
 
     public UiContainerFile registerContainer(String path) {
-        return (UiContainerFile)this.register(UiFileType.CONTAINER, path);
+        return (UiContainerFile)wrap(this.store.register(UiFileType.CONTAINER, path));
     }
 
     public UiOverlayFile registerOverlay(String path) {
-        return (UiOverlayFile)this.register(UiFileType.OVERLAY, path);
-    }
-
-    private UiFile register(UiFileType type, String path) {
-        Objects.requireNonNull(type, "type");
-        String normalizedPath = normalizePath(path);
-        Key key = new Key(type, normalizedPath);
-        synchronized (REGISTRY_LOCK) {
-            return this.entries.computeIfAbsent(key, ignored -> createFile(this.modId, normalizedPath, type));
-        }
+        return (UiOverlayFile)wrap(this.store.register(UiFileType.OVERLAY, path));
     }
 
     public Optional<UiFile> get(UiFileType type, String path) {
-        Key key = new Key(Objects.requireNonNull(type, "type"), normalizePath(path));
-        synchronized (REGISTRY_LOCK) {
-            return Optional.ofNullable(this.entries.get(key));
-        }
+        return this.store.get(type, path).map(UiRegister::wrap);
     }
 
     public Collection<UiFile> entries() {
-        synchronized (REGISTRY_LOCK) {
-            return List.copyOf(this.entries.values());
-        }
+        return this.store.entries().stream().map(UiRegister::wrap).toList();
     }
 
     public static Collection<UiFile> allRegisteredFiles() {
-        synchronized (REGISTRY_LOCK) {
-            return REGISTRIES.values().stream()
-                .flatMap(registry -> registry.entries.values().stream())
-                .toList();
-        }
+        return UiRegistryStore.allRegisteredFiles().stream().map(UiRegister::wrap).toList();
     }
 
-    private static String normalizePath(String path) {
-        Objects.requireNonNull(path, "path");
-        String normalized = path.trim();
-        if (normalized.isEmpty()) {
-            throw new IllegalArgumentException("UI file path cannot be blank");
-        }
-        if (normalized.indexOf('\\') >= 0) {
-            throw new IllegalArgumentException("UI file paths must use '/': " + path);
-        }
-        if (normalized.startsWith("/") || normalized.endsWith("/")) {
-            throw new IllegalArgumentException("UI file paths cannot start or end with '/': " + path);
-        }
-        for (String segment : normalized.split("/")) {
-            if (segment.isEmpty() || segment.equals(".") || segment.equals("..")) {
-                throw new IllegalArgumentException("Invalid UI file path: " + path);
-            }
-        }
-        for (UiFileType type : UiFileType.values()) {
-            if (normalized.endsWith("." + type.extension())) {
-                throw new IllegalArgumentException(
-                    "Register UI paths without their extension; received: " + path
-                );
-            }
-        }
-        return normalized;
-    }
-
-    private static UiFile createFile(String modId, String path, UiFileType type) {
-        return switch (type) {
-            case SCREEN -> new UiScreenFile(modId, path);
-            case CONTAINER -> new UiContainerFile(modId, path);
-            case OVERLAY -> new UiOverlayFile(modId, path);
+    private static UiFile wrap(UiRegistryStore.UiEntry entry) {
+        return switch (entry.type()) {
+            case SCREEN -> new UiScreenFile(entry.modId(), entry.path());
+            case CONTAINER -> new UiContainerFile(entry.modId(), entry.path());
+            case OVERLAY -> new UiOverlayFile(entry.modId(), entry.path());
             case STYLE -> throw new IllegalArgumentException(
-                "Style files are resolved through imports and cannot be registered"
+                    "Style files are resolved through imports and cannot be registered"
             );
         };
-    }
-
-    private record Key(UiFileType type, String path) {
     }
 }

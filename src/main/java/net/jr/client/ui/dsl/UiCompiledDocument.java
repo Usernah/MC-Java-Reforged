@@ -1,4 +1,4 @@
-package net.jr.api.client.ui.dsl;
+package net.jr.client.ui.dsl;
 
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;

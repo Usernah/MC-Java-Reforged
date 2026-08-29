@@ -5,8 +5,6 @@ import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.UiFile;
 import net.jr.api.client.ui.UiFileType;
 import net.jr.api.client.ui.UiRegister;
-import net.jr.api.client.ui.dsl.UiDocument;
-import net.jr.api.client.ui.dsl.UiCompiledDocument;
 import net.jr.client.ui.presentation.UiPresentation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;

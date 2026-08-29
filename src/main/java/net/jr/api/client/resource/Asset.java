@@ -1,8 +1,6 @@
 package net.jr.api.client.resource;
 
-import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.jr.client.resource.ClientAssetManager;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
@@ -12,18 +10,14 @@ import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public class Asset {
     private static final String MOD_ID = "java_reforged";
-    private static final Map<String, Asset> DYNAMIC_TEXTURE_CACHE = new ConcurrentHashMap<>();
 
     private final Identifier location;
     @Nullable
@@ -40,32 +34,12 @@ public class Asset {
 
     @Nullable
     public static Asset fromFile(File imageFile) {
-        if (imageFile == null || !imageFile.isFile()) {
-            return null;
-        }
-        return loadFromStream(
-            imageFile.getAbsolutePath(),
-            imageFile.getName(),
-            () -> {
-                try {
-                    return new FileInputStream(imageFile);
-                } catch (IOException exception) {
-                    throw new IllegalStateException(exception);
-                }
-            }
-        );
+        return ClientAssetManager.fromFile(imageFile);
     }
 
     @Nullable
     public static Asset fromInternal(String internalPath) {
-        if (internalPath == null || internalPath.isBlank()) {
-            return null;
-        }
-        return loadFromStream(
-            internalPath,
-            internalPath,
-            () -> Asset.class.getResourceAsStream(internalPath)
-        );
+        return ClientAssetManager.fromInternal(internalPath);
     }
 
     @Nullable
@@ -74,47 +48,7 @@ public class Asset {
         String resourceIdentifier,
         Supplier<InputStream> inputStreamSupplier
     ) {
-        if (cacheKey == null || cacheKey.isBlank() || inputStreamSupplier == null) {
-            return null;
-        }
-        String identifier = resourceIdentifier == null || resourceIdentifier.isBlank()
-            ? cacheKey
-            : resourceIdentifier;
-        return loadFromStream(cacheKey, identifier, inputStreamSupplier);
-    }
-
-    @Nullable
-    private static Asset loadFromStream(
-        String cacheKey,
-        String resourceIdentifier,
-        Supplier<InputStream> inputStreamSupplier
-    ) {
-        Asset cached = DYNAMIC_TEXTURE_CACHE.get(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
-
-        try (InputStream inputStream = inputStreamSupplier.get()) {
-            if (inputStream == null) {
-                return null;
-            }
-
-            NativeImage image = NativeImage.read(inputStream);
-            DynamicTexture texture = new DynamicTexture(() -> resourceIdentifier, image);
-            String cleanName = resourceIdentifier.toLowerCase().replaceAll("[^a-z0-9/._-]", "_");
-            Identifier identifier = Identifier.fromNamespaceAndPath(MOD_ID, "dynamic/" + cleanName);
-            Minecraft.getInstance().getTextureManager().register(identifier, texture);
-
-            Asset loaded = new Asset(identifier);
-            Asset previous = DYNAMIC_TEXTURE_CACHE.putIfAbsent(cacheKey, loaded);
-            if (previous != null) {
-                Minecraft.getInstance().getTextureManager().release(identifier);
-                return previous;
-            }
-            return loaded;
-        } catch (Exception exception) {
-            return null;
-        }
+        return ClientAssetManager.fromStream(cacheKey, resourceIdentifier, inputStreamSupplier);
     }
 
     @Nullable
@@ -169,27 +103,22 @@ public class Asset {
     }
 
     public Optional<Resource> find(ResourceManager manager) {
-        Objects.requireNonNull(manager, "manager");
-        return manager.getResource(location);
+        return ClientAssetManager.find(this, manager);
     }
 
     public Resource require(ResourceManager manager) {
-        return find(manager).orElseThrow(
-            () -> new IllegalStateException("Missing required asset: " + this)
-        );
+        return ClientAssetManager.require(this, manager);
     }
 
     public InputStream open(ResourceManager manager) throws IOException {
-        return require(manager).open();
+        return ClientAssetManager.open(this, manager);
     }
 
     public void registerReloadListener(
         AddClientReloadListenersEvent event,
         PreparableReloadListener listener
     ) {
-        Objects.requireNonNull(event, "event");
-        Objects.requireNonNull(listener, "listener");
-        event.addListener(location, listener);
+        ClientAssetManager.registerReloadListener(this, event, listener);
     }
 
     public FontDescription.Resource asFontDescription() {
@@ -197,15 +126,7 @@ public class Asset {
     }
 
     public Optional<InputStream> getAsStream() {
-        try {
-            Optional<Resource> resource = find(Minecraft.getInstance().getResourceManager());
-            if (resource.isEmpty()) {
-                return Optional.empty();
-            }
-            return Optional.of(resource.get().open());
-        } catch (Exception exception) {
-            return Optional.empty();
-        }
+        return ClientAssetManager.getAsStream(this);
     }
 
     public Identifier res() {
@@ -221,7 +142,7 @@ public class Asset {
     }
 
     public static void clearDynamicTextureCache() {
-        DYNAMIC_TEXTURE_CACHE.clear();
+        ClientAssetManager.clearDynamicTextureCache();
     }
 
     @Override

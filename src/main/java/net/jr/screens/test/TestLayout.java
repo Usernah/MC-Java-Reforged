@@ -1,6 +1,6 @@
 package net.jr.screens.test;
 
-import net.jr.api.client.ui.dsl.UiRenderLayer;
+import net.jr.client.ui.dsl.UiRenderLayer;
 import net.jr.client.ui.UiElement;
 import net.jr.client.ui.UiWidget;
 import net.jr.client.ui.layout.UILayout;

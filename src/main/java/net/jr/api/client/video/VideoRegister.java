@@ -1,108 +1,56 @@
 package net.jr.api.client.video;
 
 import net.jr.api.client.resource.Asset;
-import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
-import net.minecraft.util.profiling.ProfilerFiller;
+import net.jr.client.video.VideoRegistryStore;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 
-import java.io.File;
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public final class VideoRegister {
-    private static final Object REGISTRY_LOCK = new Object();
-    private static final Map<String, VideoRegister> REGISTRIES = new LinkedHashMap<>();
-    private static final Map<String, VideoHolder> ALL_VIDEOS = new LinkedHashMap<>();
-    private static final Asset RELOAD_LISTENER_ID = Asset.MOD("reload/videos");
-    private static final ClientVideoReloadListener RELOAD_LISTENER = new ClientVideoReloadListener();
+    private final VideoRegistryStore store;
 
-    private final String modId;
-    private final Map<String, VideoHolder> entries = new LinkedHashMap<>();
-
-    private VideoRegister(String modId) {
-        this.modId = modId;
+    private VideoRegister(VideoRegistryStore store) {
+        this.store = store;
     }
 
     public static VideoRegister create(String modId) {
-        synchronized (REGISTRY_LOCK) {
-            return REGISTRIES.computeIfAbsent(modId, VideoRegister::new);
-        }
+        return new VideoRegister(VideoRegistryStore.create(modId));
     }
 
     public String modId() {
-        return modId;
+        return this.store.modId();
     }
 
     public VideoHolder register(String resourcePath) {
-        synchronized (REGISTRY_LOCK) {
-            return entries.computeIfAbsent(resourcePath, path -> {
-                VideoHolder holder = new VideoHolder(modId, path);
-                ALL_VIDEOS.put(holder.location().toString(), holder);
-                return holder;
-            });
-        }
+        return new VideoHolder(this.store.register(resourcePath));
     }
 
     public Optional<VideoHolder> get(String resourcePath) {
-        synchronized (REGISTRY_LOCK) {
-            return Optional.ofNullable(entries.get(resourcePath));
-        }
+        return this.store.get(resourcePath).map(VideoHolder::new);
     }
 
     public Collection<VideoHolder> entries() {
-        synchronized (REGISTRY_LOCK) {
-            return List.copyOf(entries.values());
-        }
+        return this.store.entries().stream().map(VideoHolder::new).toList();
     }
 
     public static Collection<VideoHolder> allRegisteredVideos() {
-        synchronized (REGISTRY_LOCK) {
-            return List.copyOf(ALL_VIDEOS.values());
-        }
+        return VideoRegistryStore.allRegisteredVideos().stream().map(VideoHolder::new).toList();
     }
 
     public static Optional<VideoHolder> find(Asset asset) {
-        synchronized (REGISTRY_LOCK) {
-            return Optional.ofNullable(ALL_VIDEOS.get(asset.toString()));
-        }
+        return VideoRegistryStore.find(asset).map(VideoHolder::new);
     }
 
     public static VideoHolder require(Asset asset) {
-        return find(asset).orElseThrow(() ->
-            new IllegalArgumentException("Video asset is not registered: " + asset)
-        );
+        return new VideoHolder(VideoRegistryStore.require(asset));
     }
 
     public static int synchronizeAll(boolean forceExtract) {
-        int synchronizedCount = 0;
-        for (VideoHolder holder : allRegisteredVideos()) {
-            File resolved = holder.resolveCachedFile(forceExtract);
-            if (resolved != null) {
-                synchronizedCount++;
-            }
-        }
-        return synchronizedCount;
+        return VideoRegistryStore.synchronizeAll(forceExtract);
     }
 
     public static void registerClientReloadListener(AddClientReloadListenersEvent event) {
-        RELOAD_LISTENER_ID.registerReloadListener(event, RELOAD_LISTENER);
-    }
-
-    private static final class ClientVideoReloadListener extends SimplePreparableReloadListener<List<VideoHolder>> {
-        @Override
-        protected List<VideoHolder> prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
-            return List.copyOf(VideoRegister.allRegisteredVideos());
-        }
-
-        @Override
-        protected void apply(List<VideoHolder> holders, ResourceManager resourceManager, ProfilerFiller profiler) {
-            for (VideoHolder holder : holders) {
-                holder.resolveCachedFile(false);
-            }
-        }
+        VideoRegistryStore.registerClientReloadListener(event);
     }
 }

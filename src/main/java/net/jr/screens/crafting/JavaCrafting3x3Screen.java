@@ -10,11 +10,12 @@ import net.minecraft.world.inventory.CraftingMenu;
 public final class JavaCrafting3x3Screen extends AbstractJavaCraftingScreen<CraftingMenu> {
     private static final Asset BACKGROUND = Asset.MC("textures/gui/container/crafting_table_3x3.png");
 
-    public JavaCrafting3x3Screen(CraftingMenu menu, Inventory inventory, Component title) {
+    public JavaCrafting3x3Screen(CraftingMenu menu, Inventory inventory, Component title, int slotId) {
         super(
                 menu,
                 inventory,
                 title,
+                slotId,
                 BACKGROUND,
                 288,
                 168,

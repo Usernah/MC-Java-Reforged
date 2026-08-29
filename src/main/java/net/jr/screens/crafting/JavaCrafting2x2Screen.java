@@ -11,11 +11,12 @@ import net.minecraft.world.inventory.InventoryMenu;
 public final class JavaCrafting2x2Screen extends AbstractJavaCraftingScreen<InventoryMenu> {
     private static final Asset BACKGROUND = Asset.MC("textures/gui/container/crafting_table_2x2.png");
 
-    public JavaCrafting2x2Screen(InventoryMenu menu, Inventory inventory, Component title) {
+    public JavaCrafting2x2Screen(InventoryMenu menu, Inventory inventory, Component title, int slotId) {
         super(
                 menu,
                 inventory,
                 title,
+                slotId,
                 BACKGROUND,
                 270,
                 151,

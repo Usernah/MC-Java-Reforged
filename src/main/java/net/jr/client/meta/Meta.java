@@ -1,4 +1,4 @@
-package net.jr.api.client.meta;
+package net.jr.client.meta;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

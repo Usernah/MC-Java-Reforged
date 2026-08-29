@@ -1,7 +1,6 @@
 package net.jr.client.meta;
 
 import net.jr.Java_reforged;
-import net.jr.api.client.meta.Meta;
 import net.jr.api.client.resource.Asset;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.resources.Resource;

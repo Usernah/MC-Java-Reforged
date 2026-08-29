@@ -1,7 +1,6 @@
 package net.jr.client.ui.dsl;
 
 import net.jr.api.client.resource.Asset;
-import net.jr.api.client.ui.dsl.UiDocument;
 
 final class UiCompileException extends Exception {
     private final Asset source;

@@ -1,6 +1,7 @@
 package net.jr.client.input;
 
 import net.jr.client.input.binding.ModKeyBindings;
+import net.jr.api.client.local.LocalClients;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.screens.crafting.JavaCrafting2x2Screen;
@@ -41,7 +42,8 @@ public final class GameplayActionHandler {
                 minecraft.gui.setScreen(new JavaCrafting2x2Screen(
                     player.inventoryMenu,
                     player.getInventory(),
-                    Component.translatable("container.crafting")
+                    Component.translatable("container.crafting"),
+                    LocalClients.slotId(player)
                 ));
             }
         }
