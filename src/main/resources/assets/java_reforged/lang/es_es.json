@@ -44,6 +44,8 @@
   "menu.java_reforged.video.split_orientation.vertical": "Vertical",
   "menu.java_reforged.video.split_orientation.horizontal": "Horizontal",
   "menu.java_reforged.video.split_orientation.description": "Cambia cómo se divide la pantalla cuando hay dos jugadores locales conectados.",
+  "menu.java_reforged.video.optimize_experimental": "Optimización experimental",
+  "menu.java_reforged.video.optimize_experimental.description": "Activa optimizaciones de renderizado experimentales. Estas funciones están en desarrollo y pueden cambiar durante las pruebas.",
   "menu.java_reforged.split.loading_world": "Cargando mundo...",
   "menu.java_reforged.split.loading_player": "Preparando jugador %s"
 }

@@ -19,5 +19,7 @@
   "creative_tab.java_reforged.ingredients_and_resources": "Ingredientes y recursos",
   "creative_tab.java_reforged.spawn_eggs": "Huevos de aparición",
   "creative_tab.java_reforged.search": "Buscar",
-  "creative_tab.java_reforged.search_placeholder": "Buscar..."
+  "creative_tab.java_reforged.search_placeholder": "Buscar...",
+  "menu.java_reforged.video.optimize_experimental": "Optimización experimental",
+  "menu.java_reforged.video.optimize_experimental.description": "Activa optimizaciones de renderizado experimentales. Estas funciones están en desarrollo y pueden cambiar durante las pruebas."
 }

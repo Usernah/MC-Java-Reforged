@@ -78,16 +78,6 @@ public final class WorldRenderPass {
                     slot.renderState().levelRenderState().cameraRenderState.pos,
                     optionsState.textureFiltering == TextureFilteringMethod.RGSS
             );
-            renderer.javaReforged$getGlobalSettingsUniform().update(
-                viewport.width(),
-                viewport.height(),
-                optionsState.glintStrength,
-                slot.renderState().level().getGameTime(),
-                deltaTracker,
-                optionsState.menuBackgroundBlurriness,
-                slot.renderState().levelRenderState().cameraRenderState.pos,
-                optionsState.textureFiltering == TextureFilteringMethod.RGSS
-            );
             renderer.javaReforged$getLightmap().render(slot.renderState().lightmapRenderState());
             RenderTarget globalTarget = gameRenderer.mainRenderTarget();
             try (ViewportRenderTargets.Scope ignoredTargets = ViewportRenderTargets.enter(slot.id(), viewport, globalTarget)) {

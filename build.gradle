@@ -16,6 +16,17 @@ group = mod_group_id
 repositories {
     mavenCentral()
     maven { url = "https://maven.isxander.dev/releases" }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
 }
 
 configurations {
@@ -159,6 +170,10 @@ dependencies {
     // The loader is already supplied by NeoForge at runtime; this is API-only.
     transformServiceCompileOnly "net.neoforged.fancymodloader:loader:11.0.13"
     jarJar files(transformServiceJar)
+
+    // Optional Sodium compatibility baseline. This exposes Sodium to Java and
+    // IntelliJ without bundling it or declaring it as a required runtime mod.
+    compileOnly "maven.modrinth:AANobbMI:${sodium_modrinth_version_id}"
 
     // Video decoder. Kept at the exact versions used by Reforged API.
     def javacpp_ver = "1.5.10"
