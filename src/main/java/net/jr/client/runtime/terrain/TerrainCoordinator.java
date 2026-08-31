@@ -9,24 +9,31 @@ import javax.annotation.Nullable;
 
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.mixin.accessors.LevelRendererAccessor;
+import net.jr.mixin.accessors.SectionRenderDispatcherAccessor;
 import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
+import net.jr.client.runtime.render.experimental.ExperimentalRenderMetrics;
+import net.jr.client.runtime.render.experimental.ExperimentalRenderController;
+import net.jr.client.runtime.render.experimental.TerrainMultiDraw;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.runtime.state.TerrainState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.PrioritizeChunkUpdates;
 import net.minecraft.client.SectionUpdateTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SectionOcclusionGraph;
 import net.minecraft.client.renderer.ViewArea;
+import net.minecraft.client.renderer.chunk.CompiledSectionMesh;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.state.level.SectionUpdateRenderState;
 import net.minecraft.core.SectionPos;
+import net.minecraft.world.phys.Vec3;
 
 public final class TerrainCoordinator {
     private static boolean sharedGeometryRebuildRequestedThisExtraction;
@@ -76,6 +83,7 @@ public final class TerrainCoordinator {
     }
 
     public static void resetActiveSlotTerrain() {
+        TerrainMultiDraw.invalidateSlot(activeSlotId());
         TerrainStateStore.terrain().releaseViewArea();
     }
 
@@ -89,7 +97,12 @@ public final class TerrainCoordinator {
 
     public static void uploadSharedTerrain(SectionRenderDispatcher dispatcher) {
         if (TerrainWorkPhase.canUpdateTerrain()) {
-            dispatcher.uploadTerrainBuffersToGpu();
+            long uploadStarted = ExperimentalRenderMetrics.startTimer();
+            try {
+                dispatcher.uploadTerrainBuffersToGpu();
+            } finally {
+                ExperimentalRenderMetrics.recordTerrainUpload(uploadStarted, queueDepth(dispatcher));
+            }
         }
     }
 
@@ -155,6 +168,7 @@ public final class TerrainCoordinator {
         }
 
         TerrainState terrain = slot.renderState().terrain();
+        TerrainMultiDraw.invalidateSlot(slot.id());
         terrain.releaseViewArea();
         TerrainGraphArea viewArea = terrain.ensureViewArea(store, level, viewDistance, slot.id());
         SectionPos cameraSectionPos = SectionPos.of(slot.renderState().camera().position());
@@ -219,9 +233,18 @@ public final class TerrainCoordinator {
     }
 
     public static void prepareFrame() {
+        TerrainMultiDraw.beginFrame();
         SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
         if (store != null) {
             store.beginFrame();
+            if (ExperimentalRenderController.enabled()) {
+                publishPriorityCameras();
+            } else {
+                TerrainTaskPriority.clearCameras();
+            }
+            TerrainCompileBudget.beginFrame(store.dispatcher(), queueDepth(store.dispatcher()));
+        } else {
+            TerrainTaskPriority.clearCameras();
         }
     }
 
@@ -229,17 +252,26 @@ public final class TerrainCoordinator {
         if (!TerrainWorkPhase.canUpdateTerrain()) {
             return;
         }
+        long schedulingStarted = ExperimentalRenderMetrics.startTimer();
         LevelRendererAccessor renderer = (LevelRendererAccessor)levelRenderer;
         SectionRenderDispatcher dispatcher = renderer.javaReforged$getSectionRenderDispatcher();
         if (dispatcher == null) {
+            ExperimentalRenderMetrics.recordTerrainScheduling(schedulingStarted, 0);
             return;
         }
 
         Minecraft minecraft = Minecraft.getInstance();
+
         Map<TerrainKey, SectionUpdateRenderState> selectedUpdates = selectUniqueUpdates();
         int driverSlotId = SlotScope.requireId();
         var driverCamera = ClientRuntime.INSTANCE.slots().slot(driverSlotId)
             .renderState().levelRenderState().cameraRenderState.pos;
+        var optionsRenderState = minecraft.gameRenderer.gameRenderState().optionsRenderState;
+        PrioritizeChunkUpdates previousChunkPriority = optionsRenderState.prioritizeChunkUpdates;
+        if (ExperimentalRenderController.enabled()) {
+            // Nearby synchronous rebuilds bypass the worker queue and are the main source of movement spikes.
+            optionsRenderState.prioritizeChunkUpdates = PrioritizeChunkUpdates.NONE;
+        }
         try {
             for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
                 if (!canRender(slot)) {
@@ -247,7 +279,10 @@ public final class TerrainCoordinator {
                 }
                 ClientLevel level = slot.renderState().level();
                 var updates = slot.renderState().levelRenderState().sectionUpdateRenderStates;
-                updates.removeIf(update -> selectedUpdates.get(key(level, update)) != update);
+                updates.removeIf(update ->
+                    selectedUpdates.get(key(level, update)) != update
+                        || shouldCoalescePendingInitialCompile(slot, update)
+                );
                 if (updates.isEmpty() && slot.renderState().terrain().visibleSections().isEmpty()) {
                     continue;
                 }
@@ -263,8 +298,45 @@ public final class TerrainCoordinator {
                 }
             }
         } finally {
+            optionsRenderState.prioritizeChunkUpdates = previousChunkPriority;
             dispatcher.setCameraPosition(driverCamera);
+            int queueDepth = queueDepth(dispatcher);
+            TerrainCompileBudget.observeQueueDepth(queueDepth);
+            ExperimentalRenderMetrics.recordTerrainScheduling(schedulingStarted, queueDepth);
         }
+    }
+
+    private static void publishPriorityCameras() {
+        Vec3[] priorityCameras = new Vec3[LocalClientSlotRegistry.MAX_SLOTS];
+        for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+            if (canRender(slot)) {
+                priorityCameras[slot.id()] = slot.renderState().levelRenderState().cameraRenderState.pos;
+            }
+        }
+        TerrainTaskPriority.publishCameras(priorityCameras);
+    }
+
+    private static boolean shouldCoalescePendingInitialCompile(
+        LocalClientSlot slot,
+        SectionUpdateRenderState update
+    ) {
+        if (!ExperimentalRenderController.enabled() || update.playerChanged()) {
+            return false;
+        }
+        TerrainGraphArea viewArea = slot.renderState().terrain().viewArea();
+        if (viewArea == null) {
+            return false;
+        }
+        SectionRenderDispatcher.RenderSection section = viewArea.sectionAtNode(update.sectionNode());
+        if (
+            section == null
+                || section.getSectionMesh() != CompiledSectionMesh.UNCOMPILED
+                || !TerrainTaskOwnership.hasPendingCompile(section)
+        ) {
+            return false;
+        }
+        TerrainCompileBudget.recordCoalescedRequest();
+        return true;
     }
 
     private static Map<TerrainKey, SectionUpdateRenderState> selectUniqueUpdates() {
@@ -286,11 +358,27 @@ public final class TerrainCoordinator {
     }
 
     public static void onSectionCompiled(SectionRenderDispatcher.RenderSection section) {
+        ExperimentalRenderMetrics.recordSectionCompiled();
+        TerrainMultiDraw.invalidateSection(section);
         for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
             TerrainState terrain = ClientRuntime.INSTANCE.slots().slot(slotId).renderState().terrain();
             if (terrain.contains(section)) {
                 terrain.sectionOcclusionGraph().schedulePropagationFrom(section);
             }
+        }
+    }
+
+    public static void onSectionBuffersChanged(SectionRenderDispatcher.RenderSection section) {
+        TerrainMultiDraw.invalidateSection(section);
+    }
+
+    private static int queueDepth(SectionRenderDispatcher dispatcher) {
+        var queue = ((SectionRenderDispatcherAccessor)(Object)dispatcher).javaReforged$getQueue();
+        if (ExperimentalRenderController.enabled()) {
+            return ((TerrainTaskQueueExtension)(Object)queue).javaReforged$pruneUntrackedTasks();
+        }
+        synchronized (queue) {
+            return queue.size();
         }
     }
 
@@ -313,6 +401,7 @@ public final class TerrainCoordinator {
     }
 
     public static void closeSharedTerrain() {
+        TerrainMultiDraw.close();
         SharedTerrainStore current = TerrainStateStore.nullableTerrainStore();
         if (current == null) {
             return;
@@ -320,10 +409,12 @@ public final class TerrainCoordinator {
         releaseAllViews();
         current.close();
         TerrainStateStore.setTerrainStore(null);
+        TerrainTaskPriority.clearCameras();
     }
 
     private static void releaseAllViews() {
         for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
+            TerrainMultiDraw.invalidateSlot(slotId);
             ClientRuntime.INSTANCE.slots().slot(slotId).renderState().terrain().releaseViewArea();
         }
     }

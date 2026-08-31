@@ -12,6 +12,7 @@ import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
 import net.jr.client.ui.hud.MinimapHudOverlay;
 import net.jr.client.ui.hud.PlayerNameHudOverlay;
+import net.jr.client.ui.hud.ExperimentalRenderMetricsOverlay;
 import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -77,6 +78,7 @@ public final class HudRenderPass {
             if (SplitScreen.isActive()) {
                 PlayerNameHudOverlay.render(graphics);
             }
+            ExperimentalRenderMetricsOverlay.render(graphics);
         }
     }
 

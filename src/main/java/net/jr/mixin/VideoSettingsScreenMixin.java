@@ -1,6 +1,7 @@
 package net.jr.mixin;
 
 import net.jr.client.ui.presentation.InterfaceProfileOptionsHandler;
+import net.jr.client.ui.presentation.RenderOptimizationOptionsHandler;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
@@ -22,6 +23,14 @@ public abstract class VideoSettingsScreenMixin extends OptionsSubScreen {
             CallbackInfoReturnable<OptionInstance<?>[]> cir
     ) {
         cir.setReturnValue(InterfaceProfileOptionsHandler.extend(options, cir.getReturnValue()));
+    }
+
+    @Inject(method = "qualityOptions", at = @At("RETURN"), cancellable = true)
+    private static void javaReforged$extendQualityOptions(
+            net.minecraft.client.Options options,
+            CallbackInfoReturnable<OptionInstance<?>[]> cir
+    ) {
+        cir.setReturnValue(RenderOptimizationOptionsHandler.extendQuality(options, cir.getReturnValue()));
     }
 
     @Inject(method = "tick", at = @At("TAIL"))

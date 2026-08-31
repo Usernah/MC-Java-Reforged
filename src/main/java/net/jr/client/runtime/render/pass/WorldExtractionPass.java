@@ -7,6 +7,7 @@ import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.terrain.TerrainCoordinator;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
+import net.jr.client.runtime.render.experimental.ExperimentalRenderMetrics;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.mixin.accessors.GameRendererAccessor;
 import net.jr.mixin.accessors.LightmapRenderStateExtractorAccessor;
@@ -61,6 +62,7 @@ public final class WorldExtractionPass {
         TerrainCoordinator.beginExtractionFrame(extractionSlots);
 
         for (LocalClientSlot slot : extractionSlots) {
+            long extractionStarted = ExperimentalRenderMetrics.startTimer();
             try (
                     LocalClientExecution.Scope ignoredClient =
                             LocalClientExecution.enterForClient(
@@ -107,6 +109,8 @@ public final class WorldExtractionPass {
                         camera,
                         worldPartialTicks
                 );
+            } finally {
+                ExperimentalRenderMetrics.recordExtraction(slot.id(), extractionStarted);
             }
         }
     }

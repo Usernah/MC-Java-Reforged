@@ -43,6 +43,7 @@
   "key.java_reforged.gameplay_hotbar_prev": "Previous Hotbar Slot",
   "key.java_reforged.gameplay_hotbar_next": "Next Hotbar Slot",
   "key.java_reforged.gameplay_crafting": "Crafting",
+  "key.java_reforged.profile_allocations": "Capture memory allocations (30 s)",
   "hint.gameplay.java_reforged.crafting": "Crafting",
   "crafting_tab.java_reforged.building_blocks": "Building Blocks",
   "crafting_tab.java_reforged.equipment_and_tools": "Equipment & Tools",
@@ -76,6 +77,13 @@
   "menu.java_reforged.video.split_orientation.vertical": "Vertical",
   "menu.java_reforged.video.split_orientation.horizontal": "Horizontal",
   "menu.java_reforged.video.split_orientation.description": "Changes how the screen is divided when two local players are connected.",
+  "menu.java_reforged.video.optimize_experimental": "Optimize Experimental",
+  "menu.java_reforged.video.optimize_experimental.description": "Enables experimental render optimizations. These features are under active development and can be changed while testing.",
+  "message.java_reforged.jfr.started": "Memory capture started: %s seconds",
+  "message.java_reforged.jfr.finished": "Memory capture saved: %s",
+  "message.java_reforged.jfr.stopped": "Capture stopped and saved: %s",
+  "message.java_reforged.jfr.unavailable": "JFR is not available in this JVM",
+  "message.java_reforged.jfr.failed": "Memory capture failed; check the log",
   "menu.java_reforged.split.loading_world": "Loading world...",
   "menu.java_reforged.split.loading_player": "Preparing player %s"
 }

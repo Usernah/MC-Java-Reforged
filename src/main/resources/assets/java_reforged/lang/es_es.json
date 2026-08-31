@@ -30,6 +30,7 @@
   "key.java_reforged.ui_store_all": "Guardar todo",
   "key.java_reforged.gameplay_hotbar_prev": "Ranura anterior",
   "key.java_reforged.gameplay_hotbar_next": "Ranura siguiente",
+  "key.java_reforged.profile_allocations": "Capturar asignaciones de memoria (30 s)",
   "key.categories.java_reforged.general": "Java Reforged",
   "key.categories.java_reforged.ui": "Interfaz de Java Reforged",
   "key.categories.java_reforged.gameplay": "Juego de Java Reforged",
@@ -46,6 +47,11 @@
   "menu.java_reforged.video.split_orientation.description": "Cambia cómo se divide la pantalla cuando hay dos jugadores locales conectados.",
   "menu.java_reforged.video.optimize_experimental": "Optimización experimental",
   "menu.java_reforged.video.optimize_experimental.description": "Activa optimizaciones de renderizado experimentales. Estas funciones están en desarrollo y pueden cambiar durante las pruebas.",
+  "message.java_reforged.jfr.started": "Captura de memoria iniciada: %s segundos",
+  "message.java_reforged.jfr.finished": "Captura de memoria guardada: %s",
+  "message.java_reforged.jfr.stopped": "Captura detenida y guardada: %s",
+  "message.java_reforged.jfr.unavailable": "JFR no está disponible en esta JVM",
+  "message.java_reforged.jfr.failed": "Falló la captura de memoria; revisa el log",
   "menu.java_reforged.split.loading_world": "Cargando mundo...",
   "menu.java_reforged.split.loading_player": "Preparando jugador %s"
 }

@@ -12,6 +12,7 @@ import net.jr.client.runtime.network.PacketExecutionRouter;
 import net.jr.client.runtime.player.BedrockBridgeUseHandler;
 import net.jr.client.runtime.render.pass.HudRenderPass;
 import net.jr.client.runtime.render.pass.WorldExtractionPass;
+import net.jr.client.runtime.render.experimental.ExperimentalRenderController;
 import net.jr.client.runtime.session.LocalClientDisconnectHandler;
 import net.jr.client.runtime.ui.LocalScreenManager;
 import net.jr.client.runtime.ui.LocalScreenTransitionHandler;
@@ -101,6 +102,16 @@ public abstract class MinecraftMixin {
     @Redirect(method = "renderFrame", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;pick(F)V"))
     private void javaReforged$pickForVisiblePlayers(Minecraft minecraft, float partialTicks) {
         WorldExtractionPass.pickVisibleSlots(minecraft, partialTicks);
+    }
+
+    @Inject(method = "renderFrame", at = @At("HEAD"))
+    private void javaReforged$beginExperimentalRenderFrame(boolean advanceGameTime, CallbackInfo ci) {
+        ExperimentalRenderController.beginFrame();
+    }
+
+    @Inject(method = "renderFrame", at = @At("RETURN"))
+    private void javaReforged$endExperimentalRenderFrame(boolean advanceGameTime, CallbackInfo ci) {
+        ExperimentalRenderController.endFrame();
     }
 
     @Inject(method = "tick", at = @At("RETURN"))

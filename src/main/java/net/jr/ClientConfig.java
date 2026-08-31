@@ -12,6 +12,9 @@ public final class ClientConfig {
     public static final ModConfigSpec.EnumValue<SplitOrientation> SPLIT_ORIENTATION = BUILDER
         .comment("Orientation used by the two-player split-screen layout")
         .defineEnum("splitOrientation", SplitOrientation.VERTICAL);
+    public static final ModConfigSpec.BooleanValue EXPERIMENTAL_RENDER_OPTIMIZATIONS = BUILDER
+        .comment("Enable experimental render optimizations")
+        .define("experimentalRenderOptimizations", false);
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     private ClientConfig() {
@@ -33,5 +36,14 @@ public final class ClientConfig {
     public static void setSplitOrientation(SplitOrientation orientation) {
         SPLIT_ORIENTATION.set(orientation);
         SPLIT_ORIENTATION.save();
+    }
+
+    public static boolean experimentalRenderOptimizations() {
+        return EXPERIMENTAL_RENDER_OPTIMIZATIONS.getAsBoolean();
+    }
+
+    public static void setExperimentalRenderOptimizations(boolean enabled) {
+        EXPERIMENTAL_RENDER_OPTIMIZATIONS.set(enabled);
+        EXPERIMENTAL_RENDER_OPTIMIZATIONS.save();
     }
 }

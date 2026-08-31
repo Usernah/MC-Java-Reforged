@@ -24,6 +24,8 @@ public final class ModKeyBindings {
 
     public static final KeyMapping EXAMPLE_KEY = key("example_action", InputConstants.KEY_G, CATEGORY_GENERAL);
     public static final KeyMapping BATTLE_TEST_TOGGLE = key("battle_test_toggle", InputConstants.KEY_F8, CATEGORY_GAMEPLAY);
+    public static final KeyMapping PROFILE_ALLOCATIONS =
+        key("profile_allocations", InputConstants.KEY_F9, CATEGORY_GENERAL);
     public static final KeyMapping UI_CONFIRM = mouse("ui_confirm", GLFW.GLFW_MOUSE_BUTTON_LEFT);
     public static final KeyMapping UI_BACK = key("ui_back", InputConstants.KEY_ESCAPE, CATEGORY_UI);
     public static final KeyMapping UI_ALTERNATE = mouse("ui_alternate", GLFW.GLFW_MOUSE_BUTTON_RIGHT);

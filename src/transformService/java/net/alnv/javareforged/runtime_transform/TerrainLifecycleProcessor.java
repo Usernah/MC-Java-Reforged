@@ -114,11 +114,14 @@ public final class TerrainLifecycleProcessor implements ClassProcessor {
                     "L" + RENDER_SECTION_OWNER + ";"
                 ));
                 hook.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                hook.add(new InsnNode(
+                    COMPILE_TASK_OWNER.equals(classNode.name) ? Opcodes.ICONST_1 : Opcodes.ICONST_0
+                ));
                 hook.add(new MethodInsnNode(
                     Opcodes.INVOKESTATIC,
                     TERRAIN_SECTION_OWNERS_OWNER,
                     "taskCreated",
-                    "(L" + RENDER_SECTION_OWNER + ";Ljava/lang/Object;)V",
+                    "(L" + RENDER_SECTION_OWNER + ";Ljava/lang/Object;Z)V",
                     false
                 ));
                 method.instructions.insertBefore(insn, hook);

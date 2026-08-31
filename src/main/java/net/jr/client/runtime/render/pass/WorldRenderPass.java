@@ -7,6 +7,7 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.render.experimental.ExperimentalRenderMetrics;
 import net.jr.client.runtime.render.target.ViewportRenderTargets;
 import net.jr.client.runtime.terrain.TerrainCoordinator;
 import net.jr.client.runtime.terrain.TerrainWorkPhase;
@@ -52,6 +53,8 @@ public final class WorldRenderPass {
         ViewportArea viewport,
         boolean updateTerrain
     ) {
+        long renderStarted = ExperimentalRenderMetrics.startTimer();
+        int visibleSections = slot.renderState().terrain().visibleSections().size();
         try (
             LocalClientExecution.Scope ignoredClient = LocalClientExecution.enterForClient(minecraft, slot.id());
             TerrainWorkPhase.Scope ignoredTerrain = updateTerrain ? TerrainWorkPhase.update() : TerrainWorkPhase.drawOnly();
@@ -92,6 +95,8 @@ public final class WorldRenderPass {
                 }
                 ignoredTargets.present();
             }
+        } finally {
+            ExperimentalRenderMetrics.recordSlotRender(slot.id(), renderStarted, visibleSections);
         }
     }
 

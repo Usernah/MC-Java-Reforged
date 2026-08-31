@@ -88,6 +88,10 @@ public final class TerrainGraphArea extends ViewArea {
         return this.store.sectionForGraph(this.slotId, this.view, sectionNode);
     }
 
+    public @Nullable SectionRenderDispatcher.RenderSection sectionAtNode(long sectionNode) {
+        return this.store.sectionForGraph(this.slotId, this.view, sectionNode);
+    }
+
     @Override
     public void releaseAllBuffers() {
         this.store.releaseSlot(this.slotId, this.view);

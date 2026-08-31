@@ -134,6 +134,11 @@ public final class SharedTerrainStore implements AutoCloseable {
         }
     }
 
+    @Nullable AtomicInteger referenceMaskForTask(SectionRenderDispatcher.RenderSection section) {
+        Entry entry = this.entry(section);
+        return entry == null ? null : entry.references;
+    }
+
     public void taskFinished(SectionRenderDispatcher.RenderSection section) {
         Entry entry = this.entry(section);
         if (entry == null) {
