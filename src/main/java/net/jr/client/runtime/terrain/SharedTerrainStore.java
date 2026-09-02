@@ -34,6 +34,16 @@ public final class SharedTerrainStore implements AutoCloseable {
         return this.dispatcher;
     }
 
+    public Diagnostics diagnostics() {
+        return new Diagnostics(
+            this.sections.size(),
+            this.reverse.size(),
+            this.retired.size(),
+            this.reusable.size(),
+            this.nextIndex.get()
+        );
+    }
+
     public void beginFrame() {
         this.ensureOpen();
         this.frame++;
@@ -132,6 +142,18 @@ public final class SharedTerrainStore implements AutoCloseable {
             entry.taskStarted();
             entry.invalidateRetirement();
         }
+    }
+
+    public void markDirty(ClientLevel level, long sectionNode) {
+        Entry entry = this.sections.get(key(level, sectionNode));
+        if (entry != null) {
+            entry.markDirty();
+        }
+    }
+
+    long revision(SectionRenderDispatcher.RenderSection section) {
+        Entry entry = this.entry(section);
+        return entry == null ? -1L : entry.revision();
     }
 
     @Nullable AtomicInteger referenceMaskForTask(SectionRenderDispatcher.RenderSection section) {
@@ -235,6 +257,16 @@ public final class SharedTerrainStore implements AutoCloseable {
         this.reusable.clear();
     }
 
+    public record Diagnostics(
+        int liveSections,
+        int reverseEntries,
+        int queuedRetirements,
+        int reusableSections,
+        int allocatedSections
+    ) {
+        public static final Diagnostics EMPTY = new Diagnostics(0, 0, 0, 0, 0);
+    }
+
     private void ensureOpen() {
         if (this.closed) {
             throw new IllegalStateException("Shared terrain store is closed");
@@ -246,6 +278,7 @@ public final class SharedTerrainStore implements AutoCloseable {
         private final AtomicInteger references = new AtomicInteger();
         private final AtomicInteger tasks = new AtomicInteger();
         private final AtomicLong retirementEpoch = new AtomicLong();
+        private final AtomicLong revision = new AtomicLong();
 
         private Entry(SectionRenderDispatcher.RenderSection section) {
             this.section = section;
@@ -281,6 +314,14 @@ public final class SharedTerrainStore implements AutoCloseable {
 
         private long retirementEpoch() {
             return this.retirementEpoch.get();
+        }
+
+        private void markDirty() {
+            this.revision.incrementAndGet();
+        }
+
+        private long revision() {
+            return this.revision.get();
         }
 
         private void addReference(int slotMask) {

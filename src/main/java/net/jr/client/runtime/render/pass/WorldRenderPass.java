@@ -4,6 +4,7 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.bridge.MinecraftClientAccess;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
@@ -41,11 +42,13 @@ public final class WorldRenderPass {
                 drawWaitingViewport(gameRenderer, slot, viewport);
                 continue;
             }
-            renderSlot(minecraft, gameRenderer, deltaTracker, slot, viewport, slot.id() == terrainDriverSlotId);
+            if (!renderSlot(minecraft, gameRenderer, deltaTracker, slot, viewport, slot.id() == terrainDriverSlotId)) {
+                drawWaitingViewport(gameRenderer, slot, viewport);
+            }
         }
     }
 
-    private static void renderSlot(
+    private static boolean renderSlot(
         Minecraft minecraft,
         GameRenderer gameRenderer,
         DeltaTracker deltaTracker,
@@ -61,6 +64,16 @@ public final class WorldRenderPass {
             ViewportRenderScope.Scope ignoredViewport = ViewportRenderScope.enter(viewport);
             WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bind(minecraft, slot)
         ) {
+            // Minecraft's transformed render code resolves these fields through the
+            // active slot. Reading the raw fields here would validate J1 while a
+            // secondary viewport is being rendered.
+            if (
+                MinecraftClientAccess.level(minecraft) == null
+                    || MinecraftClientAccess.player(minecraft) == null
+                    || MinecraftClientAccess.gameMode(minecraft) == null
+            ) {
+                return false;
+            }
             GameRendererAccessor renderer = (GameRendererAccessor)(Object)gameRenderer;
             var gameState = gameRenderer.gameRenderState();
             var optionsState = gameState.optionsRenderState;
@@ -95,6 +108,7 @@ public final class WorldRenderPass {
                 }
                 ignoredTargets.present();
             }
+            return true;
         } finally {
             ExperimentalRenderMetrics.recordSlotRender(slot.id(), renderStarted, visibleSections);
         }
@@ -107,7 +121,8 @@ public final class WorldRenderPass {
 
     private static int selectTerrainDriver(ClientRuntime players) {
         for (LocalClientSlot slot : players.viewports().drawableSlots()) {
-            if (canRenderLevel(slot) && slot.gameplayState().player().isAlive()) {
+            var player = slot.gameplayState().player();
+            if (canRenderLevel(slot) && player != null && player.isAlive()) {
                 return slot.id();
             }
         }

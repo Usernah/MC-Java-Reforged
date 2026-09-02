@@ -36,7 +36,12 @@ public abstract class SectionTaskDynamicQueueMixin implements TerrainTaskQueueEx
         Vec3 cameraPos,
         CallbackInfoReturnable<SectionRenderDispatcher.RenderSection.SectionTask> callback
     ) {
-        if (!this.tasks.isEmpty() && !TerrainCompileBudget.tryAcquirePermit()) {
+        // The budget is for construction of new terrain. A recompile represents a
+        // correction to an already visible mesh (block edit, propagated light, model
+        // data, etc.) and must never wait behind the initial chunk backlog.
+        boolean hasVisibleCorrection = this.tasks.stream()
+            .anyMatch(SectionRenderDispatcher.RenderSection.SectionTask::isRecompile);
+        if (!this.tasks.isEmpty() && !hasVisibleCorrection && !TerrainCompileBudget.tryAcquirePermit()) {
             callback.setReturnValue(null);
         }
     }

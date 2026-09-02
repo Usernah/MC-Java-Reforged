@@ -156,6 +156,19 @@ public final class LocalTerrainView {
         return this.level;
     }
 
+    public int viewDistance() {
+        return this.viewDistance;
+    }
+
+    public long referencedSectionCapacity() {
+        ClientLevel currentLevel = this.level;
+        if (currentLevel == null || this.viewDistance < 0) {
+            return 0L;
+        }
+        long width = this.viewDistance * 2L + 1L;
+        return width * width * currentLevel.getSectionsCount();
+    }
+
     public void clear() {
         this.store = null;
         this.level = null;

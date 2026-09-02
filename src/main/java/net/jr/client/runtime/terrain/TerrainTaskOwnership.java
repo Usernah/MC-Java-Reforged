@@ -37,9 +37,11 @@ public final class TerrainTaskOwnership {
         }
         SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
         AtomicInteger referenceMask = null;
+        long revision = -1L;
         if (store != null) {
             store.taskStarted(section);
             referenceMask = store.referenceMaskForTask(section);
+            revision = store.revision(section);
         }
         TaskContext previous = TASKS.putIfAbsent(
             task,
@@ -47,6 +49,7 @@ public final class TerrainTaskOwnership {
                 section,
                 store,
                 referenceMask,
+                revision,
                 new AtomicReference<>(cameraPosition),
                 new AtomicBoolean(),
                 compileTask
@@ -86,6 +89,25 @@ public final class TerrainTaskOwnership {
         return PENDING_COMPILES.containsKey(section);
     }
 
+    public static boolean pendingCompileCoversCurrentRevision(
+        SectionRenderDispatcher.RenderSection section
+    ) {
+        Object task = PENDING_COMPILES.get(section);
+        TaskContext context = task == null ? null : TASKS.get(task);
+        if (context == null) {
+            return false;
+        }
+        return context.store() == null
+            || context.revision() == context.store().revision(section);
+    }
+
+    public static boolean isCurrent(Object task) {
+        TaskContext context = TASKS.get(task);
+        return context == null
+            || context.store() == null
+            || context.revision() == context.store().revision(context.section());
+    }
+
     public static boolean isTracked(Object task) {
         return TASKS.containsKey(task);
     }
@@ -110,6 +132,7 @@ public final class TerrainTaskOwnership {
         SectionRenderDispatcher.RenderSection section,
         @Nullable SharedTerrainStore store,
         @Nullable AtomicInteger referenceMask,
+        long revision,
         AtomicReference<Vec3> cameraPosition,
         AtomicBoolean executing,
         boolean compileTask

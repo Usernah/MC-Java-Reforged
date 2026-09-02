@@ -269,8 +269,11 @@ public final class TerrainCoordinator {
         var optionsRenderState = minecraft.gameRenderer.gameRenderState().optionsRenderState;
         PrioritizeChunkUpdates previousChunkPriority = optionsRenderState.prioritizeChunkUpdates;
         if (ExperimentalRenderController.enabled()) {
-            // Nearby synchronous rebuilds bypass the worker queue and are the main source of movement spikes.
-            optionsRenderState.prioritizeChunkUpdates = PrioritizeChunkUpdates.NONE;
+            // Initial nearby chunk meshes remain asynchronous, but an edit made by a
+            // player must replace the visible mesh immediately. Sending both kinds of
+            // work through the paced initial-load queue can leave stale faces and light
+            // visible while that queue is under pressure.
+            optionsRenderState.prioritizeChunkUpdates = PrioritizeChunkUpdates.PLAYER_AFFECTED;
         }
         try {
             for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
@@ -331,7 +334,7 @@ public final class TerrainCoordinator {
         if (
             section == null
                 || section.getSectionMesh() != CompiledSectionMesh.UNCOMPILED
-                || !TerrainTaskOwnership.hasPendingCompile(section)
+                || !TerrainTaskOwnership.pendingCompileCoversCurrentRevision(section)
         ) {
             return false;
         }

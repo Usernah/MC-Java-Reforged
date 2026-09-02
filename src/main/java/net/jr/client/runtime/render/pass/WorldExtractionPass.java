@@ -8,6 +8,7 @@ import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.terrain.TerrainCoordinator;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.render.experimental.ExperimentalRenderMetrics;
+import net.jr.client.runtime.render.experimental.NameTagEventFastPath;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.mixin.accessors.GameRendererAccessor;
 import net.jr.mixin.accessors.LightmapRenderStateExtractorAccessor;
@@ -60,58 +61,59 @@ public final class WorldExtractionPass {
             .filter(WorldExtractionPass::canExtract)
             .toList();
         TerrainCoordinator.beginExtractionFrame(extractionSlots);
-
-        for (LocalClientSlot slot : extractionSlots) {
-            long extractionStarted = ExperimentalRenderMetrics.startTimer();
-            try (
+        NameTagEventFastPath.beginExtractionFrame();
+        try {
+            for (LocalClientSlot slot : extractionSlots) {
+                long extractionStarted = ExperimentalRenderMetrics.startTimer();
+                try (
                     LocalClientExecution.Scope ignoredClient =
-                            LocalClientExecution.enterForClient(
-                                    minecraft,
-                                    slot.id()
-                            );
+                        LocalClientExecution.enterForClient(minecraft, slot.id());
                     WorldEngineStateScope ignoredEngines =
-                            WorldEngineStateScope.bind(minecraft, slot)
-            ) {
-                var optionsRenderState =
+                        WorldEngineStateScope.bind(minecraft, slot)
+                ) {
+                    var optionsRenderState =
                         gameRenderer.gameRenderState().optionsRenderState;
 
-                optionsRenderState.cameraType =
+                    optionsRenderState.cameraType =
                         slot.optionsState().cameraType();
 
-                optionsRenderState.fov =
+                    optionsRenderState.fov =
                         slot.optionsState().fov().get();
 
-                Camera camera =
+                    Camera camera =
                         ClientRuntime.INSTANCE
-                                .clients()
-                                .client(slot.id())
-                                .camera();
+                            .clients()
+                            .client(slot.id())
+                            .camera();
 
-                ((LightmapRenderStateExtractorAccessor)(Object)lightmapExtractor)
+                    ((LightmapRenderStateExtractorAccessor)(Object)lightmapExtractor)
                         .javaReforged$setNeedsUpdate(true);
 
-                lightmapExtractor.extract(
+                    lightmapExtractor.extract(
                         slot.renderState().lightmapRenderState(),
                         1.0F
-                );
+                    );
 
-                float cameraPartialTicks =
+                    float cameraPartialTicks =
                         camera.getCameraEntityPartialTicks(deltaTracker);
 
-                renderer.javaReforged$extractCamera(
+                    renderer.javaReforged$extractCamera(
                         deltaTracker,
                         worldPartialTicks,
                         cameraPartialTicks
-                );
+                    );
 
-                levelExtractor.extract(
+                    levelExtractor.extract(
                         deltaTracker,
                         camera,
                         worldPartialTicks
-                );
-            } finally {
-                ExperimentalRenderMetrics.recordExtraction(slot.id(), extractionStarted);
+                    );
+                } finally {
+                    ExperimentalRenderMetrics.recordExtraction(slot.id(), extractionStarted);
+                }
             }
+        } finally {
+            NameTagEventFastPath.endExtractionFrame();
         }
     }
 

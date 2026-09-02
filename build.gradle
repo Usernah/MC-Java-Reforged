@@ -175,6 +175,10 @@ dependencies {
     // IntelliJ without bundling it or declaring it as a required runtime mod.
     compileOnly "maven.modrinth:AANobbMI:${sodium_modrinth_version_id}"
 
+    // Development-only FerriteCore compatibility test. Gradle supplies the mod
+    // to NeoForge runs, but it is not bundled or declared as a required mod.
+    runtimeOnly "maven.modrinth:uXXizFIs:${ferritecore_modrinth_version_id}"
+
     // Video decoder. Kept at the exact versions used by Reforged API.
     def javacpp_ver = "1.5.10"
     def ffmpeg_ver = "6.1.1-${javacpp_ver}"

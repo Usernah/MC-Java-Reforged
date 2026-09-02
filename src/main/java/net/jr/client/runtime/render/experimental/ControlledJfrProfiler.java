@@ -24,6 +24,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class ControlledJfrProfiler {
     private static final Duration CAPTURE_DURATION = Duration.ofSeconds(30L);
+    private static final long MAX_CAPTURE_SIZE = 512L * 1024L * 1024L;
     private static final DateTimeFormatter FILE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     private static Recording activeRecording;
@@ -67,7 +68,9 @@ public final class ControlledJfrProfiler {
             recording.setDuration(CAPTURE_DURATION);
             recording.setDestination(destination);
             recording.setDumpOnExit(true);
-            recording.enable("jdk.ObjectAllocationSample");
+            recording.setToDisk(true);
+            recording.setMaxSize(MAX_CAPTURE_SIZE);
+            enableMemoryDiagnostics(recording);
             recording.start();
 
             activeRecording = recording;
@@ -82,6 +85,30 @@ public final class ControlledJfrProfiler {
             notify(minecraft, Component.translatable("message.java_reforged.jfr.failed").withStyle(ChatFormatting.RED));
             Java_reforged.LOGGER.error("No se pudo iniciar la captura JFR controlada", exception);
         }
+    }
+
+    private static void enableMemoryDiagnostics(Recording recording) {
+        recording.enable("jdk.ObjectAllocationSample")
+            .with("throttle", "1000/s")
+            .withStackTrace();
+
+        // Exact allocation sites for large arrays and objects that bypass the TLAB.
+        recording.enable("jdk.ObjectAllocationOutsideTLAB").withStackTrace();
+        // TLAB refill sites complement the sampled allocation view without recording every object.
+        recording.enable("jdk.ObjectAllocationInNewTLAB").withStackTrace();
+
+        // Preserve allocation stacks and GC-root paths for objects that survive collection.
+        recording.enable("jdk.OldObjectSample")
+            .withStackTrace()
+            .with("cutoff", "1 h");
+        recording.enable("jdk.ObjectCountAfterGC");
+
+        // Keep the heap/collector timeline explicit even if the bundled profile changes.
+        recording.enable("jdk.GCHeapSummary");
+        recording.enable("jdk.G1HeapSummary");
+        recording.enable("jdk.GarbageCollection").withThreshold(Duration.ZERO);
+        recording.enable("jdk.YoungGarbageCollection").withThreshold(Duration.ZERO);
+        recording.enable("jdk.OldGarbageCollection").withThreshold(Duration.ZERO);
     }
 
     private static void stop(Minecraft minecraft, boolean cancelledEarly) {

@@ -7,6 +7,8 @@ import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.render.experimental.ExperimentalRenderMetrics;
 import net.jr.client.runtime.render.experimental.TerrainMultiDraw;
 import net.jr.client.runtime.terrain.TerrainCompileBudget;
+import net.jr.client.runtime.terrain.ClientWorkBackpressure;
+import net.jr.client.runtime.terrain.TerrainResidencyDiagnostics;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Font;
@@ -56,6 +58,20 @@ public final class ExperimentalRenderMetricsOverlay {
                 "Coalesced %.2f duplicate requests/f",
                 budget.coalescedPerFrame()
             ), TEXT));
+            var clientWork = ClientWorkBackpressure.snapshot();
+            lines.add(new Line(String.format(
+                Locale.ROOT,
+                "Heap %.0f%% %.0f MiB/s | Pressure %s",
+                clientWork.heapPercent(),
+                clientWork.growthMiBPerSecond(),
+                clientWork.pressure()
+            ), TEXT));
+            lines.add(new Line(String.format(
+                Locale.ROOT,
+                "Graph rebuilds %d running | %d waiting",
+                clientWork.runningGraphRebuilds(),
+                clientWork.waitingGraphRebuilds()
+            ), TEXT));
             var multiDraw = TerrainMultiDraw.snapshot();
             lines.add(new Line(String.format(
                 Locale.ROOT,
@@ -77,6 +93,37 @@ public final class ExperimentalRenderMetricsOverlay {
                 scheduler.slot2(),
                 scheduler.slot3(),
                 scheduler.fallbacks()
+            ), TEXT));
+
+            var residency = TerrainResidencyDiagnostics.snapshot();
+            lines.add(new Line(String.format(
+                Locale.ROOT,
+                "Residency opt %d | Server vd %d | loaded %d",
+                residency.configuredDistance(),
+                residency.serverDistance(),
+                residency.serverLoadedChunks()
+            ), TEXT));
+            for (var slot : residency.slots()) {
+                lines.add(new Line(String.format(
+                    Locale.ROOT,
+                    "J%d cache r%d %d/%d | view %d refs %d",
+                    slot.slotId() + 1,
+                    slot.cacheRadius(),
+                    slot.loadedChunks(),
+                    slot.cacheCapacity(),
+                    slot.terrainViewDistance(),
+                    slot.referencedSectionCapacity()
+                ), TEXT));
+            }
+            var store = residency.store();
+            lines.add(new Line(String.format(
+                Locale.ROOT,
+                "Store live %d | reverse %d | retire %d | pool %d/%d",
+                store.liveSections(),
+                store.reverseEntries(),
+                store.queuedRetirements(),
+                store.reusableSections(),
+                store.allocatedSections()
             ), TEXT));
         }
 

@@ -13,6 +13,7 @@ import net.jr.client.runtime.player.BedrockBridgeUseHandler;
 import net.jr.client.runtime.render.pass.HudRenderPass;
 import net.jr.client.runtime.render.pass.WorldExtractionPass;
 import net.jr.client.runtime.render.experimental.ExperimentalRenderController;
+import net.jr.client.runtime.terrain.ClientWorkBackpressure;
 import net.jr.client.runtime.session.LocalClientDisconnectHandler;
 import net.jr.client.runtime.ui.LocalScreenManager;
 import net.jr.client.runtime.ui.LocalScreenTransitionHandler;
@@ -117,6 +118,11 @@ public abstract class MinecraftMixin {
     @Inject(method = "tick", at = @At("RETURN"))
     private void javaReforged$tickSecondarySessions(CallbackInfo ci) {
         ClientRuntime.INSTANCE.clients().tickSecondarySessions((Minecraft)(Object)this);
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void javaReforged$beginClientWorkBudget(CallbackInfo ci) {
+        ClientWorkBackpressure.beginClientTick();
     }
 
     @Inject(method = "handleKeybinds", at = @At("HEAD"), cancellable = true)

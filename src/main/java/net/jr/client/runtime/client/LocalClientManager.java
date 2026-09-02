@@ -268,8 +268,7 @@ public final class LocalClientManager {
                 }
                 gameMode.tick();
                 this.handleSecondaryKeybinds(minecraft, client);
-                level.pollLightUpdates();
-                level.getChunkSource().getLightEngine().runLightUpdates();
+                level.update();
                 level.tickEntities();
                 level.tick(() -> true);
                 if (level.tickRateManager().runsNormally()) {
