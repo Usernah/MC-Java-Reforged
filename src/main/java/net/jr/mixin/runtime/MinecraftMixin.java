@@ -13,6 +13,7 @@ import net.jr.client.runtime.player.BedrockBridgeUseHandler;
 import net.jr.client.runtime.render.pass.HudRenderPass;
 import net.jr.client.runtime.render.pass.WorldExtractionPass;
 import net.jr.client.runtime.render.experimental.ExperimentalRenderController;
+import net.jr.client.runtime.render.experimental.FrameHardwareMetrics;
 import net.jr.client.runtime.terrain.ClientWorkBackpressure;
 import net.jr.client.runtime.session.LocalClientDisconnectHandler;
 import net.jr.client.runtime.ui.LocalScreenManager;
@@ -93,10 +94,12 @@ public abstract class MinecraftMixin {
     private void javaReforged$enterPrimaryRunTick(boolean renderLevel, CallbackInfo ci) {
         Minecraft minecraft = (Minecraft)(Object)this;
         PrimaryTickScope.begin(minecraft);
+        FrameHardwareMetrics.beginFrame(minecraft);
     }
 
     @Inject(method = "runTick", at = @At("RETURN"))
     private void javaReforged$exitPrimaryRunTick(boolean renderLevel, CallbackInfo ci) {
+        FrameHardwareMetrics.endFrame();
         PrimaryTickScope.end();
     }
 
@@ -107,6 +110,7 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "renderFrame", at = @At("HEAD"))
     private void javaReforged$beginExperimentalRenderFrame(boolean advanceGameTime, CallbackInfo ci) {
+        FrameHardwareMetrics.beforeRender();
         ExperimentalRenderController.beginFrame();
     }
 

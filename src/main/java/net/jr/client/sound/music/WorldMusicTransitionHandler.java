@@ -1,6 +1,7 @@
 package net.jr.client.sound.music;
 
 import net.jr.client.runtime.client.LocalClient;
+import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.sound.bridge.MusicManagerBridge;
 import net.jr.client.sound.bridge.SoundEngineBridge;
@@ -60,7 +61,7 @@ public final class WorldMusicTransitionHandler {
 
     public static void tick(Minecraft minecraft, MusicManager musicManager, WorldMusicTransitionState state) {
         if (MusicTransitionManager.shouldProtectWorldLoadAudio()
-                && globalLevel(minecraft) != null && globalPlayer(minecraft) != null) {
+                && LocalClientReadinessPolicy.worldBound(0)) {
             finish(minecraft, musicManager, state);
         }
     }

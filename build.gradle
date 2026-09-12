@@ -85,7 +85,7 @@ neoForge {
     runs {
         client {
             client()
-            programArguments.addAll '--width', '1600', '--height', '720'
+            //programArguments.addAll '--width', '1600', '--height', '720'
             if (project.hasProperty('devUsername')) {
                 programArguments.addAll '--username', project.property('devUsername').toString()
             }
@@ -174,6 +174,12 @@ dependencies {
     // Optional Sodium compatibility baseline. This exposes Sodium to Java and
     // IntelliJ without bundling it or declaring it as a required runtime mod.
     compileOnly "maven.modrinth:AANobbMI:${sodium_modrinth_version_id}"
+    compileOnly "maven.modrinth:nvQzSEkH:${jade_modrinth_version_id}"
+    compileOnly "maven.modrinth:5sy6g3kz:${bettercombat_modrinth_version_id}"
+    compileOnly "maven.modrinth:wGKYL7st:${combat_roll_modrinth_version_id}"
+    compileOnly "maven.modrinth:XvoWJaA2:${spell_engine_modrinth_version_id}"
+    compileOnly "maven.modrinth:1bokaNcj:${xaero_minimap_modrinth_version_id}"
+    compileOnly "maven.modrinth:NcUtCpym:${xaero_world_map_modrinth_version_id}"
 
     // Development-only FerriteCore compatibility test. Gradle supplies the mod
     // to NeoForge runs, but it is not bundled or declared as a required mod.

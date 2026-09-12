@@ -84,4 +84,19 @@ public final class MinecraftClientAccess {
     private static Entity liveEntityOrNull(@Nullable Entity entity) {
         return entity != null && !entity.isRemoved() ? entity : null;
     }
+    public static int missTime(Minecraft minecraft) {
+        return slot().gameplayState().missTime();
+    }
+
+    public static void setMissTime(Minecraft minecraft, int missTime) {
+        slot().gameplayState().setMissTime(missTime);
+    }
+
+    public static int rightClickDelay(Minecraft minecraft) {
+        return slot().gameplayState().rightClickDelay();
+    }
+
+    public static void setRightClickDelay(Minecraft minecraft, int rightClickDelay) {
+        slot().gameplayState().setRightClickDelay(rightClickDelay);
+    }
 }

@@ -1,0 +1,25 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.jade",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "BossHealthOverlayMixin",
+    "BoxElementImplMixin",
+    "ClientProxyAccessor",
+    "ClientProxyMixin",
+    "JadeMixin",
+    "JadeClientAccessor",
+    "JadeClientMixin",
+    "JadeFogRendererMixin",
+    "ObjectDataCenterAccessor",
+    "OverlayRendererAccessor",
+    "PinScreenMixin",
+    "PreviewOptionsScreenMixin",
+    "ReceiveDataPacketMixin",
+    "ServerHandshakePacketMixin",
+    "WailaTickHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.combatroll",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "HudRenderHelperMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

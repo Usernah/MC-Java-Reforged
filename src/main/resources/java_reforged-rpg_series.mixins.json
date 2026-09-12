@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.rpgseries",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ClientCastControllerMixin",
+    "ClientNetworkMixin",
+    "EntityActionsAllowedMixin",
+    "HudMessagesAccessor",
+    "HudMixin",
+    "HudRenderHelperMixin",
+    "MinecraftMixin",
+    "MultiPlayerGameModeMixin",
+    "WrappedKeybindingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

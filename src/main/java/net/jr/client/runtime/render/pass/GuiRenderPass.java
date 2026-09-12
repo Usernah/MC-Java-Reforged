@@ -8,6 +8,7 @@ import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.ui.SecondaryWorldLoadingScreen;
 import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.ui.hud.ExperimentalRenderMetricsOverlay;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -188,6 +189,7 @@ public final class GuiRenderPass {
 
                     if (!(screen instanceof DebugOptionsScreen)) {
                         hud.extractDebugOverlay(graphics);
+                        ExperimentalRenderMetricsOverlay.render(graphics);
                     }
 
                     hud.extractDeferredSubtitles();

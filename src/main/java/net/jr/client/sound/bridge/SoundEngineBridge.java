@@ -13,6 +13,8 @@ public interface SoundEngineBridge {
 
     boolean javaReforged$hasFadingMusic();
 
+    boolean javaReforged$hasManagedMusic();
+
     default boolean javaReforged$onInterceptStop() {
         if (!SoundTransitionConfig.seamlessTransitions && SoundTransitionConfig.seamlessSoundTransitions == 0) {
             return true;

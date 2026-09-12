@@ -38,6 +38,10 @@ public final class InputApi {
     }
 
     public static void markGamepadInput() {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft != null) {
+            minecraft.getFramerateLimitTracker().onInputReceived();
+        }
         LocalInputContext.markGamepadInput();
     }
 

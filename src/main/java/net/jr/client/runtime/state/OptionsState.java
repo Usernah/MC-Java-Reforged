@@ -11,6 +11,10 @@ import net.minecraft.client.Options;
 import net.minecraft.network.chat.Component;
 
 public final class OptionsState {
+    private static final double DEFAULT_CONTROLLER_CURSOR_SENSITIVITY = 15.0D;
+    private static final double DEFAULT_CONTROLLER_CAMERA_SENSITIVITY = 24.0D;
+    private static final double DEFAULT_CONTROLLER_SPYGLASS_SENSITIVITY = 6.0D;
+
     private final int slotId;
 
     private final OptionInstance<Integer> guiScale;
@@ -30,6 +34,12 @@ public final class OptionsState {
     private final OptionInstance<Integer> sprintWindow;
     private final OptionInstance<Boolean> autoJump;
     private final OptionInstance<Boolean> operatorItemsTab;
+    private final OptionInstance<Double> controllerCursorSensitivity;
+    private final OptionInstance<Double> controllerCameraSensitivity;
+    private final OptionInstance<Double> controllerSpyglassSensitivity;
+    private final OptionInstance<Boolean> invertControllerMovementY;
+    private final OptionInstance<Boolean> invertControllerCameraX;
+    private final OptionInstance<Boolean> invertControllerCameraY;
 
     private CameraType cameraType = CameraType.FIRST_PERSON;
 
@@ -204,6 +214,34 @@ public final class OptionsState {
                 false,
                 value -> this.save()
         );
+        this.controllerCursorSensitivity = this.controllerSensitivity(
+                "controls.java_reforged.cursor_sensitivity",
+                DEFAULT_CONTROLLER_CURSOR_SENSITIVITY
+        );
+        this.controllerCameraSensitivity = this.controllerSensitivity(
+                "controls.java_reforged.camera_sensitivity",
+                DEFAULT_CONTROLLER_CAMERA_SENSITIVITY
+        );
+        this.controllerSpyglassSensitivity = this.boundedControllerSensitivity(
+                "controls.java_reforged.spyglass_sensitivity",
+                DEFAULT_CONTROLLER_SPYGLASS_SENSITIVITY,
+                50
+        );
+        this.invertControllerMovementY = OptionInstance.createBoolean(
+                "controls.java_reforged.invert_movement_y",
+                false,
+                value -> this.save()
+        );
+        this.invertControllerCameraX = OptionInstance.createBoolean(
+                "controls.java_reforged.invert_camera_x",
+                false,
+                value -> this.save()
+        );
+        this.invertControllerCameraY = OptionInstance.createBoolean(
+                "controls.java_reforged.invert_camera_y",
+                false,
+                value -> this.save()
+        );
     }
 
     public OptionInstance<Integer> guiScale() {
@@ -287,6 +325,30 @@ public final class OptionsState {
         return this.operatorItemsTab;
     }
 
+    public OptionInstance<Double> controllerCursorSensitivity() {
+        return this.controllerCursorSensitivity;
+    }
+
+    public OptionInstance<Double> controllerCameraSensitivity() {
+        return this.controllerCameraSensitivity;
+    }
+
+    public OptionInstance<Double> controllerSpyglassSensitivity() {
+        return this.controllerSpyglassSensitivity;
+    }
+
+    public OptionInstance<Boolean> invertControllerMovementY() {
+        return this.invertControllerMovementY;
+    }
+
+    public OptionInstance<Boolean> invertControllerCameraX() {
+        return this.invertControllerCameraX;
+    }
+
+    public OptionInstance<Boolean> invertControllerCameraY() {
+        return this.invertControllerCameraY;
+    }
+
     public void setGuiScale(int guiScale) {
         this.guiScale.set(guiScale);
     }
@@ -353,6 +415,30 @@ public final class OptionsState {
 
     public void setOperatorItemsTab(boolean operatorItemsTab) {
         this.operatorItemsTab.set(operatorItemsTab);
+    }
+
+    public void setControllerCursorSensitivity(double controllerCursorSensitivity) {
+        this.controllerCursorSensitivity.set(controllerCursorSensitivity);
+    }
+
+    public void setControllerCameraSensitivity(double controllerCameraSensitivity) {
+        this.controllerCameraSensitivity.set(controllerCameraSensitivity);
+    }
+
+    public void setControllerSpyglassSensitivity(double controllerSpyglassSensitivity) {
+        this.controllerSpyglassSensitivity.set(controllerSpyglassSensitivity);
+    }
+
+    public void setInvertControllerMovementY(boolean invertControllerMovementY) {
+        this.invertControllerMovementY.set(invertControllerMovementY);
+    }
+
+    public void setInvertControllerCameraX(boolean invertControllerCameraX) {
+        this.invertControllerCameraX.set(invertControllerCameraX);
+    }
+
+    public void setInvertControllerCameraY(boolean invertControllerCameraY) {
+        this.invertControllerCameraY.set(invertControllerCameraY);
     }
 
     public void initialize(InitialValues values) {
@@ -428,6 +514,50 @@ public final class OptionsState {
                         value ? "options.key.toggle" : "options.key.hold"
                 ),
                 OptionInstance.BOOLEAN_VALUES,
+                defaultValue,
+                value -> this.save()
+        );
+    }
+
+    private OptionInstance<Double> controllerSensitivity(String key, double defaultValue) {
+        return new OptionInstance<>(
+                key,
+                OptionInstance.noTooltip(),
+                (caption, value) -> Component.translatable(
+                        "options.percent_value",
+                        caption,
+                        (int) Math.round(value * 2.0D)
+                ),
+                new OptionInstance.IntRange(0, 200).xmap(
+                        percent -> percent / 2.0D,
+                        value -> (int) Math.round(value * 2.0D),
+                        true
+                ),
+                Codec.doubleRange(0.0D, 100.0D),
+                defaultValue,
+                value -> this.save()
+        );
+    }
+
+    private OptionInstance<Double> boundedControllerSensitivity(
+            String key,
+            double defaultValue,
+            int maximum
+    ) {
+        return new OptionInstance<>(
+                key,
+                OptionInstance.noTooltip(),
+                (caption, value) -> Component.translatable(
+                        "options.percent_value",
+                        caption,
+                        (int) Math.round(value * 100.0D / maximum)
+                ),
+                new OptionInstance.IntRange(0, 100).xmap(
+                        percent -> percent * maximum / 100.0D,
+                        value -> (int) Math.round(value * 100.0D / maximum),
+                        true
+                ),
+                Codec.doubleRange(0.0D, maximum),
                 defaultValue,
                 value -> this.save()
         );

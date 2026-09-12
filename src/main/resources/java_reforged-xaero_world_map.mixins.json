@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.xaeroworldmap",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ClientEventsMixin",
+    "MapProcessorMixin",
+    "MapSaveLoadMixin",
+    "MapRunnerMixin",
+    "WorldMapCoreMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

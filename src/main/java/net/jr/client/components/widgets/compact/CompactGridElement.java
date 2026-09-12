@@ -1,6 +1,5 @@
 package net.jr.client.components.widgets.compact;
 
-import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.components.widgets.item.AbstractItemGridElement;
 
@@ -129,14 +128,6 @@ public abstract class CompactGridElement<G, V> extends AbstractItemGridElement<C
                 this::activatePrimary,
                 this::activateAlternate
         );
-    }
-
-    @Override
-    public boolean handleUiAction(UiAction action) {
-        if ((action == UiAction.BACK || action == UiAction.CANCEL) && this.closeExpansion()) {
-            return true;
-        }
-        return super.handleUiAction(action);
     }
 
     private void activatePrimary(CompactGridEntry<G, V> entry) {

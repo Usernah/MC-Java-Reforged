@@ -10,6 +10,7 @@ import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.mixin.accessors.MouseHandlerAccessor;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import org.jetbrains.annotations.Nullable;
@@ -76,6 +77,11 @@ public final class UiInputModeController {
 
     public static boolean shouldSuppressPointerHover() {
         return isFocusNavigationActive() && !shouldShowCursorDuringFocus();
+    }
+
+    @Nullable
+    public static GuiEventListener focusedElement(Screen screen) {
+        return ScreenFocusController.resolveFocusedListener(screen);
     }
 
     public static void prepareForFocusNavigation(int keyCode) {

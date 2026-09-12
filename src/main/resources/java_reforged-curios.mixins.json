@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.curios",
+  "compatibilityLevel": "JAVA_25",
+  "mixinextras": {
+    "minVersion": "0.5.4"
+  },
+  "client": [
+    "CuriosScreenEventsMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -8,6 +8,7 @@ import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.options.OptionsStateResolver;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.input.gamepad.GamepadAxis;
@@ -51,7 +52,6 @@ public final class LocalGamepadInputHandler {
     }
 
     private static final float DEADZONE = 0.2f;
-    private static final float CURSOR_SPEED = 15.0f;
     private static final float CURSOR_INPUT_EPSILON = 0.0001f;
     private static final double RAW_MOUSE_MOVE_EPSILON = 0.25D;
     private static final double CAMERA_FRAME_SCALE_MAX = 2.0D;
@@ -201,8 +201,9 @@ public final class LocalGamepadInputHandler {
                 centerVirtualCursor(mc, slotId);
             }
             double frameScale = cursorClock(slotId).sample();
-            state.virtualCursorX += stickX * CURSOR_SPEED * frameScale;
-            state.virtualCursorY += stickY * CURSOR_SPEED * frameScale;
+            double sensitivity = OptionsStateResolver.current().controllerCursorSensitivity().get();
+            state.virtualCursorX += stickX * sensitivity * frameScale;
+            state.virtualCursorY += stickY * sensitivity * frameScale;
             markCursorAsJoystickDriven(slotId);
             UiInputModeController.notifyJoystickPointerActivity();
         } else {
@@ -520,7 +521,7 @@ public final class LocalGamepadInputHandler {
 
     static void dispatchFocusNavigation(Screen screen, int keyCode) {
         UiInputModeController.prepareForFocusNavigation(keyCode);
-        FocusSnapshot focusBefore = FocusSnapshot.capture(screen);
+        InputActionSounds.FocusSnapshot focusBefore = InputActionSounds.captureFocus(screen);
         UiAction directionalAction = switch (keyCode) {
             case GLFW.GLFW_KEY_LEFT -> UiAction.MOVE_LEFT;
             case GLFW.GLFW_KEY_RIGHT -> UiAction.MOVE_RIGHT;
@@ -539,9 +540,7 @@ public final class LocalGamepadInputHandler {
         if (directionalAction != null
                 && screen instanceof UiActionHandler screenHandler
                 && screenHandler.handleUiAction(directionalAction)) {
-            if (focusBefore.hasChanged(screen)) {
-                InputActionSounds.playFocus();
-            }
+            focusBefore.playIfChanged(screen);
             syncVirtualCursorToFocusedComponent(screen);
             screen.afterKeyboardAction();
             return;
@@ -557,9 +556,7 @@ public final class LocalGamepadInputHandler {
             fallbackHandled = handled ? false : UiInputModeController.applyContainerSlotFocusFallback(screen, keyCode);
         }
         if (handled || fallbackHandled) {
-            if (focusBefore.hasChanged(screen)) {
-                InputActionSounds.playFocus();
-            }
+            focusBefore.playIfChanged(screen);
             syncVirtualCursorToFocusedComponent(screen);
         }
         screen.afterKeyboardAction();
@@ -569,23 +566,6 @@ public final class LocalGamepadInputHandler {
         GuiEventListener focused = focusedElement(screen);
         return focused instanceof UiActionHandler handler
             && handler.handleUiAction(action);
-    }
-
-    private record FocusSnapshot(GuiEventListener focusedLeaf, Integer focusedSlot) {
-        private static FocusSnapshot capture(Screen screen) {
-            GuiEventListener focused = LocalGamepadInputHandler.focusedElement(screen);
-            Integer slot = screen instanceof AbstractContainerScreen<?> containerScreen
-                    ? ContainerSlotFocusController.getFocusedSlotIndex(containerScreen)
-                    : null;
-            return new FocusSnapshot(focused, slot);
-        }
-
-        private boolean hasChanged(Screen screen) {
-            FocusSnapshot current = capture(screen);
-            return this.focusedLeaf != current.focusedLeaf
-                    || !java.util.Objects.equals(this.focusedSlot, current.focusedSlot);
-        }
-
     }
 
     static boolean focusedElementPrefersDirectAction(Screen screen) {
@@ -838,7 +818,7 @@ public final class LocalGamepadInputHandler {
     }
 
     private static void markCursorAsJoystickDriven(int slotId) {
-        ClientRuntime.INSTANCE.slots().slot(slotId).inputState().markGamepadInput();
+        InputApi.markGamepadInput();
         LocalCursorState state = cursorState(slotId);
         state.cursorInputSource = CursorInputSource.JOYSTICK;
         resetFocusCursorAnimation(slotId, state.virtualCursorX, state.virtualCursorY);

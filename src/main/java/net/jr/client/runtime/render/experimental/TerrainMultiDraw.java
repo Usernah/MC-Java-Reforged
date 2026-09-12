@@ -59,6 +59,7 @@ public final class TerrainMultiDraw {
     private static final int MAX_SECTIONS = 32768;
     private static final int MAX_COMMANDS = MAX_SECTIONS * 2;
     private static final int MAX_DRAWS_PER_SUBMIT = 128;
+    private static final GpuBufferSlice[] NO_SECTION_UNIFORMS = new GpuBufferSlice[0];
     private static final int TERRAIN_BATCH_UBO_SIZE = new Std140SizeCalculator().putMat4f().putIVec2().get();
     private static final int BUFFER_USAGE_CPU_VERTEX = GpuBuffer.USAGE_MAP_WRITE | GpuBuffer.USAGE_HINT_CLIENT_STORAGE | GpuBuffer.USAGE_VERTEX;
     private static final int BUFFER_USAGE_CPU_INDIRECT = GpuBuffer.USAGE_MAP_WRITE
@@ -160,24 +161,32 @@ public final class TerrainMultiDraw {
 
         long now = Util.getMillis();
         Matrix4f frameModelView = cache.frameModelView.set(modelViewMatrix);
-        DynamicUniforms.ChunkSectionInfo[] sectionInfos = cache.sectionInfos(topology.sectionCount);
+        DynamicUniforms.ChunkSectionInfo[] sectionInfos = cache.sectionInfos(topology.translucentSectionCount);
         float[] visibilities = cache.visibilities(topology.sectionCount);
         for (int index = 0; index < topology.sectionCount; index++) {
             SectionEntry entry = topology.sections[index];
             float visibility = entry.section.getVisibility(now);
             visibilities[index] = visibility;
+        }
+        // Opaque draws use TerrainBatch and sectionInstances. Only the vanilla
+        // translucent draws need a per-section matrix/uniform allocation.
+        for (int index = 0; index < topology.translucentSectionCount; index++) {
+            int sectionIndex = topology.translucentSections[index];
+            SectionEntry entry = topology.sections[sectionIndex];
             sectionInfos[index] = new DynamicUniforms.ChunkSectionInfo(
                 frameModelView,
                 entry.x,
                 entry.y,
                 entry.z,
-                visibility,
+                visibilities[sectionIndex],
                 textureAtlasWidth,
                 textureAtlasHeight
             );
         }
 
-        GpuBufferSlice[] chunkSectionInfos = RenderSystem.getDynamicUniforms().writeChunkSections(sectionInfos);
+        GpuBufferSlice[] chunkSectionInfos = sectionInfos.length == 0
+            ? NO_SECTION_UNIFORMS
+            : RenderSystem.getDynamicUniforms().writeChunkSections(sectionInfos);
         ChunkSectionsToRender result = new ChunkSectionsToRender(
             blockAtlas,
             topology.vanillaGroups,
@@ -355,9 +364,9 @@ public final class TerrainMultiDraw {
                         firstIndex = (int)(slice.indexBufferOffset() / indexType.bytes);
                     }
 
-                    int finalSectionIndex = sectionIndex;
                     int baseVertex = (int)(slice.vertexBufferOffset() / vertexFormat.getVertexSize());
                     if (layer == ChunkSectionLayer.TRANSLUCENT) {
+                        int translucentIndex = topology.addTranslucentSection(sectionIndex);
                         topology.drawList(layer, combinedHash).add(new RenderPass.Draw<>(
                             0,
                             vertexBuffer,
@@ -366,7 +375,7 @@ public final class TerrainMultiDraw {
                             firstIndex,
                             draw.indexCount(),
                             baseVertex,
-                            (sectionUbos, uploader) -> uploader.upload("ChunkSection", sectionUbos[finalSectionIndex])
+                            (sectionUbos, uploader) -> uploader.upload("ChunkSection", sectionUbos[translucentIndex])
                         ));
                     }
 
@@ -525,6 +534,8 @@ public final class TerrainMultiDraw {
         private int visibleSectionCount;
         private SectionEntry[] sections = new SectionEntry[256];
         private int sectionCount;
+        private int[] translucentSections = new int[256];
+        private int translucentSectionCount;
         private final EnumMap<ChunkSectionLayer, Int2ObjectOpenHashMap<List<RenderPass.Draw<GpuBufferSlice[]>>>> vanillaGroups = new EnumMap<>(ChunkSectionLayer.class);
         private final List<ArrayList<RenderPass.Draw<GpuBufferSlice[]>>> drawListPool = new ArrayList<>();
         private int drawListCursor;
@@ -556,6 +567,7 @@ public final class TerrainMultiDraw {
             this.invalidationGeneration = invalidationGeneration;
             this.visibleSectionCount = visibleSectionCount;
             this.sectionCount = 0;
+            this.translucentSectionCount = 0;
             this.commandCount = 0;
             this.logicalDrawCount = 0;
             this.drawListCursor = 0;
@@ -600,6 +612,17 @@ public final class TerrainMultiDraw {
             }
             entry.set(section, x, y, z);
             return this.sectionCount++;
+        }
+
+        private int addTranslucentSection(int sectionIndex) {
+            if (this.translucentSectionCount == this.translucentSections.length) {
+                this.translucentSections = java.util.Arrays.copyOf(
+                    this.translucentSections, grow(this.translucentSections.length, this.translucentSectionCount + 1)
+                );
+            }
+            int index = this.translucentSectionCount++;
+            this.translucentSections[index] = sectionIndex;
+            return index;
         }
 
         private List<RenderPass.Draw<GpuBufferSlice[]>> drawList(ChunkSectionLayer layer, int hash) {

@@ -11,6 +11,7 @@ public final class RuntimeTransformationService implements ClassProcessorProvide
     public void createProcessors(Context context, Collector collector) {
         collector.add(new RuntimeFieldRedirectProcessor());
         collector.add(new TerrainLifecycleProcessor());
+        collector.add(new BetterCombatCompatProcessor());
         LOGGER.debug("JavaReforged runtime class processors registered");
     }
 }

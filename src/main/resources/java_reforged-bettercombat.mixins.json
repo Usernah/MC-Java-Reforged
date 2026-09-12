@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.bettercombat",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "AttackInteractorMixin",
+    "ClientNetworkMixin",
+    "LocalClientManagerMixin",
+    "MinecraftClientInteractorMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -16,4 +16,5 @@ public abstract class SoundManagerMixin implements SoundEngineBridge {
     @Override public void javaReforged$fadeSounds(float ticks) { this.javaReforged$bridge().javaReforged$fadeSounds(ticks); }
     @Override public void javaReforged$clearQueued() { this.javaReforged$bridge().javaReforged$clearQueued(); }
     @Override public boolean javaReforged$hasFadingMusic() { return this.javaReforged$bridge().javaReforged$hasFadingMusic(); }
+    @Override public boolean javaReforged$hasManagedMusic() { return this.javaReforged$bridge().javaReforged$hasManagedMusic(); }
 }

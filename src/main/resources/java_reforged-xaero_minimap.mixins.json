@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.xaerominimap",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ClientEventsMixin",
+    "GuiUtilsMixin",
+    "HudRendererMixin",
+    "MinimapAccessor",
+    "MinimapConfigClientUtilsMixin",
+    "MinimapCoreMixin",
+    "MinimapElementWorldRendererHandlerAccessor",
+    "MinimapPipRendererMixin",
+    "MinimapPipRenderStateMixin",
+    "MinimapProcessorMixin",
+    "MinimapRendererAccessor",
+    "MinimapSafeModeRendererAccessor",
+    "ModClientEventsMixin",
+    "WaypointMapRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

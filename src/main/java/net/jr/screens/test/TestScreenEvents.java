@@ -5,10 +5,9 @@ import net.jr.api.client.local.LocalClients;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CraftingScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.jr.screens.crafting.JavaCrafting3x3Screen;
-import net.jr.screens.inventory.JavaCreativeInventoryScreen;
-import net.jr.screens.inventory.JavaInventoryScreen;
+import net.jr.screens.crafting.Crafting3x3Screen;
+import net.jr.screens.inventory.CreativeInventoryScreen;
+import net.jr.screens.InventoryScreen;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -23,7 +22,7 @@ public final class TestScreenEvents {
         if (event.getScreen() instanceof CraftingScreen craftingScreen) {
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.player != null) {
-                event.setNewScreen(new JavaCrafting3x3Screen(
+                event.setNewScreen(new Crafting3x3Screen(
                         craftingScreen.getMenu(),
                         minecraft.player.getInventory(),
                         craftingScreen.getTitle(),
@@ -33,10 +32,10 @@ public final class TestScreenEvents {
             return;
         }
 
-        if (event.getScreen() instanceof InventoryScreen inventoryScreen) {
+        if (event.getScreen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen inventoryScreen) {
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.player != null && !minecraft.player.hasInfiniteMaterials()) {
-                event.setNewScreen(new JavaInventoryScreen(
+                event.setNewScreen(new InventoryScreen(
                         inventoryScreen.getMenu(),
                         minecraft.player.getInventory(),
                         inventoryScreen.getTitle()
@@ -51,10 +50,22 @@ public final class TestScreenEvents {
                 return;
             }
 
-            event.setNewScreen(new JavaCreativeInventoryScreen(
+            event.setNewScreen(new CreativeInventoryScreen(
                     minecraft.player,
                     creativeScreen.getTitle()
             ));
+            return;
+        }
+
+        if (event.getScreen() instanceof net.minecraft.client.gui.screens.inventory.StonecutterScreen stonecutterScreen) {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft.player != null) {
+                event.setNewScreen(new net.jr.screens.StonecutterScreen(
+                        stonecutterScreen.getMenu(),
+                        minecraft.player.getInventory(),
+                        stonecutterScreen.getTitle()
+                ));
+            }
         }
     }
 }

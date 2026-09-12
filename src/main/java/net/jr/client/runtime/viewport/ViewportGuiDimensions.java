@@ -1,7 +1,6 @@
 package net.jr.client.runtime.viewport;
 
 import javax.annotation.Nullable;
-import net.jr.client.runtime.ClientRuntime;
 
 public final class ViewportGuiDimensions {
     private ViewportGuiDimensions() {
@@ -25,9 +24,5 @@ public final class ViewportGuiDimensions {
         }
         ViewportArea viewport = ViewportRenderScope.activeViewportOrNull();
         return viewport != null ? viewport.guiHeight() : null;
-    }
-
-    public static boolean suppressFrameGlobalBlur() {
-        return ClientRuntime.INSTANCE.viewports().presentedCount() > 1;
     }
 }

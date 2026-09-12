@@ -6,6 +6,7 @@ import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.terrain.TerrainCoordinator;
+import net.jr.client.runtime.terrain.TerrainUpdateBatch;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.render.experimental.ExperimentalRenderMetrics;
 import net.jr.client.runtime.render.experimental.NameTagEventFastPath;
@@ -62,7 +63,7 @@ public final class WorldExtractionPass {
             .toList();
         TerrainCoordinator.beginExtractionFrame(extractionSlots);
         NameTagEventFastPath.beginExtractionFrame();
-        try {
+        try (TerrainUpdateBatch terrainUpdates = TerrainUpdateBatch.begin()) {
             for (LocalClientSlot slot : extractionSlots) {
                 long extractionStarted = ExperimentalRenderMetrics.startTimer();
                 try (
@@ -112,6 +113,7 @@ public final class WorldExtractionPass {
                     ExperimentalRenderMetrics.recordExtraction(slot.id(), extractionStarted);
                 }
             }
+            terrainUpdates.prepareSnapshots(minecraft, extractionSlots);
         } finally {
             NameTagEventFastPath.endExtractionFrame();
         }

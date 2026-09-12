@@ -1,4 +1,12 @@
 {
+  "controls.java_reforged.controller_options": "Mandos...",
+  "controls.java_reforged.controller_options.title": "Mandos",
+  "controls.java_reforged.cursor_sensitivity": "Sensibilidad del cursor",
+  "controls.java_reforged.camera_sensitivity": "Sensibilidad de la cámara",
+  "controls.java_reforged.spyglass_sensitivity": "Sensibilidad del catalejo",
+  "controls.java_reforged.invert_movement_y": "Invertir eje Y de movimiento",
+  "controls.java_reforged.invert_camera_x": "Invertir eje X de la cámara",
+  "controls.java_reforged.invert_camera_y": "Invertir eje Y de la cámara",
   "key.java_reforged.gameplay_crafting": "Crafteo",
   "hint.gameplay.java_reforged.crafting": "Crafteo",
   "hint.container.java_reforged.add_to_hotbar": "Añadir a barra rápida",

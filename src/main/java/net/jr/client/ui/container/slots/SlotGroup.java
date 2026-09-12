@@ -9,6 +9,7 @@ public enum SlotGroup {
     PLAYER_CRAFTING_GRID(4),
     CRAFTING_RESULT(1),
     CRAFTING_GRID_3X3(9),
+    STONECUTTER_INPUT(1),
 
     GENERIC_X9(9),
     GENERIC_X18(18),

@@ -4,9 +4,16 @@
   "package": "net.jr.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
-    "accessors.BlockItemAccessor"
+    "AdvancementDisplayMixin",
+    "ServerRecipeBookMixin",
+    "ServerPlayerRecipeMixin",
+    "accessors.BlockItemAccessor",
+    "runtime.ChunkMapMixin",
+    "runtime.DistanceManagerMixin",
+    "runtime.MinecraftServerChunkAdmissionMixin"
   ],
   "client": [
+    "RecipeToastMixin",
     "accessors.AbstractSliderButtonAccessor",
     "AbstractContainerScreenMixin",
     "AbstractSliderButtonMixin",
@@ -56,6 +63,7 @@
     "accessors.GameRenderStateAccessor",
     "runtime.GlCommandEncoderMixin",
     "runtime.GuiGraphicsExtractorMixin",
+    "runtime.GuiRenderStateMixin",
     "accessors.GuiAccessor",
     "runtime.GuiRendererMixin",
     "runtime.GuiMixin",
@@ -84,8 +92,12 @@
     "runtime.ParticleEngineMixin",
     "runtime.PauseScreenMixin",
     "runtime.RenderSectionBufferGenerationMixin",
+    "runtime.RenderSectionTaskCreationMixin",
+    "runtime.SectionRenderDispatcherSchedulingMixin",
     "runtime.ScreenRectangleMixin",
     "runtime.SectionCompileTaskMixin",
+    "runtime.TerrainMeshVersionMixin",
+    "runtime.TerrainSnapshotVersionMixin",
     "runtime.SectionTaskDynamicQueueMixin",
     "runtime.SectionToNodeMapMixin",
     "runtime.SkyRendererMixin",

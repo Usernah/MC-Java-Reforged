@@ -35,6 +35,25 @@ public final class ContainerInventoryActionHandler {
         if (screen instanceof CreativeModeInventoryScreen) {
             return CreativeContainerActions.quickMoveCreativeSlot(screen, target);
         }
+        int containerSlotCount = containerSlotCount(screen);
+        if (containerSlotCount >= 0 && target.index < containerSlotCount) {
+            int playerSlotEnd = screen.getMenu().slots.size();
+            int hotbarStart = Math.max(containerSlotCount, playerSlotEnd - 9);
+            List<Integer> hotbarSlots = java.util.stream.IntStream
+                .range(hotbarStart, playerSlotEnd)
+                .boxed()
+                .toList();
+            List<Integer> inventorySlots = java.util.stream.IntStream
+                .range(containerSlotCount, hotbarStart)
+                .boxed()
+                .toList();
+            return moveSlotToPlayerInOrder(
+                screen,
+                target.index,
+                hotbarSlots,
+                inventorySlots
+            );
+        }
         return click(screen, target, 0, ContainerInput.QUICK_MOVE);
     }
 

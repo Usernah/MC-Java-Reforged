@@ -29,6 +29,13 @@ public abstract class ChannelMixin {
         StreamingChannelHandler.stopped(this.javaReforged$streamingState);
     }
 
+    @Inject(method = "updateStream", at = @At("HEAD"), cancellable = true)
+    private void javaReforged$skipStoppedStreamRefill(CallbackInfo ci) {
+        if (StreamingChannelHandler.shouldSkipUpdate((Channel) (Object) this, this.javaReforged$streamingState)) {
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "updateStream", at = @At("TAIL"))
     private void javaReforged$updateStream(CallbackInfo ci) {
         StreamingChannelHandler.updated((Channel) (Object) this, this.javaReforged$streamingState);

@@ -34,6 +34,34 @@ description = '''${mod_description}'''
 [[mixins]]
 config = "${mod_id}.mixins.json"
 
+[[mixins]]
+config = "${mod_id}-jade.mixins.json"
+requiredMods = ["jade"]
+
+[[mixins]]
+config = "${mod_id}-bettercombat.mixins.json"
+requiredMods = ["bettercombat"]
+
+[[mixins]]
+config = "${mod_id}-combat_roll.mixins.json"
+requiredMods = ["combat_roll"]
+
+[[mixins]]
+config = "${mod_id}-rpg_series.mixins.json"
+requiredMods = ["spell_engine"]
+
+[[mixins]]
+config = "${mod_id}-xaero_minimap.mixins.json"
+requiredMods = ["xaerominimap"]
+
+[[mixins]]
+config = "${mod_id}-xaero_world_map.mixins.json"
+requiredMods = ["xaeroworldmap"]
+
+[[mixins]]
+config = "${mod_id}-curios.mixins.json"
+requiredMods = ["curios"]
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]

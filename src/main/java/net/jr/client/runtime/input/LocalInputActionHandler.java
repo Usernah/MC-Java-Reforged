@@ -14,7 +14,6 @@ import net.jr.client.components.widgets.recipe.RecipeSlotElement;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.input.GamepadJoinTicker;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.input.InputApi;
@@ -34,10 +33,9 @@ import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.jr.screens.controller.ControllerBindingsScreen;
+import net.jr.screens.StonecutterScreen;
 import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
-import net.jr.screens.crafting.AbstractJavaCraftingScreen;
-import net.jr.screens.crafting.JavaCrafting2x2Screen;
-import net.jr.screens.inventory.JavaCreativeInventoryScreen;
+import net.jr.screens.crafting.AbstractCraftingScreen;
 import net.minecraft.util.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -47,7 +45,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.Slot;
@@ -234,7 +231,7 @@ public final class LocalInputActionHandler {
             handleMenuActions(minecraft, currentScreen, state, gamepadInput);
         } else if (player != null) {
             state.wasPauseButtonDown = GameplayActionHandler.handle(
-                minecraft, player, gamepadInput, state.wasPauseButtonDown
+                minecraft, player, gamepadInput, state.wasPauseButtonDown, state.hotbarRepeatState
             );
         }
         syncInGameScreenSounds(minecraft, minecraft.gui.screen(), state);
@@ -372,7 +369,7 @@ public final class LocalInputActionHandler {
             return;
         }
 
-        if (screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+        if (screen instanceof AbstractCraftingScreen<?> craftingScreen) {
             int mouseButton = action == ContainerAction.PRIMARY ? 0 : 1;
             RecipeSlotElement.ActivationFeedback feedback =
                     craftingScreen.recipeMouseActivationFeedbackAt(
@@ -412,18 +409,22 @@ public final class LocalInputActionHandler {
         boolean handled = switch (action) {
             case TAKE_ALL -> ContainerInventoryActionHandler.takeAllFromContainer(screen);
             case STORE_ALL -> ContainerInventoryActionHandler.storeAllInContainer(screen);
-            case QUICK_MOVE -> screen instanceof CreativeCatalogActionHost creativeHost
+            case QUICK_MOVE -> screen instanceof StonecutterScreen stonecutterScreen
+                    ? stonecutterScreen.craftTargetedRecipeStack()
+                    || ContainerInventoryActionHandler.quickMoveFocusedOrHoveredSlot(screen)
+                    : screen instanceof CreativeCatalogActionHost creativeHost
                     ? creativeHost.handleCreativeQuickMove()
                     : ContainerInventoryActionHandler.quickMoveFocusedOrHoveredSlot(screen);
             case PRIMARY -> ContainerInventoryActionHandler.pickupFocusedOrHoveredSlot(screen, 0);
             case ALTERNATE -> ContainerInventoryActionHandler.pickupFocusedOrHoveredSlot(screen, 1);
         };
 
-        if (handled) {
-            InputActionSounds.playClick();
-            markHandledByInput(state, action.mapping);
-        } else if (action.consumesFailure) {
-            InputActionSounds.playBlock();
+        InputActionSounds.playContainerActionFeedback(
+                handled,
+                action == ContainerAction.QUICK_MOVE,
+                action.consumesFailure
+        );
+        if (handled || action.consumesFailure) {
             markHandledByInput(state, action.mapping);
         }
         return handled || action.consumesFailure;
@@ -638,7 +639,7 @@ public final class LocalInputActionHandler {
 
                     if (directFocusAction) {
 
-                        if (screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+                        if (screen instanceof AbstractCraftingScreen<?> craftingScreen) {
                             UiAction uiAction = action.mouseButton == 0
                                     ? UiAction.ACCEPT
                                     : UiAction.ALTERNATE;
@@ -660,7 +661,7 @@ public final class LocalInputActionHandler {
                         }
 
                         if (handled
-                                && screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+                                && screen instanceof AbstractCraftingScreen<?> craftingScreen) {
                             recipeFeedback = craftingScreen.recipeMouseActivationFeedbackAt(
                                     mouseX,
                                     mouseY,
@@ -683,7 +684,7 @@ public final class LocalInputActionHandler {
                     action.dragY = mouseY;
                 }
                 if (handled
-                        && screen instanceof AbstractJavaCraftingScreen<?> craftingScreen) {
+                        && screen instanceof AbstractCraftingScreen<?> craftingScreen) {
                     recipeFeedback = craftingScreen.recipeMouseActivationFeedbackAt(
                             mouseX,
                             mouseY,
@@ -1219,6 +1220,7 @@ public final class LocalInputActionHandler {
         private final Map<Screen, Set<Integer>> screenHandledMouseButtons = new WeakHashMap<>();
         private final Set<Integer> suppressedScreenKeys = new HashSet<>();
         private final Set<Integer> suppressedScreenMouseButtons = new HashSet<>();
+        private final GameplayActionHandler.HotbarRepeatState hotbarRepeatState = new GameplayActionHandler.HotbarRepeatState();
         private boolean wasDropDown;
         private boolean wasPauseButtonDown;
         private boolean dispatchingSyntheticKey;

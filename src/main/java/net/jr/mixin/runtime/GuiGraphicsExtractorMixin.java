@@ -8,7 +8,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
@@ -22,13 +21,6 @@ public abstract class GuiGraphicsExtractorMixin {
     @ModifyVariable(method = "containsPointInScissor", at = @At("HEAD"), argsOnly = true, ordinal = 1)
     private int javaReforged$mapScissorTestYToSharedGui(int y) {
         return GuiViewportScope.mapScissorTestY(y);
-    }
-
-    @Inject(method = "blurBeforeThisStratum", at = @At("HEAD"), cancellable = true)
-    private void javaReforged$keepFrameGlobalBlurOutOfLocalViewports(CallbackInfo callback) {
-        if (ViewportGuiDimensions.suppressFrameGlobalBlur()) {
-            callback.cancel();
-        }
     }
 
     @ModifyArgs(

@@ -33,7 +33,11 @@ public final class ControlsScreenHandler {
         );
         list.addSmall(List.<AbstractWidget>of(
                 Button.builder(
-                        Component.literal("Calibracion"),
+                        Component.translatable("controls.java_reforged.controller_options"),
+                        button -> minecraft.gui.setScreen(new ControllerSettingsScreen(screen, options))
+                ).build(),
+                Button.builder(
+                        Component.translatable("controls.java_reforged.calibration"),
                         button -> minecraft.gui.setScreen(new ControllerCalibrationScreen(screen))
                 ).build()
         ));

@@ -3,6 +3,7 @@ package net.jr.mixin.runtime;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.jr.client.runtime.render.tick.CameraTicker;
+import net.jr.client.runtime.render.experimental.FrameHardwareMetrics;
 import net.jr.client.runtime.viewport.ViewportProjection;
 import net.jr.client.runtime.render.tick.HandRendererTicker;
 import net.jr.client.runtime.render.target.ViewportRenderTargets;
@@ -29,6 +30,16 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
+    @Inject(method = "render", at = @At("HEAD"))
+    private void javaReforged$beginGpuTiming(CallbackInfo ci) {
+        FrameHardwareMetrics.beginGpu();
+    }
+
+    @Inject(method = "render", at = @At("RETURN"))
+    private void javaReforged$endGpuTiming(CallbackInfo ci) {
+        FrameHardwareMetrics.endGpu();
+    }
+
     @Inject(method = "mainRenderTarget", at = @At("HEAD"), cancellable = true)
     private void javaReforged$resolveActiveMainTarget(CallbackInfoReturnable<RenderTarget> cir) {
         RenderTarget activeTarget = ViewportRenderTargets.activeMainOrNull();
@@ -47,6 +58,7 @@ public abstract class GameRendererMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     private void javaReforged$closeSlotRenderTargets(CallbackInfo ci) {
+        FrameHardwareMetrics.close();
         ControlHintRenderPass.closeAll();
         ViewportRenderTargets.closeAll();
     }

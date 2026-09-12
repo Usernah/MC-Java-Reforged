@@ -16,7 +16,9 @@ import org.slf4j.LoggerFactory;
 public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeFieldRedirectProcessor.class);
     private static final boolean LOG_REWRITES = Boolean.getBoolean("javareforged.runtimeRedirectLog");
-    private static final boolean BROAD_COMPATIBILITY_SCAN = Boolean.getBoolean("javareforged.runtimeRedirectBroad");
+    private static final boolean BROAD_COMPATIBILITY_SCAN = Boolean.parseBoolean(
+        System.getProperty("javareforged.runtimeRedirectBroad", "true")
+    );
     private static final String MINECRAFT_ACCESS_OWNER = "net/jr/client/runtime/bridge/MinecraftClientAccess";
     private static final String GUI_SCREEN_ACCESS_OWNER = "net/jr/client/runtime/bridge/GuiScreenAccess";
     private static final String GAME_RENDERER_ACCESS_OWNER = "net/jr/client/runtime/bridge/GameRendererAccess";
@@ -53,6 +55,14 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
         "org.spongepowered.asm.",
         "net.jr.client.runtime.",
         "net.jr.mixin.",
+        "net.alnv.javareforged.",
+        "net.alnv.mixin."
+    };
+    private static final String[] CONTROLLED_CLASS_PREFIXES = {
+        "com.mojang.",
+        "net.minecraft.",
+        "net.neoforged.",
+        "net.jr.",
         "net.alnv.javareforged.",
         "net.alnv.mixin."
     };
@@ -205,6 +215,14 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
             new FieldRedirect(MINECRAFT_ACCESS_OWNER, "level")
         ),
         Map.entry(new FieldKey(MINECRAFT_OWNER, "noRender", "Z"), new FieldRedirect(MINECRAFT_ACCESS_OWNER, "noRender")),
+            Map.entry(
+                    new FieldKey(MINECRAFT_OWNER, "missTime", "I"),
+                    new FieldRedirect(MINECRAFT_ACCESS_OWNER, "missTime")
+            ),
+            Map.entry(
+                    new FieldKey(MINECRAFT_OWNER, "rightClickDelay", "I"),
+                    new FieldRedirect(MINECRAFT_ACCESS_OWNER, "rightClickDelay")
+            ),
         Map.entry(
             new FieldKey(MINECRAFT_OWNER, "player", "Lnet/minecraft/client/player/LocalPlayer;"),
             new FieldRedirect(MINECRAFT_ACCESS_OWNER, "player")
@@ -292,6 +310,14 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
             new FieldKey(MINECRAFT_OWNER, "level", "Lnet/minecraft/client/multiplayer/ClientLevel;"),
             new FieldRedirect(MINECRAFT_ACCESS_OWNER, "setLevel")
         ),
+            Map.entry(
+                    new FieldKey(MINECRAFT_OWNER, "missTime", "I"),
+                    new FieldRedirect(MINECRAFT_ACCESS_OWNER, "setMissTime")
+            ),
+            Map.entry(
+                    new FieldKey(MINECRAFT_OWNER, "rightClickDelay", "I"),
+                    new FieldRedirect(MINECRAFT_ACCESS_OWNER, "setRightClickDelay")
+            ),
         Map.entry(
             new FieldKey(MINECRAFT_OWNER, "player", "Lnet/minecraft/client/player/LocalPlayer;"),
             new FieldRedirect(MINECRAFT_ACCESS_OWNER, "setPlayer")
@@ -537,6 +563,9 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
     }
 
     private static boolean shouldSkipMethod(ClassNode classNode, MethodNode method) {
+        if (isExternalModClass(Type.getObjectType(classNode.name).getClassName())) {
+            return false;
+        }
         return method.name.startsWith("javaReforged$")
             || method.name.startsWith("handler$")
             || method.name.startsWith("redirect$")
@@ -563,7 +592,19 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
                 return false;
             }
         }
-        return BROAD_COMPATIBILITY_SCAN || CORE_RUNTIME_FIELD_CONSUMERS.contains(className);
+        if (CORE_RUNTIME_FIELD_CONSUMERS.contains(className)) {
+            return true;
+        }
+        return BROAD_COMPATIBILITY_SCAN && isExternalModClass(className);
+    }
+
+    private static boolean isExternalModClass(String className) {
+        for (String controlledPrefix : CONTROLLED_CLASS_PREFIXES) {
+            if (className.startsWith(controlledPrefix)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static void logRewrite(String className, int redirectedReads, int redirectedWrites, String reason) {

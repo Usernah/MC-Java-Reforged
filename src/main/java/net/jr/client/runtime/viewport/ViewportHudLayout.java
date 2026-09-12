@@ -26,4 +26,8 @@ public final class ViewportHudLayout {
     public static int hotbarSelectionHeight() {
         return 24;
     }
+
+    public static int bottomAnchorY(int viewportHeight) {
+        return Math.round(viewportHeight + BOTTOM_Y_OFFSET);
+    }
 }

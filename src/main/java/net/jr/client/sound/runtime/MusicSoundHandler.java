@@ -111,5 +111,12 @@ public final class MusicSoundHandler {
                 .anyMatch(sound -> sound instanceof MusicSoundInstance music && music.isFadingOut());
     }
 
+    public static boolean hasManagedMusic(SoundEngine engine) {
+        SoundEngineAccessor accessor = accessor(engine);
+        if (!accessor.javaReforged$isLoaded()) return false;
+        return accessor.javaReforged$instanceToChannel().keySet().stream()
+                .anyMatch(MusicSoundInstance.class::isInstance);
+    }
+
     private static SoundEngineAccessor accessor(SoundEngine engine) { return (SoundEngineAccessor) engine; }
 }

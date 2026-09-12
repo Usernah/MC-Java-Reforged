@@ -74,6 +74,36 @@ public final class PlayerOptionsStorage {
         state.setSprintWindow(integer(player, "sprint_window", state.sprintWindow().get()));
         state.setAutoJump(bool(player, "auto_jump", state.autoJump().get()));
         state.setOperatorItemsTab(bool(player, "operator_items_tab", state.operatorItemsTab().get()));
+        state.setControllerCursorSensitivity(decimal(
+                player,
+                "controller_cursor_sensitivity",
+                state.controllerCursorSensitivity().get()
+        ));
+        state.setControllerCameraSensitivity(decimal(
+                player,
+                "controller_camera_sensitivity",
+                state.controllerCameraSensitivity().get()
+        ));
+        state.setControllerSpyglassSensitivity(decimal(
+                player,
+                "controller_spyglass_sensitivity",
+                state.controllerSpyglassSensitivity().get()
+        ));
+        state.setInvertControllerMovementY(bool(
+                player,
+                "invert_controller_movement_y",
+                state.invertControllerMovementY().get()
+        ));
+        state.setInvertControllerCameraX(bool(
+                player,
+                "invert_controller_camera_x",
+                state.invertControllerCameraX().get()
+        ));
+        state.setInvertControllerCameraY(bool(
+                player,
+                "invert_controller_camera_y",
+                state.invertControllerCameraY().get()
+        ));
     }
 
     private JsonObject write(OptionsState state) {
@@ -96,6 +126,12 @@ public final class PlayerOptionsStorage {
         player.addProperty("sprint_window", state.sprintWindow().get());
         player.addProperty("auto_jump", state.autoJump().get());
         player.addProperty("operator_items_tab", state.operatorItemsTab().get());
+        player.addProperty("controller_cursor_sensitivity", state.controllerCursorSensitivity().get());
+        player.addProperty("controller_camera_sensitivity", state.controllerCameraSensitivity().get());
+        player.addProperty("controller_spyglass_sensitivity", state.controllerSpyglassSensitivity().get());
+        player.addProperty("invert_controller_movement_y", state.invertControllerMovementY().get());
+        player.addProperty("invert_controller_camera_x", state.invertControllerCameraX().get());
+        player.addProperty("invert_controller_camera_y", state.invertControllerCameraY().get());
         return player;
     }
 

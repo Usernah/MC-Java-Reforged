@@ -51,6 +51,7 @@ public abstract class SoundEngineMixin implements SoundEngineBridge {
     @Override public void javaReforged$stopSounds() { }
     @Override public void javaReforged$clearQueued() { MusicSoundHandler.clearQueued(this.javaReforged$engine()); }
     @Override public boolean javaReforged$hasFadingMusic() { return MusicSoundHandler.hasFadingMusic(this.javaReforged$engine()); }
+    @Override public boolean javaReforged$hasManagedMusic() { return MusicSoundHandler.hasManagedMusic(this.javaReforged$engine()); }
 
     @Unique private SoundEngine javaReforged$engine() { return (SoundEngine) (Object) this; }
 }
