@@ -19,7 +19,10 @@ public abstract class SoundEngineMixin implements SoundEngineBridge {
 
     @Inject(method = {"stopAll()V", "reload()V"}, at = @At("HEAD"), cancellable = true)
     private void javaReforged$protectWorldTransitionAudio(CallbackInfo ci) {
-        if (MusicSoundHandler.protectTransitionStop()) ci.cancel();
+        if (MusicSoundHandler.protectTransitionStop()) {
+            MusicSoundHandler.stopSounds(this.javaReforged$engine());
+            ci.cancel();
+        }
     }
 
     @Inject(method = "play", at = @At("HEAD"), cancellable = true)
@@ -48,7 +51,7 @@ public abstract class SoundEngineMixin implements SoundEngineBridge {
 
     @Override public void javaReforged$stopMusic() { MusicSoundHandler.stopMusic(this.javaReforged$engine()); }
     @Override public void javaReforged$fadeSounds(float ticks) { MusicSoundHandler.fadeSounds(this.javaReforged$engine(), ticks); }
-    @Override public void javaReforged$stopSounds() { }
+    @Override public void javaReforged$stopSounds() { MusicSoundHandler.stopSounds(this.javaReforged$engine()); }
     @Override public void javaReforged$clearQueued() { MusicSoundHandler.clearQueued(this.javaReforged$engine()); }
     @Override public boolean javaReforged$hasFadingMusic() { return MusicSoundHandler.hasFadingMusic(this.javaReforged$engine()); }
     @Override public boolean javaReforged$hasManagedMusic() { return MusicSoundHandler.hasManagedMusic(this.javaReforged$engine()); }

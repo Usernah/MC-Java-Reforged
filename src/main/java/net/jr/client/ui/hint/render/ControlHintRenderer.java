@@ -120,15 +120,10 @@ public final class ControlHintRenderer {
             boolean renderText,
             ControlHintMetrics metrics
     ) {
-        float rowHeight = rowHeight(hints, metrics);
-
         float anchorY =
                 canvasHeight
                         - metrics.bottomPadding()
-                        - Math.max(
-                        metrics.barHeight(),
-                        rowHeight
-                ) / 2F;
+                        - metrics.barHeight() / 2F;
 
         float previousTextEnd = 0F;
         boolean firstHint = true;
@@ -486,39 +481,9 @@ public final class ControlHintRenderer {
     ) {
         ControlHintMetrics metrics = metrics();
 
-        if (!context.isHud()) {
-            return (int)Math.ceil(
-                    metrics.bottomPadding()
-                            + Math.max(
-                            metrics.barHeight(),
-                            rowHeight(hints, metrics)
-                    )
-            );
-        }
-
-        float leftHeight =
-                columnHeight(
-                        hints,
-                        HintPlacement.LEFT,
-                        metrics
-                );
-
-        float rightHeight =
-                columnHeight(
-                        hints,
-                        HintPlacement.RIGHT,
-                        metrics
-                );
-
         return (int)Math.ceil(
                 metrics.bottomPadding()
-                        + Math.max(
-                        metrics.barHeight(),
-                        Math.max(
-                                leftHeight,
-                                rightHeight
-                        )
-                )
+                        + metrics.barHeight()
         );
     }
 

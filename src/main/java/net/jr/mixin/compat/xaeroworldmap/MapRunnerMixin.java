@@ -20,7 +20,10 @@ abstract class MapRunnerMixin {
 
     @Inject(method = "run", at = @At("HEAD"), cancellable = true)
     private void javaReforged$runEverySession(CallbackInfo ci) {
-        while (!this.stopped && Minecraft.getInstance().isRunning()) {
+        while (
+            !this.stopped
+                && (Minecraft.getInstance().isRunning() || XaeroWorldMapRuntime.hasSessions())
+        ) {
             if (!XaeroWorldMapRuntime.runProcessors((MapRunner)(Object)this)) {
                 this.doTasks(null);
             }

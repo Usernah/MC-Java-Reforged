@@ -42,6 +42,11 @@ public final class Draw {
         }
     }
 
+    public enum AnimationMode {
+        LOOP,
+        PING_PONG
+    }
+
     public static ImageBuilder image(Asset texture, float x, float y, float width, float height) {
         return new ImageBuilder(UiRenderEngine.image(texture, x, y, width, height));
     }
@@ -186,6 +191,13 @@ public final class Draw {
 
         public ImageBuilder frameDurations(Map<Integer, Integer> frameDurations) {
             this.delegate.frameDurations(frameDurations);
+            return this;
+        }
+
+        public ImageBuilder animationMode(AnimationMode mode) {
+            this.delegate.animationMode(mode == AnimationMode.PING_PONG
+                ? UiRenderEngine.AnimationMode.PING_PONG
+                : UiRenderEngine.AnimationMode.LOOP);
             return this;
         }
 

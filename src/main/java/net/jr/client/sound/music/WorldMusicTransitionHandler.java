@@ -6,6 +6,7 @@ import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.sound.bridge.MusicManagerBridge;
 import net.jr.client.sound.bridge.SoundEngineBridge;
 import net.jr.client.sound.config.SoundTransitionConfig;
+import net.jr.experimental_features.minigame.client.BattleClientState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -18,6 +19,7 @@ public final class WorldMusicTransitionHandler {
     }
 
     public static void worldLoadStarted(MusicManager musicManager, WorldMusicTransitionState state) {
+        BattleClientState.resetForWorldExit();
         MusicManagerBridge bridge = (MusicManagerBridge) musicManager;
         bridge.javaReforged$setLoadingMode(true);
         bridge.javaReforged$setStopGraceTicks(Math.max(20, SoundTransitionConfig.fadeOutTicks));
@@ -45,6 +47,7 @@ public final class WorldMusicTransitionHandler {
             SoundEngineBridge bridge = (SoundEngineBridge) soundManager;
             state.setFadeOnLoad(true);
             bridge.javaReforged$clearQueued();
+            bridge.javaReforged$stopSounds();
             bridge.javaReforged$fadeSounds((float) SoundTransitionConfig.fadeOutTicks);
         } else {
             state.setFadeOnLoad(false);
@@ -55,6 +58,7 @@ public final class WorldMusicTransitionHandler {
     public static void disconnectFinished(MusicManager musicManager, WorldMusicTransitionState state) {
         state.setFadeOnLoad(false);
         if (state.internalDisconnect()) return;
+        BattleClientState.resetForWorldExit();
         MusicTransitionManager.clear();
         ((MusicManagerBridge) musicManager).javaReforged$resetAfterWorldExit();
     }

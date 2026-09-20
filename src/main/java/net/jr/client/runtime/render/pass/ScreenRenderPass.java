@@ -2,7 +2,6 @@ package net.jr.client.runtime.render.pass;
 
 import java.util.Stack;
 import net.jr.client.input.InputApi;
-import net.jr.client.ui.cursor.CursorRenderer;
 import net.jr.client.runtime.input.LocalGamepadInputHandler;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
@@ -15,13 +14,15 @@ import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import org.jetbrains.annotations.Nullable;
 import net.neoforged.neoforge.client.ClientHooks;
 
 public final class ScreenRenderPass {
     private ScreenRenderPass() {
     }
 
-    public static void extract(
+    @Nullable
+    public static Screen extract(
         Minecraft minecraft,
         GuiGraphicsExtractor graphics,
         float partialTick
@@ -29,7 +30,7 @@ public final class ScreenRenderPass {
         int slotId = SlotScope.requireId();
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         if (minecraft.gui.overlay() != null || !runtime.viewports().hasViewport(slotId)) {
-            return;
+            return null;
         }
 
         UiInputModeController.updateCurrentClientFrame(minecraft);
@@ -47,7 +48,7 @@ public final class ScreenRenderPass {
         }
 
         if (screen == null) {
-            return;
+            return null;
         }
 
         Screen renderScreen = screen;
@@ -66,9 +67,8 @@ public final class ScreenRenderPass {
             renderScreen.getClass().getCanonicalName()
         );
 
-        LocalGamepadInputHandler.trackFocusedCursorDuringScroll(renderScreen);
         ControlHintRenderPass.renderScreen(renderScreen, graphics);
-        CursorRenderer.renderForCurrentClient(graphics, minecraft);
+        return renderScreen;
     }
 
     private static int logicalMouseX(

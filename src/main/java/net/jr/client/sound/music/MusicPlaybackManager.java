@@ -48,6 +48,8 @@ public final class MusicPlaybackManager {
         state.resumeAfterWorldExit = true;
         state.initialPlayback = false;
         state.worldExitIntervalArmed = false;
+        state.appliedPolicy = MusicPlaybackPolicy.VANILLA;
+        state.overrideRetryTicks = 0;
         SoundInstance current = accessor.javaReforged$getCurrentMusic();
         if (current != null) {
             SoundManager sounds = accessor.javaReforged$getMinecraft().getSoundManager();
@@ -66,10 +68,11 @@ public final class MusicPlaybackManager {
         MusicManagerAccessor accessor = accessor(manager);
         SoundInstance current = accessor.javaReforged$getCurrentMusic();
         if (current == null) return;
-        if (current instanceof MusicSoundInstance music) {
+        if (current instanceof MusicSoundInstance music && SoundTransitionConfig.fadeOutTicks > 0) {
             music.setFadeOut((float) SoundTransitionConfig.fadeOutTicks);
         } else {
             accessor.javaReforged$getMinecraft().getSoundManager().stop(current);
+            accessor.javaReforged$setCurrentMusic(null);
         }
         state.stopGraceTicks = Math.max(state.stopGraceTicks, SoundTransitionConfig.fadeOutTicks);
         accessor.javaReforged$setNextSongDelay(Integer.MAX_VALUE);
@@ -108,8 +111,11 @@ public final class MusicPlaybackManager {
         MusicTransitionManager.tickMusicContinuityProtection();
         MusicManagerAccessor accessor = accessor(manager);
         Minecraft minecraft = accessor.javaReforged$getMinecraft();
+        MusicPlaybackPolicy.Selection policy = MusicPlaybackPolicy.current();
+        if (!policy.equals(state.appliedPolicy)) {
+            applyPolicyTransition(manager, state, policy);
+        }
         SoundInstance current = accessor.javaReforged$getCurrentMusic();
-        Music music = net.neoforged.neoforge.client.ClientHooks.selectMusic(minecraft.getSituationalMusic(), current);
         SoundManager sounds = minecraft.getSoundManager();
         boolean protectLoad = state.loadingMode || MusicTransitionManager.shouldProtectWorldLoadAudio();
         boolean protectStop = protectLoad
@@ -117,12 +123,40 @@ public final class MusicPlaybackManager {
                 || MusicTransitionManager.shouldProtectRespawnMusicStop()
                 || MusicTransitionManager.shouldProtectMusicContinuity();
 
-        if (current != null && clearFinished(manager, state, sounds)) scheduleNext(manager, state, true);
-        current = accessor.javaReforged$getCurrentMusic();
-        if (current != null && !sounds.isActive(current)) {
-            clearCurrent(manager, state);
+        if (current != null && clearFinished(manager, state, sounds)
+                && policy.mode() == MusicPlaybackPolicy.Mode.VANILLA) {
             scheduleNext(manager, state, true);
         }
+        current = accessor.javaReforged$getCurrentMusic();
+        if (current != null && !sounds.isActive(current)) {
+            boolean waitingForOverrideStart = policy.mode() == MusicPlaybackPolicy.Mode.OVERRIDE
+                    && state.overrideRetryTicks > 0
+                    && policy.music() != null
+                    && isCurrentValid(manager, policy.music());
+            if (!waitingForOverrideStart) {
+                clearCurrent(manager, state);
+                if (policy.mode() == MusicPlaybackPolicy.Mode.VANILLA) {
+                    scheduleNext(manager, state, true);
+                }
+            }
+        }
+
+        if (policy.mode() == MusicPlaybackPolicy.Mode.SILENT) {
+            current = accessor.javaReforged$getCurrentMusic();
+            if (current != null && (!(current instanceof MusicSoundInstance managed) || !managed.isFadingOut())) {
+                fadeOutCurrent(manager, state);
+            }
+            return;
+        }
+        if (policy.mode() == MusicPlaybackPolicy.Mode.OVERRIDE) {
+            if (!protectLoad) {
+                tickOverride(manager, state, policy.music(), sounds);
+            }
+            return;
+        }
+
+        current = accessor.javaReforged$getCurrentMusic();
+        Music music = net.neoforged.neoforge.client.ClientHooks.selectMusic(minecraft.getSituationalMusic(), current);
         if (music == null) {
             if (!state.resumeAfterWorldExit) {
                 accessor.javaReforged$setNextSongDelay(0);
@@ -170,11 +204,53 @@ public final class MusicPlaybackManager {
     }
 
     public static boolean startPlaying(MusicManager manager, MusicPlaybackState state, Music music) {
-        if (music == null) return false;
+        if (music == null || MusicPlaybackPolicy.current().mode() != MusicPlaybackPolicy.Mode.VANILLA) return false;
         float fade = state.fadeInNextTrack ? (float) SoundTransitionConfig.fadeInTicks : 0.0F;
         if (!startCommon(manager, state, music.sound(), fade)) return false;
         state.fadeInNextTrack = false;
         return true;
+    }
+
+    private static void applyPolicyTransition(MusicManager manager, MusicPlaybackState state,
+                                              MusicPlaybackPolicy.Selection policy) {
+        MusicPlaybackPolicy.Selection previous = state.appliedPolicy;
+        state.appliedPolicy = policy;
+        state.overrideRetryTicks = 0;
+        MusicTransitionManager.clearMusicContinuityProtection();
+
+        if (policy.mode() == MusicPlaybackPolicy.Mode.SILENT) {
+            fadeOutCurrent(manager, state);
+        } else if (policy.mode() == MusicPlaybackPolicy.Mode.VANILLA) {
+            if (previous.mode() == MusicPlaybackPolicy.Mode.OVERRIDE) {
+                fadeOutCurrent(manager, state);
+            }
+            MusicManagerAccessor accessor = accessor(manager);
+            if (accessor.javaReforged$getCurrentMusic() == null) {
+                state.stopGraceTicks = 0;
+            }
+            if (!state.loadingMode && !MusicTransitionManager.shouldProtectWorldLoadAudio()) {
+                accessor.javaReforged$setNextSongDelay(0);
+                state.configuredStartDelayArmed = true;
+            }
+            state.fadeInNextTrack = true;
+        }
+    }
+
+    private static void tickOverride(MusicManager manager, MusicPlaybackState state,
+                                     Music music, SoundManager sounds) {
+        SoundInstance current = accessor(manager).javaReforged$getCurrentMusic();
+        if (current != null && isCurrentValid(manager, music) && sounds.isActive(current)) {
+            state.overrideRetryTicks = 0;
+            return;
+        }
+        if (current == null || isCurrentValid(manager, music)) {
+            if (state.overrideRetryTicks > 0) {
+                state.overrideRetryTicks--;
+                return;
+            }
+        }
+        intrude(manager, state, music);
+        state.overrideRetryTicks = RETRY_DELAY_TICKS;
     }
 
     private static int deriveDelay(MusicManager manager, boolean ended) {

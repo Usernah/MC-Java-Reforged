@@ -180,6 +180,7 @@ dependencies {
     compileOnly "maven.modrinth:XvoWJaA2:${spell_engine_modrinth_version_id}"
     compileOnly "maven.modrinth:1bokaNcj:${xaero_minimap_modrinth_version_id}"
     compileOnly "maven.modrinth:NcUtCpym:${xaero_world_map_modrinth_version_id}"
+    compileOnly "maven.modrinth:vvuO3ImH:${curios_version}"
 
     // Development-only FerriteCore compatibility test. Gradle supplies the mod
     // to NeoForge runs, but it is not bundled or declared as a required mod.

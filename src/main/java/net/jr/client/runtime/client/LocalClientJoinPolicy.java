@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.input.InputDeviceRouter;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.api.client.split.SplitScreen;
 
 public final class LocalClientJoinPolicy {
     private LocalClientJoinPolicy() {
@@ -16,9 +17,23 @@ public final class LocalClientJoinPolicy {
             && nextFreeSecondarySlot() != null;
     }
 
+    /**
+     * Lets the pre-join flow recreate a secondary client from a retained
+     * device-to-slot association. Regular in-world joins still require an
+     * unassigned controller through {@link #canStartJoin(long)}.
+     */
+    public static boolean canStartJoin(long deviceId, int slotId) {
+        LocalClientSlotRegistry.requireSlotId(slotId);
+        Integer assignedSlot = InputDeviceRouter.assignedSlot(deviceId);
+        return slotId != 0
+            && InputDeviceRouter.connectedGamepads().contains(deviceId)
+            && (assignedSlot == null || assignedSlot == slotId)
+            && !InputDeviceRouter.isAwaitingNeutral(deviceId)
+            && isFreeSecondarySlot(slotId);
+    }
+
     public static boolean shouldShowJoinPrompt() {
-        int connectedControllers = InputDeviceRouter.connectedGamepads().size();
-        if (connectedControllers < 2) {
+        if (!SplitScreen.hasRequiredControllerCountForJoin()) {
             return false;
         }
         if (nextFreeSecondarySlot() == null) {
@@ -35,14 +50,18 @@ public final class LocalClientJoinPolicy {
 
     @Nullable
     public static Integer nextFreeSecondarySlot() {
-        ClientRuntime runtime = ClientRuntime.INSTANCE;
         for (int slotId = 1; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
-            if (!runtime.clients().hasClient(slotId)
-                && runtime.clients().sessionOrNull(slotId) == null
-                && !runtime.viewports().isPresented(slotId)) {
+            if (isFreeSecondarySlot(slotId)) {
                 return slotId;
             }
         }
         return null;
+    }
+
+    private static boolean isFreeSecondarySlot(int slotId) {
+        ClientRuntime runtime = ClientRuntime.INSTANCE;
+        return !runtime.clients().hasClient(slotId)
+            && runtime.clients().sessionOrNull(slotId) == null
+            && !runtime.viewports().isPresented(slotId);
     }
 }

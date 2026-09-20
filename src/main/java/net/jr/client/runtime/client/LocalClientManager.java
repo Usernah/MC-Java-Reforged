@@ -3,8 +3,12 @@ package net.jr.client.runtime.client;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 import javax.annotation.Nullable;
+import net.jr.client.compat.create.CreateFlywheelLifecycle;
 import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.compat.create.CreateRuntimeState;
+import net.jr.client.runtime.audio.SlotSoundRouter;
 import net.jr.client.runtime.network.ConnectionSlotRegistry;
 import net.jr.client.runtime.player.LocalPlayerPositionSync;
 import net.jr.client.runtime.player.SecondaryPlayerProfileFactory;
@@ -19,6 +23,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.Connection;
+import net.neoforged.neoforge.event.EventHooks;
 
 public final class LocalClientManager {
     private final LocalClientSlotRegistry slots;
@@ -132,7 +137,16 @@ public final class LocalClientManager {
             throw new IllegalArgumentException("Only secondary local clients can be disconnected here: " + slotId);
         }
 
+        SlotSoundRouter.stopSlotSounds(Minecraft.getInstance().getSoundManager(), slotId);
+
         LocalClientSession session = this.sessions[slotId];
+        if (session != null) {
+            session.markWorldCleared();
+        }
+
+        LocalClient client = this.clients[slotId];
+        CreateFlywheelLifecycle.release(client);
+
         if (session != null) {
             session.disconnect(this.connections);
         }
@@ -151,12 +165,22 @@ public final class LocalClientManager {
     }
 
     public int onClientLevelCleared(ClientPacketListener listener) {
-        int slotId = this.slotForClientPacketListener(listener);
-        this.slots.slot(slotId).clearWorldBinding();
+        Connection source = listener.getConnection();
+        Integer mappedSlot = source != null ? this.connections.slotOrNull(source) : null;
+        if (mappedSlot == null && !this.isPrimaryPacketListener(listener)) {
+            return -1;
+        }
+        int slotId = mappedSlot != null ? mappedSlot : 0;
         LocalClientSession session = this.sessions[slotId];
+        if (session != null && session.connection() != null && !session.owns(source)) {
+            return slotId;
+        }
         if (session != null) {
             session.markWorldCleared();
         }
+        SlotSoundRouter.stopSlotSounds(Minecraft.getInstance().getSoundManager(), slotId);
+        CreateFlywheelLifecycle.release(this.clients[slotId]);
+        this.slots.slot(slotId).clearWorldBinding();
         if (slotId == 0) {
             this.disconnectAllSecondary();
         }
@@ -164,10 +188,15 @@ public final class LocalClientManager {
     }
 
     public void onInitialPositionSynchronized(ClientPacketListener listener) {
-        int slotId = this.slotForClientPacketListener(listener);
+        Connection source = listener.getConnection();
+        Integer mappedSlot = source != null ? this.connections.slotOrNull(source) : null;
+        if (mappedSlot == null && !this.isPrimaryPacketListener(listener)) {
+            return;
+        }
+        int slotId = mappedSlot != null ? mappedSlot : 0;
         LocalClientSession session = this.sessions[slotId];
         if (session != null) {
-            session.markPositionSynchronized();
+            session.markPositionSynchronized(source);
         }
     }
 
@@ -270,7 +299,12 @@ public final class LocalClientManager {
                 this.handleSecondaryKeybinds(minecraft, client);
                 level.update();
                 level.tickEntities();
-                level.tick(() -> true);
+                level.tickBlockEntities();
+                BooleanSupplier haveTime = () -> true;
+                EventHooks.fireLevelTickPre(level, haveTime);
+                level.tick(haveTime);
+                EventHooks.fireLevelTickPost(level, haveTime);
+                CreateRuntimeState.tickContraptionsAfterWorldTick(level);
                 if (level.tickRateManager().runsNormally()) {
                     level.animateTick(player.getBlockX(), player.getBlockY(), player.getBlockZ());
                     minecraft.particleEngine.tick();

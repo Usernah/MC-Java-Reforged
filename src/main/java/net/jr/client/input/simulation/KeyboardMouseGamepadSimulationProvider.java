@@ -3,10 +3,13 @@ package net.jr.client.input.simulation;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import javax.annotation.Nullable;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.jr.Java_reforged;
+import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.client.input.gamepad.GamepadAxis;
 import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.input.gamepad.RawGamepadInputPress;
+import net.minecraft.client.KeyMapping;
 import org.lwjgl.glfw.GLFW;
 
 public final class KeyboardMouseGamepadSimulationProvider implements InputSimulationProvider {
@@ -73,6 +76,11 @@ public final class KeyboardMouseGamepadSimulationProvider implements InputSimula
             return true;
         }
 
+        if (matchesBinding(ModKeyBindings.MINIGAME_START, key)
+            || matchesBinding(ModKeyBindings.BATTLE_TEST_TOGGLE, key)) {
+            return false;
+        }
+
         if (!this.active) {
             return false;
         }
@@ -82,6 +90,11 @@ public final class KeyboardMouseGamepadSimulationProvider implements InputSimula
             this.setInput(input, action != GLFW.GLFW_RELEASE);
         }
         return true;
+    }
+
+    private static boolean matchesBinding(KeyMapping mapping, int key) {
+        return mapping.getKey().getType() == InputConstants.Type.KEYSYM
+            && mapping.getKey().getValue() == key;
     }
 
     @Override

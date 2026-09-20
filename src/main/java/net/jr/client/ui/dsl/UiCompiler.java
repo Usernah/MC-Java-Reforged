@@ -641,7 +641,7 @@ final class UiCompiler {
         Body body = this.body(
             document,
             node,
-            List.of("frames", "frame_size", "duration", "unit", "interpolation", "frame_durations"),
+            List.of("frames", "frame_size", "duration", "unit", "mode", "interpolation", "frame_durations"),
             List.of()
         );
         Expression<Integer> frames = this.integer(document, body.require("frames"), allowThis, 0);
@@ -650,6 +650,9 @@ final class UiCompiler {
         Expression<Draw.AnimUnit> unit = body.property("unit") == null
             ? constant(Draw.AnimUnit.MILLISECONDS)
             : this.animationUnit(document, body.property("unit"), allowThis, 0);
+        Expression<Draw.AnimationMode> mode = body.property("mode") == null
+            ? constant(Draw.AnimationMode.LOOP)
+            : this.animationMode(document, body.property("mode"), allowThis, 0);
         Expression<Boolean> interpolation = body.property("interpolation") == null
             ? constant(false)
             : this.bool(document, body.property("interpolation"), allowThis, 0);
@@ -666,7 +669,7 @@ final class UiCompiler {
                 frameDurations.add(this.integer(document, value, allowThis, 0));
             }
         }
-        return new AnimationDefinition(frames, frameSize, duration, unit, interpolation, frameDurations);
+        return new AnimationDefinition(frames, frameSize, duration, unit, mode, interpolation, frameDurations);
     }
 
     private Vector2Definition optionalVector(UiDocument document, Value value, boolean allowThis)
@@ -950,6 +953,17 @@ final class UiCompiler {
             case "second", "seconds" -> Draw.AnimUnit.SECONDS;
             case "minute", "minutes" -> Draw.AnimUnit.MINUTES;
             default -> throw new IllegalArgumentException("Unsupported animation unit");
+        };
+    }
+
+    private Expression<Draw.AnimationMode> animationMode(
+        UiDocument document, Value value, boolean allowThis, int depth
+    ) throws UiCompileException {
+        Expression<String> text = this.string(document, value, allowThis, depth);
+        return context -> switch (text.resolve(context).toLowerCase(Locale.ROOT).replace('-', '_')) {
+            case "loop" -> Draw.AnimationMode.LOOP;
+            case "ping_pong" -> Draw.AnimationMode.PING_PONG;
+            default -> throw new IllegalArgumentException("Unsupported animation mode");
         };
     }
 

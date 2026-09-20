@@ -146,11 +146,22 @@ public final class SlotSoundRouter {
     public static void stopSlotSounds(SoundManager soundManager, int slotId) {
         SoundEngine soundEngine = ((SoundManagerAccessor)soundManager).javaReforged$soundEngine();
         for (SoundInstance activeSound : activeSounds(soundEngine)) {
-            if (belongsToSlot(activeSound, slotId)) {
+            if (activeSound.getSource() != SoundSource.MUSIC && belongsToSlot(activeSound, slotId)) {
                 soundEngine.stop(activeSound);
             }
         }
-        removeQueuedMatching(soundEngine, slotId, null, null);
+        removeQueuedMatching(soundEngine, slotId, null, null, false);
+    }
+
+    /** Stops every world/effect sound while leaving managed music untouched. */
+    public static void stopAllEffects(SoundManager soundManager) {
+        SoundEngine soundEngine = ((SoundManagerAccessor)soundManager).javaReforged$soundEngine();
+        for (SoundInstance activeSound : activeSounds(soundEngine)) {
+            if (activeSound.getSource() != SoundSource.MUSIC) {
+                soundEngine.stop(activeSound);
+            }
+        }
+        removeQueuedEffects(soundEngine);
     }
 
     @Nullable
@@ -237,20 +248,40 @@ public final class SlotSoundRouter {
         @Nullable Identifier soundName,
         @Nullable SoundSource source
     ) {
+        removeQueuedMatching(soundEngine, slotId, soundName, source, true);
+    }
+
+    private static void removeQueuedMatching(
+        SoundEngine soundEngine,
+        int slotId,
+        @Nullable Identifier soundName,
+        @Nullable SoundSource source,
+        boolean includeMusic
+    ) {
         SoundEngineAccessor accessor = (SoundEngineAccessor)soundEngine;
         Iterator<SoundInstance> queuedSounds = accessor.javaReforged$queuedSounds().keySet().iterator();
         while (queuedSounds.hasNext()) {
-            if (matches(queuedSounds.next(), slotId, soundName, source)) {
+            SoundInstance queuedSound = queuedSounds.next();
+            if ((includeMusic || queuedSound.getSource() != SoundSource.MUSIC)
+                && matches(queuedSound, slotId, soundName, source)) {
                 queuedSounds.remove();
             }
         }
 
         Iterator<TickableSoundInstance> queuedTickableSounds = accessor.javaReforged$queuedTickableSounds().iterator();
         while (queuedTickableSounds.hasNext()) {
-            if (matches(queuedTickableSounds.next(), slotId, soundName, source)) {
+            TickableSoundInstance queuedSound = queuedTickableSounds.next();
+            if ((includeMusic || queuedSound.getSource() != SoundSource.MUSIC)
+                && matches(queuedSound, slotId, soundName, source)) {
                 queuedTickableSounds.remove();
             }
         }
+    }
+
+    private static void removeQueuedEffects(SoundEngine soundEngine) {
+        SoundEngineAccessor accessor = (SoundEngineAccessor)soundEngine;
+        accessor.javaReforged$queuedSounds().keySet().removeIf(sound -> sound.getSource() != SoundSource.MUSIC);
+        accessor.javaReforged$queuedTickableSounds().removeIf(sound -> sound.getSource() != SoundSource.MUSIC);
     }
 
     private static boolean matches(
@@ -270,14 +301,6 @@ public final class SlotSoundRouter {
 
     private static boolean isClientAlive(int slotId) {
         return ClientRuntime.INSTANCE.clients().hasClient(slotId);
-    }
-
-    private static boolean isSpatialSlotAlive(int slotId) {
-        if (!ClientRuntime.INSTANCE.clients().hasClient(slotId)) {
-            return false;
-        }
-        LocalClientSlot slot = ClientRuntime.INSTANCE.slots().slot(slotId);
-        return slot.renderState().level() != null && resolveCamera(slot) != null;
     }
 
     @Nullable
@@ -403,7 +426,10 @@ public final class SlotSoundRouter {
         }
 
         protected boolean javaReforged$slotCanPlay() {
-            return this.transformSpatially ? isSpatialSlotAlive(this.slotId) : isClientAlive(this.slotId);
+            // Camera and level bindings are swapped while local clients are
+            // joining and while viewports render. They are therefore not a
+            // sound-lifetime signal. Explicit slot teardown owns cleanup.
+            return isClientAlive(this.slotId);
         }
 
         @Override

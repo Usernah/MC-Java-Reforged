@@ -8,6 +8,7 @@ import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.input.sdl.SdlGamepad;
 import net.jr.client.runtime.client.LocalClientJoinHandler;
 import net.jr.client.runtime.client.LocalClientJoinPolicy;
+import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -18,8 +19,12 @@ public final class GamepadJoinTicker {
     }
 
     public static void tick(Minecraft minecraft) {
-        List<Long> connected = SdlGamepad.deviceIds();
         InputDeviceRouter.pruneDisconnectedDevices();
+        JoinPromptAnnouncer.tick(minecraft);
+        if (PreJoinWorldLoad.isActive()) {
+            return;
+        }
+        List<Long> connected = SdlGamepad.deviceIds();
         JOIN_LATCHED.keySet().removeIf(deviceId -> !connected.contains(deviceId));
 
         for (long deviceId : connected) {
@@ -57,6 +62,7 @@ public final class GamepadJoinTicker {
 
             try {
                 int slotId = LocalClientJoinHandler.join(minecraft, deviceId);
+                JoinPromptAnnouncer.dismiss();
                 show(minecraft, "Mando asignado al jugador " + (slotId + 1));
             } catch (RuntimeException exception) {
                 show(minecraft, "No se pudo unir jugador local: " + exception.getMessage());
@@ -72,6 +78,7 @@ public final class GamepadJoinTicker {
 
     public static void reset() {
         JOIN_LATCHED.clear();
+        JoinPromptAnnouncer.reset();
     }
 
     private static void show(Minecraft minecraft, String message) {

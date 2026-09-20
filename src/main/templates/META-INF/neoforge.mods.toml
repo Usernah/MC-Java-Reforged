@@ -62,6 +62,30 @@ requiredMods = ["xaeroworldmap"]
 config = "${mod_id}-curios.mixins.json"
 requiredMods = ["curios"]
 
+[[mixins]]
+config = "${mod_id}-create.mixins.json"
+requiredMods = ["create"]
+
+[[mixins]]
+config = "${mod_id}-create_flywheel.mixins.json"
+requiredMods = ["create_flywheel"]
+
+[[mixins]]
+config = "${mod_id}-create_catnip.mixins.json"
+requiredMods = ["catnip"]
+
+[[mixins]]
+config = "${mod_id}-create_ponder.mixins.json"
+requiredMods = ["ponder"]
+
+[[mixins]]
+config = "${mod_id}-create_xaero.mixins.json"
+requiredMods = ["create", "xaeroworldmap"]
+
+[[mixins]]
+config = "${mod_id}-create_journeymap.mixins.json"
+requiredMods = ["create", "journeymap"]
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]

@@ -188,6 +188,10 @@ public final class GamepadBindingRegistry {
         this.evaluator().apply(this, context);
     }
 
+    public boolean isApplied(KeyMapping keyMapping) {
+        return this.evaluator().isApplied(keyMapping);
+    }
+
     public void releaseAppliedBindings() {
         this.evaluator().release(this);
     }

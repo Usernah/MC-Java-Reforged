@@ -235,6 +235,9 @@ public class ControllerBindingsScreen extends OptionsSubScreen implements Contro
     @Override
     public void removed() {
         super.removed();
+        if (keyBindsList != null) {
+            keyBindsList.closeGlyphLayer();
+        }
         GamepadBindingRegistry.get().save();
     }
 

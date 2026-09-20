@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.createjourneymap",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "JourneyTrainMapMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

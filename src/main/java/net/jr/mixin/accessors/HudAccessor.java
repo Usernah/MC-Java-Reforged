@@ -1,8 +1,10 @@
 package net.jr.mixin.accessors;
 
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
+import net.minecraft.client.gui.contextualbar.ContextualBar;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -52,4 +54,6 @@ public interface HudAccessor {
     @Accessor("lastBubblePopSoundPlayed") void javaReforged$setLastBubblePopSoundPlayed(int value);
     @Accessor("scopeScale") float javaReforged$getScopeScale();
     @Accessor("scopeScale") void javaReforged$setScopeScale(float value);
+    @Accessor("contextualInfoBar") Pair<?, ContextualBar> javaReforged$getContextualInfoBar();
+    @Accessor("contextualInfoBar") void javaReforged$setContextualInfoBar(Pair<?, ContextualBar> value);
 }

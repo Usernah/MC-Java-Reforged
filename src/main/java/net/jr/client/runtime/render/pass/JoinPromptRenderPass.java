@@ -1,0 +1,181 @@
+package net.jr.client.runtime.render.pass;
+
+import javax.annotation.Nullable;
+import net.jr.api.client.render.Draw;
+import net.jr.api.client.resource.Asset;
+import net.jr.api.client.split.JoinPromptAnnouncement;
+import net.jr.api.client.split.JoinPromptAnnouncements;
+import net.jr.client.input.gamepad.GamepadIdentity;
+import net.jr.client.input.sdl.SdlGamepad;
+import net.jr.client.runtime.viewport.GuiScaleCalculator;
+import net.jr.client.ui.hint.glyph.ControllerGlyph;
+import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
+import net.jr.client.ui.hint.glyph.GamepadGlyphThemeState;
+import net.jr.registry.ModFonts;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Util;
+
+/** Extracts the single window-global join prompt after all local viewports. */
+public final class JoinPromptRenderPass {
+    private static final int PANEL_WIDTH = 186;
+    private static final int PANEL_HEIGHT = 37;
+    private static final int CONTROLLER_X = 6;
+    private static final int CONTROLLER_Y = 4;
+    private static final int CONTROLLER_WIDTH = 26;
+    private static final int CONTROLLER_HEIGHT = 29;
+    private static final int TEXT_AREA_LEFT = 40;
+    private static final int TEXT_AREA_RIGHT = 6;
+    private static final int SEGMENT_GAP = 2;
+    private static final float LABEL_SCALE = 1.0F;
+    private static final float GLYPH_SCALE = 1.0F;
+    private static final int TEXT_COLOR = 0xFF4D4D4D;
+    private static final long BLINK_PERIOD_MS = 1_000L;
+
+    private static final Asset PANEL = Asset.MOD("textures/gui/prompts/panel_prompt.png");
+    private static final Asset JOYSTICKS = Asset.MOD("textures/gui/prompts/joysticks_icon.png");
+    private static final Asset JOYSTICKS_P2 = Asset.MOD("textures/gui/prompts/joysticks_p2_icon.png");
+    private static final Asset JOYSTICKS_P3 = Asset.MOD("textures/gui/prompts/joysticks_p3_icon.png");
+    private static final Asset JOYSTICKS_P4 = Asset.MOD("textures/gui/prompts/joysticks_p4_icon.png");
+
+    @Nullable
+    private static JoinPromptAnnouncement.Show current;
+    private static long shownAtMs;
+
+    static {
+        JoinPromptAnnouncements.source().subscribe(JoinPromptRenderPass::onAnnouncement);
+    }
+
+    private JoinPromptRenderPass() {
+    }
+
+    public static void render(GuiGraphicsExtractor graphics) {
+        JoinPromptAnnouncement.Show prompt = current;
+        if (prompt == null) {
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        double activeScale = minecraft.getWindow().getGuiScale();
+        int standardScale = GuiScaleCalculator.resolveStandard(
+            minecraft.getWindow().getWidth(),
+            minecraft.getWindow().getHeight(),
+            minecraft.options.guiScale().get(),
+            minecraft.isEnforceUnicode()
+        );
+        float presentationScale = (float)(standardScale / activeScale);
+        if (!Float.isFinite(presentationScale) || presentationScale <= 0.0F) {
+            presentationScale = 1.0F;
+        }
+
+        float canvasWidth = graphics.guiWidth() / presentationScale;
+        float canvasHeight = graphics.guiHeight() / presentationScale;
+        float panelX = (canvasWidth - PANEL_WIDTH) / 2.0F;
+        float panelY = (canvasHeight - PANEL_HEIGHT) / 2.0F;
+
+        graphics.pose().pushMatrix();
+        graphics.pose().scale(presentationScale, presentationScale);
+        try {
+            renderPrompt(graphics, prompt, panelX, panelY);
+        } finally {
+            graphics.pose().popMatrix();
+        }
+    }
+
+    private static void renderPrompt(
+        GuiGraphicsExtractor graphics,
+        JoinPromptAnnouncement.Show prompt,
+        float panelX,
+        float panelY
+    ) {
+        Draw.image(PANEL, panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT).draw(graphics);
+        Draw.image(
+            JOYSTICKS,
+            panelX + CONTROLLER_X,
+            panelY + CONTROLLER_Y,
+            CONTROLLER_WIDTH,
+            CONTROLLER_HEIGHT
+        ).draw(graphics);
+        Draw.image(
+            playerIcon(prompt.playerNumber()),
+            panelX + CONTROLLER_X,
+            panelY + CONTROLLER_Y,
+            CONTROLLER_WIDTH,
+            CONTROLLER_HEIGHT
+        ).alpha(blinkAlpha()).draw(graphics);
+
+        renderMessage(graphics, panelX, panelY, prompt.deviceId());
+    }
+
+    private static void renderMessage(
+        GuiGraphicsExtractor graphics,
+        float panelX,
+        float panelY,
+        long deviceId
+    ) {
+        GamepadIdentity identity = SdlGamepad.identity(deviceId);
+        ControllerGlyphTheme theme = GamepadGlyphThemeState.themeForIdentity(identity);
+
+        Draw.TextBuilder prefix = label(Component.translatable("prompt.java_reforged.join.prefix"));
+        Draw.TextBuilder start = glyph(theme, ControllerGlyph.BUTTON_SELECT);
+        Draw.TextBuilder plus = label(Component.literal("+"));
+        Draw.TextBuilder select = glyph(theme, ControllerGlyph.BUTTON_START);
+        Draw.TextBuilder suffix = label(Component.translatable("prompt.java_reforged.join.suffix"));
+
+        Draw.TextBuilder[] segments = {prefix, start, plus, select, suffix};
+        int totalWidth = SEGMENT_GAP * (segments.length - 1);
+        for (Draw.TextBuilder segment : segments) {
+            totalWidth += segment.width();
+        }
+
+        float areaX = panelX + TEXT_AREA_LEFT;
+        int areaWidth = PANEL_WIDTH - TEXT_AREA_LEFT - TEXT_AREA_RIGHT;
+        int x = Math.round(areaX + (areaWidth - totalWidth) / 2.0F);
+        float centerY = panelY + PANEL_HEIGHT / 2.0F;
+
+        for (Draw.TextBuilder segment : segments) {
+            int y = Math.round(centerY - segment.lineHeight() / 2.0F);
+            segment.position(x, y).draw(graphics);
+            x += segment.width() + SEGMENT_GAP;
+        }
+    }
+
+    private static Draw.TextBuilder label(Component component) {
+        return Draw.text(component)
+            .scale(LABEL_SCALE)
+            .color(TEXT_COLOR);
+    }
+
+    private static Draw.TextBuilder glyph(ControllerGlyphTheme theme, ControllerGlyph glyph) {
+        return Draw.text(Component.literal(glyph.text()))
+            .font(GamepadGlyphThemeState.font(theme))
+            .scale(GLYPH_SCALE)
+            .color(0xFFFFFFFF);
+    }
+
+    private static Asset playerIcon(int playerNumber) {
+        return switch (playerNumber) {
+            case 2 -> JOYSTICKS_P2;
+            case 3 -> JOYSTICKS_P3;
+            case 4 -> JOYSTICKS_P4;
+            default -> throw new IllegalArgumentException("Unsupported join prompt player " + playerNumber);
+        };
+    }
+
+    private static float blinkAlpha() {
+        double phase = (Util.getMillis() - shownAtMs) % BLINK_PERIOD_MS
+            / (double)BLINK_PERIOD_MS;
+        return (float)(0.5D + 0.5D * Math.cos(phase * Math.PI * 2.0D));
+    }
+
+    private static void onAnnouncement(JoinPromptAnnouncement announcement) {
+        if (announcement instanceof JoinPromptAnnouncement.Show show) {
+            current = show;
+            shownAtMs = Util.getMillis();
+        } else {
+            current = null;
+            shownAtMs = 0L;
+        }
+    }
+}

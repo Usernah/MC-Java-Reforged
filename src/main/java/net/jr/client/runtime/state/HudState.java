@@ -1,7 +1,9 @@
 package net.jr.client.runtime.state;
 
+import com.mojang.datafixers.util.Pair;
 import javax.annotation.Nullable;
 import net.jr.mixin.accessors.HudAccessor;
+import net.minecraft.client.gui.contextualbar.ContextualBar;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -28,6 +30,7 @@ public final class HudState {
     private long healthBlinkTime;
     private int lastBubblePopSoundPlayed;
     private float scopeScale;
+    private Pair<?, ContextualBar> contextualInfoBar = emptyContextualInfoBar();
 
     public void install(HudAccessor hud) {
         hud.javaReforged$setTickCount(this.tickCount);
@@ -48,6 +51,7 @@ public final class HudState {
         hud.javaReforged$setHealthBlinkTime(this.healthBlinkTime);
         hud.javaReforged$setLastBubblePopSoundPlayed(this.lastBubblePopSoundPlayed);
         hud.javaReforged$setScopeScale(this.scopeScale);
+        hud.javaReforged$setContextualInfoBar(this.contextualInfoBar);
     }
 
     public void capture(HudAccessor hud) {
@@ -69,6 +73,7 @@ public final class HudState {
         this.healthBlinkTime = hud.javaReforged$getHealthBlinkTime();
         this.lastBubblePopSoundPlayed = hud.javaReforged$getLastBubblePopSoundPlayed();
         this.scopeScale = hud.javaReforged$getScopeScale();
+        this.contextualInfoBar = hud.javaReforged$getContextualInfoBar();
     }
 
     public void clear() {
@@ -91,6 +96,7 @@ public final class HudState {
         this.healthBlinkTime = 0L;
         this.lastBubblePopSoundPlayed = 0;
         this.scopeScale = 0.0F;
+        this.contextualInfoBar = emptyContextualInfoBar();
     }
 
     public float vignetteBrightness() {
@@ -99,5 +105,11 @@ public final class HudState {
 
     public void setVignetteBrightness(float vignetteBrightness) {
         this.vignetteBrightness = vignetteBrightness;
+    }
+
+    private static Pair<?, ContextualBar> emptyContextualInfoBar() {
+        // A null discriminator forces vanilla to resolve and construct the
+        // correct contextual bar under the currently bound local client.
+        return Pair.of(null, ContextualBar.EMPTY);
     }
 }

@@ -113,6 +113,11 @@ public final class SlotGrid {
         return this;
     }
 
+    public SlotGrid slot(int slotId, int x, int y, int width, int height, int itemSize) {
+        positions.put(slotId, new SlotPos(x, y, width, height, itemSize));
+        return this;
+    }
+
     public SlotPos get(int slotId) {
         return positions.get(slotId);
     }

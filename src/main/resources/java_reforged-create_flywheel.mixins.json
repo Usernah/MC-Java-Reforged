@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.createflywheel",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "FrameUniformsMixin",
+    "VisualizationManagerImplMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

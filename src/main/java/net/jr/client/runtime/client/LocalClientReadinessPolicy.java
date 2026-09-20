@@ -6,6 +6,7 @@ import net.jr.client.runtime.context.LocalClientScope;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.Connection;
 
 public final class LocalClientReadinessPolicy {
     private LocalClientReadinessPolicy() {
@@ -47,7 +48,7 @@ public final class LocalClientReadinessPolicy {
     }
 
     public static boolean worldReady(LocalClient client) {
-        return worldBound(client) && !ClientRuntime.INSTANCE.clients().isJoining(client.slotId());
+        return worldBound(client) && sessionReady(client);
     }
 
     public static boolean gameplayReady(int slotId) {
@@ -56,6 +57,19 @@ public final class LocalClientReadinessPolicy {
     }
 
     public static boolean gameplayReady(LocalClient client) {
-        return gameplayBound(client) && !ClientRuntime.INSTANCE.clients().isJoining(client.slotId());
+        return gameplayBound(client) && sessionReady(client);
+    }
+
+    private static boolean sessionReady(LocalClient client) {
+        if (client.slotId() == 0) {
+            return !ClientRuntime.INSTANCE.clients().isJoining(0);
+        }
+        LocalPlayer player = client.player();
+        var session = ClientRuntime.INSTANCE.clients().sessionOrNull(client.slotId());
+        if (player == null || player.connection == null || session == null) {
+            return false;
+        }
+        Connection connection = player.connection.getConnection();
+        return connection != null && session.isWorldReadyFor(connection);
     }
 }

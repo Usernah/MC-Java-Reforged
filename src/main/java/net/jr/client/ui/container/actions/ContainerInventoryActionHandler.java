@@ -1,5 +1,6 @@
 package net.jr.client.ui.container.actions;
 
+import java.util.ArrayList;
 import java.util.List;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
@@ -47,11 +48,13 @@ public final class ContainerInventoryActionHandler {
                 .range(containerSlotCount, hotbarStart)
                 .boxed()
                 .toList();
+            List<Integer> playerSlots = new ArrayList<>(hotbarSlots.size() + inventorySlots.size());
+            playerSlots.addAll(hotbarSlots);
+            playerSlots.addAll(inventorySlots);
             return moveSlotToPlayerInOrder(
                 screen,
                 target.index,
-                hotbarSlots,
-                inventorySlots
+                playerSlots
             );
         }
         return click(screen, target, 0, ContainerInput.QUICK_MOVE);
@@ -76,6 +79,9 @@ public final class ContainerInventoryActionHandler {
             .range(containerSlotCount, hotbarStart)
             .boxed()
             .toList();
+        List<Integer> playerSlots = new ArrayList<>(hotbarSlots.size() + inventorySlots.size());
+        playerSlots.addAll(hotbarSlots);
+        playerSlots.addAll(inventorySlots);
         boolean movedAny = false;
         for (int sourceIndex = 0; sourceIndex < containerSlotCount; sourceIndex++) {
             Slot source = screen.getMenu().slots.get(sourceIndex);
@@ -83,8 +89,7 @@ public final class ContainerInventoryActionHandler {
                 movedAny |= moveSlotToPlayerInOrder(
                     screen,
                     sourceIndex,
-                    hotbarSlots,
-                    inventorySlots
+                    playerSlots
                 );
             }
         }
@@ -170,8 +175,7 @@ public final class ContainerInventoryActionHandler {
     private static boolean moveSlotToPlayerInOrder(
         AbstractContainerScreen<?> screen,
         int sourceIndex,
-        List<Integer> hotbarSlotOrder,
-        List<Integer> inventorySlotOrder
+        List<Integer> playerSlotOrder
     ) {
         Slot source = screen.getMenu().slots.get(sourceIndex);
         if (!source.hasItem()) {
@@ -182,10 +186,8 @@ public final class ContainerInventoryActionHandler {
         if (screen.getMenu().getCarried().isEmpty()) {
             return !ItemStack.matches(original, source.getItem());
         }
-        moveCarriedIntoMatchingSlots(screen, hotbarSlotOrder);
-        moveCarriedIntoEmptySlots(screen, hotbarSlotOrder);
-        moveCarriedIntoMatchingSlots(screen, inventorySlotOrder);
-        moveCarriedIntoEmptySlots(screen, inventorySlotOrder);
+        moveCarriedIntoMatchingSlots(screen, playerSlotOrder);
+        moveCarriedIntoEmptySlots(screen, playerSlotOrder);
         if (!screen.getMenu().getCarried().isEmpty()) {
             click(screen, source, 0, ContainerInput.PICKUP);
         }

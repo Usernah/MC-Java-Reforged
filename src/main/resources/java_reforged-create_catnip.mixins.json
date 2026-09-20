@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.createcatnip",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "NavigatableSimiScreenMixin",
+    "PlacementClientMixin",
+    "ScreenOpenerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -213,6 +213,7 @@ public final class UiCompiledDocument {
         Vector2Definition frameSize,
         Expression<Integer> duration,
         Expression<Draw.AnimUnit> unit,
+        Expression<Draw.AnimationMode> mode,
         Expression<Boolean> interpolation,
         List<Expression<Integer>> frameDurations
     ) {
@@ -221,6 +222,7 @@ public final class UiCompiledDocument {
             Objects.requireNonNull(frameSize, "frameSize");
             Objects.requireNonNull(duration, "duration");
             Objects.requireNonNull(unit, "unit");
+            Objects.requireNonNull(mode, "mode");
             Objects.requireNonNull(interpolation, "interpolation");
             frameDurations = List.copyOf(frameDurations);
         }

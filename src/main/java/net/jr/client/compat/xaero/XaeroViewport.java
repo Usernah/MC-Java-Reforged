@@ -3,6 +3,7 @@ package net.jr.client.compat.xaero;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
 
@@ -15,6 +16,12 @@ public final class XaeroViewport {
         if (viewport != null) {
             return viewport;
         }
+
+        Integer slotId = SlotScope.idOrNull();
+        if (slotId != null && ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
+            return ClientRuntime.INSTANCE.viewports().viewport(slotId);
+        }
+
         LocalClient client = LocalClientScope.currentClientOrNull();
         if (client == null || !ClientRuntime.INSTANCE.viewports().hasViewport(client.slotId())) {
             return null;

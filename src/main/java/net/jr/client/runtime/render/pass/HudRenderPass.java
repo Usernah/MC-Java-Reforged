@@ -1,19 +1,17 @@
 package net.jr.client.runtime.render.pass;
 
-import net.jr.api.client.split.SplitScreen;
+import net.jr.api.client.render.gui.GuiRenderObjects;
+import net.jr.api.client.render.gui.HudRenderContext;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
-import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.render.state.HudStateScope;
 import net.jr.client.runtime.ui.LocalChatRouter;
 import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.runtime.viewport.ViewportHudLayout;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
-import net.jr.client.ui.hud.MinimapHudOverlay;
-import net.jr.client.ui.hud.PlayerNameHudOverlay;
 import net.jr.mixin.accessors.HudAccessor;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -52,13 +50,14 @@ public final class HudRenderPass {
 
     public static void extractCurrent(
         Hud hud,
-        GuiGraphicsExtractor graphics,
-        DeltaTracker deltaTracker
+        HudRenderContext context
     ) {
-        LocalClient client = LocalClientScope.currentClient();
+        LocalClient client = context.client();
         if (!LocalClientReadinessPolicy.gameplayReady(client)) {
             return;
         }
+        GuiGraphicsExtractor graphics = context.graphics();
+        var deltaTracker = context.deltaTracker();
         Screen screen = client.screen();
         if (screen != null) {
             try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
@@ -71,12 +70,21 @@ public final class HudRenderPass {
         }
 
         try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-            hud.extractRenderState(graphics, deltaTracker);
-            // MinimapHudOverlay.extract(graphics);
-            ControlHintRenderPass.renderHud(graphics);
-            if (SplitScreen.isActive()) {
-                PlayerNameHudOverlay.render(graphics);
+            ControlHintRenderPass.PreparedHud preparedHints =
+                ControlHintRenderPass.prepareHud(graphics);
+            float bottomInset = preparedHints != null
+                ? preparedHints.bottomInset()
+                : 0.0F;
+            try (
+                ViewportHudLayout.BottomInsetScope ignoredInset =
+                    ViewportHudLayout.pushBottomInset(bottomInset)
+            ) {
+                hud.extractRenderState(graphics, deltaTracker);
             }
+            if (preparedHints != null) {
+                ControlHintRenderPass.renderHud(preparedHints, graphics);
+            }
+            GuiRenderObjects.renderHud(context);
         }
     }
 

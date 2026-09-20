@@ -8,7 +8,6 @@ import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(VideoSettingsScreen.class)
@@ -31,10 +30,5 @@ public abstract class VideoSettingsScreenMixin extends OptionsSubScreen {
             CallbackInfoReturnable<OptionInstance<?>[]> cir
     ) {
         cir.setReturnValue(RenderOptimizationOptionsHandler.extendQuality(options, cir.getReturnValue()));
-    }
-
-    @Inject(method = "tick", at = @At("TAIL"))
-    private void javaReforged$updateProfileLock(CallbackInfo ci) {
-        InterfaceProfileOptionsHandler.updateSplitLock(this.list);
     }
 }

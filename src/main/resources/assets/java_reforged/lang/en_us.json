@@ -1,7 +1,5 @@
 {
-  "itemGroup.java_reforged": "Example Mod Tab",
-  "block.java_reforged.example_block": "Example Block",
-  "item.java_reforged.example_item": "Example Item",
+  "menu.java_reforged.pre_join.join": "Press to join",
   "controls.java_reforged.controller_bindings": "Controller Bindings",
   "controls.java_reforged.controller_options": "Controllers...",
   "controls.java_reforged.controller_options.title": "Controllers",
@@ -38,6 +36,7 @@
   "hint.container.java_reforged.exit": "Exit",
   "hint.container.java_reforged.swap": "Swap",
   "hint.container.java_reforged.change_tab": "Change tab",
+  "hint.container.java_reforged.change_tab_page": "Change tab page",
   "key.java_reforged.ui_confirm": "UI Confirm",
   "key.java_reforged.ui_back": "UI Back",
   "key.java_reforged.ui_alternate": "UI Alternate",
@@ -69,7 +68,6 @@
   "creative_tab.java_reforged.spawn_eggs": "Spawn Eggs",
   "creative_tab.java_reforged.search": "Search",
   "creative_tab.java_reforged.search_placeholder": "Search...",
-  "key.java_reforged.example_action": "Example Action",
   "key.java_reforged.battle_test_toggle": "Battle Test",
   "key.categories.java_reforged.general": "Java Reforged",
   "key.categories.java_reforged.ui": "Java Reforged UI",
@@ -80,7 +78,7 @@
   "menu.java_reforged.video.interface_profile": "Interface Profile",
   "menu.java_reforged.video.interface_profile.standard": "Standard",
   "menu.java_reforged.video.interface_profile.portable": "Portable",
-  "menu.java_reforged.video.interface_profile.description": "Adjusts interface proportions for the type of screen in use. Split screen always uses the Standard profile.",
+  "menu.java_reforged.video.interface_profile.description": "Adjusts interface proportions for the type of screen in use.",
   "menu.java_reforged.video.split_orientation": "Split Screen Orientation",
   "menu.java_reforged.video.split_orientation.vertical": "Vertical",
   "menu.java_reforged.video.split_orientation.horizontal": "Horizontal",
@@ -93,5 +91,7 @@
   "message.java_reforged.jfr.unavailable": "JFR is not available in this JVM",
   "message.java_reforged.jfr.failed": "Memory capture failed; check the log",
   "menu.java_reforged.split.loading_world": "Loading world...",
-  "menu.java_reforged.split.loading_player": "Preparing player %s"
+  "menu.java_reforged.split.loading_player": "Preparing player %s",
+  "prompt.java_reforged.join.prefix": "Press",
+  "prompt.java_reforged.join.suffix": "to join"
 }

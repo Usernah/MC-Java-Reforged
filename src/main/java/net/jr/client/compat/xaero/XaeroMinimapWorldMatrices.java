@@ -1,5 +1,7 @@
 package net.jr.client.compat.xaero;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.ScissorState;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.jr.client.runtime.client.LocalClient;
@@ -35,21 +37,53 @@ public final class XaeroMinimapWorldMatrices {
     public static void run(Runnable action) {
         State state = currentState();
         ViewportArea viewport = XaeroViewport.currentOrNull();
-        if (state == null || viewport == null || !state.hasProjection || !state.hasModelView) {
+        if (viewport == null) {
             action.run();
             return;
         }
 
-        Matrix4f previousProjection = XaeroMinimapCore.waypointsProjection;
-        Matrix4f previousModelView = XaeroMinimapCore.waypointModelView;
-        XaeroMinimapCore.waypointsProjection = viewportProjection(state.projection, viewport);
-        XaeroMinimapCore.waypointModelView = new Matrix4f(state.modelView);
+        ScissorState previousScissor = new ScissorState(RenderSystem.getScissorStateForRenderTypeDraws());
+        enableViewportScissor(previousScissor, viewport);
+
+        boolean replaceMatrices = state != null && state.hasProjection && state.hasModelView;
+        Matrix4f previousProjection = null;
+        Matrix4f previousModelView = null;
+        if (replaceMatrices) {
+            previousProjection = XaeroMinimapCore.waypointsProjection;
+            previousModelView = XaeroMinimapCore.waypointModelView;
+            XaeroMinimapCore.waypointsProjection = viewportProjection(state.projection, viewport);
+            XaeroMinimapCore.waypointModelView = new Matrix4f(state.modelView);
+        }
         try {
             action.run();
         } finally {
-            XaeroMinimapCore.waypointsProjection = previousProjection;
-            XaeroMinimapCore.waypointModelView = previousModelView;
+            if (replaceMatrices) {
+                XaeroMinimapCore.waypointsProjection = previousProjection;
+                XaeroMinimapCore.waypointModelView = previousModelView;
+            }
+            RenderSystem.getScissorStateForRenderTypeDraws().setFrom(previousScissor);
         }
+    }
+
+    private static void enableViewportScissor(ScissorState previous, ViewportArea viewport) {
+        int left = viewport.glX();
+        int bottom = viewport.glY();
+        int right = left + viewport.glWidth();
+        int top = bottom + viewport.glHeight();
+
+        if (previous.enabled()) {
+            left = Math.max(left, previous.x());
+            bottom = Math.max(bottom, previous.y());
+            right = Math.min(right, previous.x() + previous.width());
+            top = Math.min(top, previous.y() + previous.height());
+        }
+
+        RenderSystem.enableScissorForRenderTypeDraws(
+            left,
+            bottom,
+            Math.max(0, right - left),
+            Math.max(0, top - bottom)
+        );
     }
 
     private static State currentState() {

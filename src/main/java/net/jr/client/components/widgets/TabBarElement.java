@@ -213,12 +213,9 @@ public class TabBarElement extends JavaBaseWidget implements TabNavigator {
                         : this.selectedIndex;
 
         int next =
-                Math.max(
-                        0,
-                        Math.min(
-                                current + delta,
-                                this.tabs.size() - 1
-                        )
+                Math.floorMod(
+                        current + delta,
+                        this.tabs.size()
                 );
 
         if (next == this.selectedIndex) {

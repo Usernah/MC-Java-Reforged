@@ -15,9 +15,9 @@ public record ControlHintMetrics(
 ) {
     public static final ControlHintMetrics DEFAULT = new ControlHintMetrics(
             23F,
-            28F,
-            10,
-            10F,
+            40F,
+            18F,
+            14F,
             18F,
             18F,
             10F,
@@ -29,9 +29,9 @@ public record ControlHintMetrics(
 
     public static final ControlHintMetrics HD = new ControlHintMetrics(
             23F,
-            28F,
-            2,
-            4F,
+            20F,
+            10F,
+            8F,
             6F,
             2F,
             2F,

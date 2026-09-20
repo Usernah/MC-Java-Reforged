@@ -6,6 +6,7 @@ import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.Cursor;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
+import net.jr.client.components.navigation.TabNavigator;
 import net.jr.client.components.elements.TextElement;
 import net.jr.client.components.widgets.EditBoxElement;
 import net.jr.client.components.widgets.TabBarElement;
@@ -28,8 +29,10 @@ import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
+import net.jr.experimental_features.gamepad_keyboard.GamepadTextInputFocus;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
@@ -46,6 +49,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.client.player.LocalPlayer;
+import net.neoforged.neoforge.common.CreativeModeTabRegistry;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -63,6 +67,10 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private static final int TAB_ICON_SIZE = 18;
     private static final int TAB_ICON_OFFSET_X = 7;
     private static final int TAB_ICON_OFFSET_Y = 4;
+    private static final int TABS_PER_PAGE = CreativeCategory.values().length;
+    private static final int MOD_TABS_PER_PAGE = TABS_PER_PAGE - 1;
+    private static final int PAGE_BUTTON_SIZE = 20;
+    private static final int PAGE_BUTTON_Y_OFFSET = -49;
 
     private static final int ITEM_GRID_X = 10;
     private static final int ITEM_GRID_Y = 22;
@@ -102,17 +110,33 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             Asset.MC("textures/gui/sprites/widgets/text_edit_box.png");
 
     private final TabNavigationController tabNavigation = new TabNavigationController();
-    private final Map<TabElement, CreativeCategory> categoryByTab = new IdentityHashMap<>();
+    private final TabNavigator tabPageNavigation = new TabNavigator() {
+        @Override
+        public boolean selectPrevious() {
+            return CreativeInventoryScreen.this.changeTabPage(-1);
+        }
+
+        @Override
+        public boolean selectNext() {
+            return CreativeInventoryScreen.this.changeTabPage(1);
+        }
+    };
+    private final Map<TabElement, CreativeTab> creativeTabByWidget = new IdentityHashMap<>();
+    private final List<List<CreativeTab>> tabPages = new ArrayList<>();
     private final LocalPlayer player;
     private final int slotId;
 
     private VanillaSlotLayer slotLayer;
     private SlotGrid slotGrid;
     private CreativeItemGridElement itemGrid;
+    private boolean slotPointerActive;
     private TabBarElement tabs;
+    private Button previousPageButton;
+    private Button nextPageButton;
     private TextElement tabTitleText;
     private EditBoxElement searchEditBox;
-    private CreativeCategory selectedCategory = CreativeCategory.CONSTRUCTION_AND_COLORS;
+    private CreativeTab selectedCreativeTab = CreativeTab.category(CreativeCategory.CONSTRUCTION_AND_COLORS);
+    private int tabPageIndex;
     private FocusRegion focusRegion = FocusRegion.CATALOG;
     private int pendingCatalogReturnIndex = -1;
 
@@ -131,6 +155,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         this.topPos += 12;
 
         this.rebuildCreativeTabContents();
+        this.rebuildTabPages();
         this.slotLayer = new VanillaSlotLayer(this, this.menu, this.font, SLOT_FRAME_SIZE);
         this.slotGrid = new SlotGrid(SlotMaps.SURVIVAL_INVENTORY)
                 .grid(
@@ -161,6 +186,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         this.configureItemScrollbar();
 
         this.tabs = this.createTabs();
+        this.createPageButtons();
         this.createTabTitle();
         this.createSearchBox();
         this.tabNavigation.clear();
@@ -171,9 +197,18 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 Component.translatable("hint.container.java_reforged.change_tab"),
                 InputActionSounds::playFocus
         );
+        this.tabNavigation.bind(
+                this.tabPageNavigation,
+                UiInputBinding.gamepad(GamepadDigitalInput.TRIGGER_LEFT),
+                UiInputBinding.gamepad(GamepadDigitalInput.TRIGGER_RIGHT),
+                Component.translatable("hint.container.java_reforged.change_tab_page"),
+                InputActionSounds::playFocus
+        );
 
         this.addRenderableWidget(this.itemGrid);
         this.addRenderableWidget(this.tabs);
+        this.addRenderableWidget(this.previousPageButton);
+        this.addRenderableWidget(this.nextPageButton);
         this.addRenderableWidget(this.searchEditBox);
         this.reloadItems();
         this.focusFirstCatalogEntryAndMoveCursor();
@@ -200,37 +235,126 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         bar.setOrientation(TabBarElement.Orientation.HORIZONTAL);
 
         bar.setPadding(-1.0F);
-
-        for (CreativeCategory category : CreativeCategory.values()) {
-            TabElement tab = new TabElement(0, 0, TAB_WIDTH, TAB_HEIGHT);
-            tab.setRenderer((graphics, widget, mouseX, mouseY, partialTick) ->
-                    this.renderTab(graphics, (TabElement)widget, category.icon())
-            );
-            this.categoryByTab.put(tab, category);
-            bar.addTab(tab);
-        }
         bar.onSelectionChange(tab -> {
-            CreativeCategory category = this.categoryByTab.get(tab);
-            if (category != null) {
+            CreativeTab creativeTab = this.creativeTabByWidget.get(tab);
+            if (creativeTab != null) {
                 boolean refocusCatalog = this.shouldRefocusCatalogAfterTabChange();
-                this.selectedCategory = category;
+                this.selectedCreativeTab = creativeTab;
                 this.reloadItems();
                 if (refocusCatalog) {
                     this.focusFirstCatalogEntryAndMoveCursor();
                 } else if (this.getFocused() == this.itemGrid) {
                     this.setFocused(null);
                 }
-                this.setSearchBoxVisible(category == CreativeCategory.SEARCH);
+                this.setSearchBoxVisible(creativeTab.hasSearchBar());
             }
         });
+        this.populateTabs(bar);
         return bar;
     }
 
+    private void rebuildTabPages() {
+        this.tabPages.clear();
+        List<CreativeTab> vanillaTabs = new ArrayList<>(List.of(CreativeCategory.values()).stream()
+                .filter(category -> category != CreativeCategory.SEARCH)
+                .map(CreativeTab::category)
+                .toList());
+        vanillaTabs.add(CreativeTab.category(CreativeCategory.SEARCH));
+        this.tabPages.add(List.copyOf(vanillaTabs));
+
+        List<CreativeTab> modTabs = CreativeModeTabRegistry.getSortedCreativeModeTabs().stream()
+                .filter(CreativeModeTab::shouldDisplay)
+                .filter(CreativeModeTab::hasAnyItems)
+                .filter(CreativeInventoryScreen::isModCreativeTab)
+                .map(CreativeTab::registered)
+                .toList();
+        for (int start = 0; start < modTabs.size(); start += MOD_TABS_PER_PAGE) {
+            int end = Math.min(start + MOD_TABS_PER_PAGE, modTabs.size());
+            List<CreativeTab> page = new ArrayList<>(modTabs.subList(start, end));
+            page.add(CreativeTab.category(CreativeCategory.SEARCH));
+            this.tabPages.add(List.copyOf(page));
+        }
+
+        int selectedPage = this.findPage(this.selectedCreativeTab);
+        if (this.selectedCreativeTab.category() == CreativeCategory.SEARCH) {
+            this.tabPageIndex = Math.min(this.tabPageIndex, this.tabPages.size() - 1);
+        } else if (selectedPage >= 0) {
+            this.tabPageIndex = selectedPage;
+        } else {
+            this.tabPageIndex = Math.min(this.tabPageIndex, this.tabPages.size() - 1);
+        }
+    }
+
+    private static boolean isModCreativeTab(CreativeModeTab tab) {
+        Identifier id = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
+        return id != null && !"minecraft".equals(id.getNamespace());
+    }
+
+    private int findPage(CreativeTab creativeTab) {
+        for (int page = 0; page < this.tabPages.size(); page++) {
+            if (this.tabPages.get(page).contains(creativeTab)) {
+                return page;
+            }
+        }
+        return -1;
+    }
+
+    private void populateTabs(TabBarElement bar) {
+        bar.clearTabs();
+        this.creativeTabByWidget.clear();
+        List<CreativeTab> page = this.tabPages.get(this.tabPageIndex);
+        CreativeTab preferredTab = page.contains(this.selectedCreativeTab)
+                ? this.selectedCreativeTab
+                : page.getFirst();
+        for (CreativeTab creativeTab : page) {
+            TabElement tab = new TabElement(0, 0, TAB_WIDTH, TAB_HEIGHT);
+            tab.setRenderer((graphics, widget, mouseX, mouseY, partialTick) ->
+                    this.renderTab(graphics, (TabElement)widget, creativeTab.icon())
+            );
+            this.creativeTabByWidget.put(tab, creativeTab);
+            bar.addTab(tab);
+        }
+        bar.select(page.indexOf(preferredTab));
+    }
+
+    private void createPageButtons() {
+        int y = this.topPos + PAGE_BUTTON_Y_OFFSET;
+        this.previousPageButton = Button.builder(Component.literal("<"), ignored -> this.changeTabPage(-1))
+                .pos(this.leftPos, y)
+                .size(PAGE_BUTTON_SIZE, PAGE_BUTTON_SIZE)
+                .build();
+        this.nextPageButton = Button.builder(Component.literal(">"), ignored -> this.changeTabPage(1))
+                .pos(this.leftPos + this.imageWidth - PAGE_BUTTON_SIZE, y)
+                .size(PAGE_BUTTON_SIZE, PAGE_BUTTON_SIZE)
+                .build();
+        this.updatePageButtons();
+    }
+
+    private boolean changeTabPage(int delta) {
+        int nextPage = Math.max(0, Math.min(this.tabPageIndex + delta, this.tabPages.size() - 1));
+        if (nextPage == this.tabPageIndex) {
+            return false;
+        }
+        this.tabPageIndex = nextPage;
+        this.populateTabs(this.tabs);
+        this.updatePageButtons();
+        return true;
+    }
+
+    private void updatePageButtons() {
+        boolean hasMultiplePages = this.tabPages.size() > 1;
+        this.previousPageButton.visible = hasMultiplePages;
+        this.nextPageButton.visible = hasMultiplePages;
+        this.previousPageButton.active = hasMultiplePages && this.tabPageIndex > 0;
+        this.nextPageButton.active = hasMultiplePages && this.tabPageIndex + 1 < this.tabPages.size();
+    }
+
     private void renderTab(GuiGraphicsExtractor graphics, TabElement tab, ItemStack icon) {
+        boolean selected = tab.isSelected();
         Asset background = switch (tab.positionRole()) {
-            case FIRST -> tab.isSelected() ? TAB_LEFT_SELECTED : TAB_LEFT;
-            case LAST -> tab.isSelected() ? TAB_RIGHT_SELECTED : TAB_RIGHT;
-            case MIDDLE, SINGLE -> tab.isSelected() ? TAB_CENTER_SELECTED : TAB_CENTER;
+            case SINGLE, FIRST -> selected ? TAB_LEFT_SELECTED : TAB_LEFT;
+            case MIDDLE -> selected ? TAB_CENTER_SELECTED : TAB_CENTER;
+            case LAST -> selected ? TAB_RIGHT_SELECTED : TAB_RIGHT;
         };
         Draw.imageFromMeta(background, tab.x(), tab.y(), TAB_WIDTH, TAB_HEIGHT).draw(graphics);
 
@@ -263,7 +387,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
     private void createTabTitle() {
         this.tabTitleText = new TextElement(
-                this.selectedCategory.title(),
+                this.selectedCreativeTab.title(),
                 this.leftPos + TAB_TITLE_X,
                 this.topPos + TAB_TITLE_Y,
                 null
@@ -288,11 +412,11 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         this.searchEditBox.setMaxLength(64);
         this.searchEditBox.setRenderer(this::renderSearchBox);
         this.searchEditBox.setResponder(ignored -> {
-            if (this.selectedCategory == CreativeCategory.SEARCH) {
+            if (this.selectedCreativeTab.hasSearchBar()) {
                 this.reloadItems();
             }
         });
-        this.setSearchBoxVisible(false);
+        this.setSearchBoxVisible(this.selectedCreativeTab.hasSearchBar());
     }
 
     private void renderSearchBox(
@@ -343,22 +467,22 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         this.pendingCatalogReturnIndex = -1;
         this.itemGrid.scrollToImmediately(0.0D, 0.0D);
         this.itemGrid.clearEntryFocus();
-        this.itemGrid.setEntries(this.collectItems(this.selectedCategory));
+        this.itemGrid.setEntries(this.collectItems(this.selectedCreativeTab));
     }
 
-    private List<ItemStack> collectItems(CreativeCategory category) {
+    private List<ItemStack> collectItems(CreativeTab selectedTab) {
+        if (selectedTab.registeredTab() != null) {
+            return this.filterItems(selectedTab.registeredTab().getDisplayItems(), selectedTab.hasSearchBar());
+        }
+
+        CreativeCategory category = selectedTab.category();
         if (category == CreativeCategory.SEARCH) {
-            String query = this.searchEditBox == null
-                    ? ""
-                    : this.searchEditBox.value().trim().toLowerCase(Locale.ROOT);
-            return CreativeModeTabs.searchTab().getDisplayItems().stream()
-                    .filter(stack -> this.matchesSearch(stack, query))
-                    .toList();
+            return this.filterItems(CreativeModeTabs.searchTab().getDisplayItems(), true);
         }
 
         List<ItemStack> items = new ArrayList<>();
         for (CreativeModeTab tab : CreativeModeTabs.allTabs()) {
-            if (tab.getType() != CreativeModeTab.Type.CATEGORY) {
+            if (tab.getType() != CreativeModeTab.Type.CATEGORY || isModCreativeTab(tab)) {
                 continue;
             }
             Identifier id = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
@@ -369,6 +493,24 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 }
             }
         }
+        return List.copyOf(items);
+    }
+
+    private List<ItemStack> filterItems(Iterable<ItemStack> source, boolean applySearch) {
+        if (applySearch) {
+            String query = this.searchEditBox == null
+                    ? ""
+                    : this.searchEditBox.value().trim().toLowerCase(Locale.ROOT);
+            List<ItemStack> items = new ArrayList<>();
+            for (ItemStack stack : source) {
+                if (this.matchesSearch(stack, query)) {
+                    items.add(stack);
+                }
+            }
+            return List.copyOf(items);
+        }
+        List<ItemStack> items = new ArrayList<>();
+        source.forEach(items::add);
         return List.copyOf(items);
     }
 
@@ -751,12 +893,23 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             int mouseY,
             float partialTick
     ) {
-        this.tabTitleText.setText(this.selectedCategory.title());
-        if (this.selectedCategory != CreativeCategory.SEARCH) {
+        this.tabTitleText.setText(this.selectedCreativeTab.title());
+        this.tabTitleText.setColor(this.selectedCreativeTab.labelColor());
+        if (!this.selectedCreativeTab.hasSearchBar()) {
             this.tabTitleText.draw(graphics);
         }
         this.itemGrid.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.tabs.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.previousPageButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.nextPageButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        if (this.tabPages.size() > 1) {
+            Component page = Component.literal((this.tabPageIndex + 1) + " / " + this.tabPages.size());
+            Draw.text(
+                    page,
+                    this.leftPos + (this.imageWidth - this.font.width(page)) / 2,
+                    this.topPos + PAGE_BUTTON_Y_OFFSET + 6
+            ).color(0xFFFFFFFF).draw(graphics);
+        }
         this.searchEditBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.slotLayer.updateHovered(this.slotGrid, mouseX, mouseY);
         this.slotLayer.renderSlotMap(graphics, this.slotGrid);
@@ -781,8 +934,12 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (this.previousPageButton.mouseClicked(event, doubleClick)
+                || this.nextPageButton.mouseClicked(event, doubleClick)) {
+            return true;
+        }
         if (this.searchEditBox.mouseClicked(event, doubleClick)) {
-            this.setFocused(this.searchEditBox);
+            this.focusSearchBox();
             return true;
         }
         if (this.tabs.mouseClicked(event, doubleClick)) {
@@ -814,6 +971,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 this.imageHeight
         );
         if (handled) {
+            this.slotPointerActive = true;
             this.enterHotbarFocus();
         }
         return handled;
@@ -828,7 +986,23 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        return this.searchEditBox.mouseReleased(event)
+        if (this.slotPointerActive) {
+            this.slotPointerActive = false;
+            return this.slotLayer.mouseReleased(
+                    this.slotGrid,
+                    event.x(),
+                    event.y(),
+                    event.button(),
+                    true,
+                    this.leftPos,
+                    this.topPos,
+                    this.imageWidth,
+                    this.imageHeight
+            );
+        }
+        return this.previousPageButton.mouseReleased(event)
+                || this.nextPageButton.mouseReleased(event)
+                || this.searchEditBox.mouseReleased(event)
                 || this.tabs.mouseReleased(event)
                 || this.itemGrid.mouseReleased(event)
                 || this.slotLayer.mouseReleased(
@@ -846,6 +1020,16 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (this.slotPointerActive) {
+            return this.slotLayer.mouseDragged(
+                    this.slotGrid,
+                    event.x(),
+                    event.y(),
+                    event.button(),
+                    dragX,
+                    dragY
+            );
+        }
         return this.searchEditBox.mouseDragged(event, dragX, dragY)
                 || this.itemGrid.mouseDragged(event, dragX, dragY)
                 || this.slotLayer.mouseDragged(
@@ -892,10 +1076,24 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
     @Override
     public boolean handleUiAction(UiAction action) {
+        if (GamepadTextInputFocus.handleFocusedNavigation(
+                this,
+                this.searchEditBox,
+                action,
+                this::assignFirstCatalogFocusAndMoveCursor)) {
+            return true;
+        }
         if (this.focusRegion != FocusRegion.CATALOG) {
             return false;
         }
         if (this.itemGrid.handleUiAction(action)) {
+            return true;
+        }
+        if (GamepadTextInputFocus.focusFromContentBoundary(
+                this,
+                this.searchEditBox,
+                action,
+                this::prepareSearchFocus)) {
             return true;
         }
         if (action == UiAction.MOVE_DOWN) {
@@ -904,6 +1102,20 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         }
 
         return action.isDirectional();
+    }
+
+    private boolean focusSearchBox() {
+        return GamepadTextInputFocus.focus(this, this.searchEditBox, this::prepareSearchFocus);
+    }
+
+    private void prepareSearchFocus() {
+        this.focusRegion = FocusRegion.SEARCH;
+        if (this.itemGrid != null) {
+            this.itemGrid.clearEntryFocus();
+        }
+        if (this.slotLayer != null) {
+            this.slotLayer.clearFocusedSlot();
+        }
     }
 
     private void enterCatalogFocus(boolean focusLast) {
@@ -1044,8 +1256,40 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         }
     }
 
+    private record CreativeTab(
+            CreativeCategory category,
+            CreativeModeTab registeredTab
+    ) {
+        private static CreativeTab category(CreativeCategory category) {
+            return new CreativeTab(category, null);
+        }
+
+        private static CreativeTab registered(CreativeModeTab tab) {
+            return new CreativeTab(null, tab);
+        }
+
+        private ItemStack icon() {
+            return this.registeredTab != null ? this.registeredTab.getIconItem() : this.category.icon();
+        }
+
+        private Component title() {
+            return this.registeredTab != null ? this.registeredTab.getDisplayName() : this.category.title();
+        }
+
+        private boolean hasSearchBar() {
+            return this.registeredTab != null
+                    ? this.registeredTab.hasSearchBar()
+                    : this.category == CreativeCategory.SEARCH;
+        }
+
+        private int labelColor() {
+            return this.registeredTab != null ? this.registeredTab.getLabelColor() : 0xFF404040;
+        }
+    }
+
     private enum FocusRegion {
         NONE,
+        SEARCH,
         CATALOG,
         HOTBAR
     }

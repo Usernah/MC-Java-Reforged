@@ -40,6 +40,8 @@ public final class VanillaSlotLayer {
     private Integer focusedSlotId;
 
     private final Set<Slot> quickCraftSlots = new HashSet<>();
+    @Nullable
+    private Slot quickCraftOriginSlot;
     private boolean isQuickCrafting;
     private int quickCraftingType;
     private int quickCraftingButton;
@@ -216,6 +218,7 @@ public final class VanillaSlotLayer {
                     this.skipNextRelease = true;
                 } else if (!this.isQuickCrafting) {
                     this.isQuickCrafting = true;
+                    this.quickCraftOriginSlot = slot;
                     this.quickCraftingButton = button;
                     this.quickCraftSlots.clear();
                     if (button == 0) {
@@ -302,6 +305,7 @@ public final class VanillaSlotLayer {
         } else {
             if (this.isQuickCrafting && this.quickCraftingButton != button) {
                 this.isQuickCrafting = false;
+                this.quickCraftOriginSlot = null;
                 this.quickCraftSlots.clear();
                 this.quickCraftingRemainder = 0;
                 this.skipNextRelease = true;
@@ -360,6 +364,7 @@ public final class VanillaSlotLayer {
             this.lastClickTime = 0L;
         }
         this.isQuickCrafting = false;
+        this.quickCraftOriginSlot = null;
         this.quickCraftSlots.clear();
         this.quickCraftingRemainder = 0;
         this.syncScreenState();
@@ -380,17 +385,30 @@ public final class VanillaSlotLayer {
         Slot slot = this.findSlot(grid, mouseX, mouseY);
         ItemStack carried = this.menu.getCarried();
         if (this.isQuickCrafting
+            && this.quickCraftOriginSlot != null
             && slot != null
+            && slot != this.quickCraftOriginSlot
             && !carried.isEmpty()
             && (carried.getCount() > this.quickCraftSlots.size() || this.quickCraftingType == 2)
-            && AbstractContainerMenu.canItemQuickReplace(slot, carried, true)
-            && slot.mayPlace(carried)
-            && this.menu.canDragTo(slot)) {
+            && this.canQuickCraftInto(slot, carried)) {
+            if (this.quickCraftSlots.isEmpty()) {
+                if (!this.canQuickCraftInto(this.quickCraftOriginSlot, carried)) {
+                    return true;
+                }
+                this.quickCraftSlots.add(this.quickCraftOriginSlot);
+            }
             this.quickCraftSlots.add(slot);
             this.recalculateQuickCraftRemaining();
             this.syncScreenState();
         }
         return true;
+    }
+
+    private boolean canQuickCraftInto(Slot slot, ItemStack carried) {
+        return slot.isActive()
+            && AbstractContainerMenu.canItemQuickReplace(slot, carried, true)
+            && slot.mayPlace(carried)
+            && this.menu.canDragTo(slot);
     }
 
     public boolean keyPressed(SlotGrid grid, int keyCode, int scanCode) {

@@ -1,12 +1,10 @@
 package net.jr.client.ui.hud;
 
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientScope;
-import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.api.client.render.gui.HudRenderContext;
+import net.jr.api.client.split.SplitScreen;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.components.elements.TextElement;
 import net.jr.playerdata.PlayerProfileDataManager;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 
@@ -20,22 +18,23 @@ public final class PlayerNameHudOverlay {
     private PlayerNameHudOverlay() {
     }
 
-    public static void render(GuiGraphicsExtractor graphics) {
-        LocalClient client = LocalClientScope.currentClientOrNull();
-        LocalPlayer player = client != null ? client.player() : null;
-        Integer guiWidth = ViewportGuiScale.activeGuiWidthOrNull();
-        if (player == null || guiWidth == null) {
+    public static void render(HudRenderContext context) {
+        if (!SplitScreen.isActive()) {
+            return;
+        }
+        LocalPlayer player = context.client().player();
+        if (player == null) {
             return;
         }
 
-        TextElement name = nameElement(client.slotId());
+        TextElement name = nameElement(context.slot().id());
         Component visualName = PlayerProfileDataManager.getSplitDisplayName(player);
         if (visualName == null) {
             visualName = player.getDisplayName();
         }
         name.setText(visualName);
-        name.setPosition(guiWidth - RIGHT_PADDING - name.width(), TOP_PADDING);
-        name.draw(graphics);
+        name.setPosition(context.viewport().guiWidth() - RIGHT_PADDING - name.width(), TOP_PADDING);
+        name.draw(context.graphics());
     }
 
     private static TextElement nameElement(int slotId) {
@@ -46,7 +45,8 @@ public final class PlayerNameHudOverlay {
 
         name = new TextElement(Component.empty(), 0, 0, null);
         name.setColor(TEXT_COLOR);
-        name.setOutline(OUTLINE_COLOR);
+        name.setShadow(true);
+        name.setShadowColor(OUTLINE_COLOR);
         PLAYER_NAMES[slotId] = name;
         return name;
     }

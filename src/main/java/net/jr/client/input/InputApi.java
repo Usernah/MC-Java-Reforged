@@ -205,6 +205,10 @@ public final class InputApi {
         GamepadBindingRegistry.get().applyMappedBindings(context);
     }
 
+    public static boolean isBindingApplied(KeyMapping keyMapping) {
+        return GamepadBindingRegistry.get().isApplied(keyMapping);
+    }
+
     public static void releaseBindings() {
         GamepadBindingRegistry.get().releaseAppliedBindings();
     }

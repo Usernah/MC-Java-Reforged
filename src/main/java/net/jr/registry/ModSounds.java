@@ -1,6 +1,7 @@
 package net.jr.registry;
 
 import net.jr.Java_reforged;
+import net.jr.api.client.render.font.FontRegister;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
@@ -20,6 +21,21 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_HOTBAR_FOCUS = register("ui.hotbar_focus");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_TOAST_NOTIFY = register("ui.toast_new");
     public static final DeferredHolder<SoundEvent, SoundEvent> GAMEPLAY_ITEM_POP = register("gameplay.item_pop");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_CELEBRATION = register("minigames.battle.celebration");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_CELEBRATION2 = register("minigames.battle.celebration2");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_CHEST = register("minigames.battle.chest");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_CHEST2 = register("minigames.battle.chest2");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_DEATH = register("minigames.battle.death");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_DEATH2 = register("minigames.battle.death2");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_GAMESTART = register("minigames.battle.gamestart");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_GRACE = register("minigames.battle.grace");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_GRACEZERO = register("minigames.battle.gracezero");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_SHOWDOWN = register("minigames.battle.showdown");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_LOBBY_LOBBY = register("minigames.lobby.lobby");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_LOBBY_LOBBYACCENT = register("minigames.lobby.lobbyaccent");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_LOBBY_LOBBYZERO = register("minigames.lobby.lobbyzero");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_LOBBY_STARTCD = register("minigames.lobby.startcd");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_MUSIC_BATTLE_VANILLA = register("minigames.music.battle.vanilla");
 
     private ModSounds() {}
 

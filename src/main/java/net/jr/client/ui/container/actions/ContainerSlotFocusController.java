@@ -189,6 +189,8 @@ public final class ContainerSlotFocusController {
     }
 
     private static void setFocus(AbstractContainerScreen<?> screen, Slot slot) {
+        // A vanilla container slot and a screen widget must not both own controller focus.
+        screen.setFocused(null);
         state().containerSlotFocus().put(screen, slot.index);
         FocusedSlotCenter center = getFocusedSlotCenter(screen);
         if (center != null) LocalGamepadInputHandler.moveVirtualCursorToFocusedSlot(center.guiX, center.guiY);

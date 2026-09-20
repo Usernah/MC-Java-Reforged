@@ -1,4 +1,5 @@
 {
+  "menu.java_reforged.pre_join.join": "Pulsa para unirte",
   "controls.java_reforged.controller_bindings": "Asignación del mando",
   "controls.java_reforged.controller_options": "Mandos...",
   "controls.java_reforged.controller_options.title": "Mandos",
@@ -35,6 +36,7 @@
   "hint.container.java_reforged.exit": "Salir",
   "hint.container.java_reforged.swap": "Intercambiar",
   "hint.container.java_reforged.change_tab": "Cambiar pestaña",
+  "hint.container.java_reforged.change_tab_page": "Cambiar página de pestañas",
   "key.java_reforged.ui_confirm": "Confirmar en la interfaz",
   "key.java_reforged.ui_back": "Volver en la interfaz",
   "key.java_reforged.ui_alternate": "Acción alternativa",
@@ -75,7 +77,7 @@
   "menu.java_reforged.video.interface_profile": "Perfil de interfaz",
   "menu.java_reforged.video.interface_profile.standard": "Estándar",
   "menu.java_reforged.video.interface_profile.portable": "Portátil",
-  "menu.java_reforged.video.interface_profile.description": "Ajusta las proporciones de la interfaz al tipo de pantalla. La pantalla dividida siempre usa el perfil Estándar.",
+  "menu.java_reforged.video.interface_profile.description": "Ajusta las proporciones de la interfaz al tipo de pantalla.",
   "menu.java_reforged.video.split_orientation": "Orientación de pantalla dividida",
   "menu.java_reforged.video.split_orientation.vertical": "Vertical",
   "menu.java_reforged.video.split_orientation.horizontal": "Horizontal",
@@ -88,5 +90,7 @@
   "message.java_reforged.jfr.unavailable": "JFR no está disponible en esta JVM",
   "message.java_reforged.jfr.failed": "Falló la captura de memoria; revisá el log",
   "menu.java_reforged.split.loading_world": "Cargando mundo...",
-  "menu.java_reforged.split.loading_player": "Preparando jugador %s"
+  "menu.java_reforged.split.loading_player": "Preparando jugador %s",
+  "prompt.java_reforged.join.prefix": "Presioná",
+  "prompt.java_reforged.join.suffix": "para unirte"
 }

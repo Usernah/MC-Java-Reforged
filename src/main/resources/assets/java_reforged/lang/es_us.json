@@ -1,4 +1,5 @@
 {
+  "menu.java_reforged.pre_join.join": "Pulsa para unirte",
   "controls.java_reforged.controller_options": "Mandos...",
   "controls.java_reforged.controller_options.title": "Mandos",
   "controls.java_reforged.cursor_sensitivity": "Sensibilidad del cursor",
@@ -12,6 +13,7 @@
   "hint.container.java_reforged.add_to_hotbar": "Añadir a barra rápida",
   "hint.container.java_reforged.craft": "Fabricar",
   "hint.container.java_reforged.view_variants": "Ver variantes",
+  "hint.container.java_reforged.change_tab_page": "Cambiar página de pestañas",
   "crafting_tab.java_reforged.building_blocks": "Bloques de construcción",
   "crafting_tab.java_reforged.equipment_and_tools": "Equipamiento y herramientas",
   "crafting_tab.java_reforged.resources_and_food": "Recursos y comida",
@@ -29,5 +31,7 @@
   "creative_tab.java_reforged.search": "Buscar",
   "creative_tab.java_reforged.search_placeholder": "Buscar...",
   "menu.java_reforged.video.optimize_experimental": "Optimización experimental",
-  "menu.java_reforged.video.optimize_experimental.description": "Activa optimizaciones de renderizado experimentales. Estas funciones están en desarrollo y pueden cambiar durante las pruebas."
+  "menu.java_reforged.video.optimize_experimental.description": "Activa optimizaciones de renderizado experimentales. Estas funciones están en desarrollo y pueden cambiar durante las pruebas.",
+  "prompt.java_reforged.join.prefix": "Presiona",
+  "prompt.java_reforged.join.suffix": "para unirte"
 }

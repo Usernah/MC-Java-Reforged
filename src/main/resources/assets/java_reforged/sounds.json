@@ -70,5 +70,116 @@
       { "name": "java_reforged:gameplay/item_drop_rem", "pitch": 1.0 },
       { "name": "java_reforged:gameplay/item_drop_rem", "pitch": 1.05 }
     ]
+  },
+  "minigames.battle.celebration": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/celebration", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/celebration", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/celebration", "pitch": 1.03 }
+    ]
+  },
+  "minigames.battle.celebration2": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/celebration2", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/celebration2", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/celebration2", "pitch": 1.03 }
+    ]
+  },
+  "minigames.battle.chest": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/chest", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/chest", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/chest", "pitch": 1.03 },
+      { "name": "java_reforged:minigames/sounds/battle/chest2", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/chest2", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/chest2", "pitch": 1.03 }
+    ]
+  },
+  "minigames.battle.death": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/death", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/death", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/death", "pitch": 1.03 },
+      { "name": "java_reforged:minigames/sounds/battle/death2", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/death2", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/death2", "pitch": 1.03 }
+    ]
+  },
+  "minigames.battle.gamestart": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/gamestart", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/gamestart", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/gamestart", "pitch": 1.03 }
+    ]
+  },
+  "minigames.battle.grace": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/grace", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/grace", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/grace", "pitch": 1.03 }
+    ]
+  },
+  "minigames.battle.gracezero": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/gracezero", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/gracezero", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/gracezero", "pitch": 1.03 }
+    ]
+  },
+  "minigames.battle.showdown": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/battle/showdown", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/battle/showdown", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/battle/showdown", "pitch": 1.03 }
+    ]
+  },
+  "minigames.lobby.lobby": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/lobby/lobby", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/lobby/lobby", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/lobby/lobby", "pitch": 1.03 }
+    ]
+  },
+  "minigames.lobby.lobbyaccent": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/lobby/lobbyaccent", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/lobby/lobbyaccent", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/lobby/lobbyaccent", "pitch": 1.03 }
+    ]
+  },
+  "minigames.lobby.lobbyzero": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/lobby/lobbyzero", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/lobby/lobbyzero", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/lobby/lobbyzero", "pitch": 1.03 }
+    ]
+  },
+  "minigames.lobby.startcd": {
+    "category": "master",
+    "sounds": [
+      { "name": "java_reforged:minigames/sounds/lobby/startcd", "pitch": 0.97 },
+      { "name": "java_reforged:minigames/sounds/lobby/startcd", "pitch": 1.0 },
+      { "name": "java_reforged:minigames/sounds/lobby/startcd", "pitch": 1.03 }
+    ]
+  },
+  "minigames.music.battle.vanilla": {
+    "category": "music",
+    "sounds": [
+      { "name": "java_reforged:minigames/music/battle/vanilla/vanilla1" },
+      { "name": "java_reforged:minigames/music/battle/vanilla/vanilla2" },
+      { "name": "java_reforged:minigames/music/battle/vanilla/vanilla3" },
+      { "name": "java_reforged:minigames/music/battle/vanilla/vanilla4" }
+    ]
   }
 }

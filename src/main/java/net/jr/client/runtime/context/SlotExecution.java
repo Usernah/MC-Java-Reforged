@@ -2,6 +2,9 @@ package net.jr.client.runtime.context;
 
 import java.util.Objects;
 import java.util.function.Supplier;
+import net.jr.client.compat.create.CreateRuntimeState;
+import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -81,7 +84,9 @@ public final class SlotExecution {
         SlotScope.Scope slotScope = SlotScope.enter(slot.id());
         try {
             MinecraftClientStateScope stateScope = MinecraftClientStateScope.bind(minecraft, slot);
-            return new Scope(slotScope, stateScope);
+            LocalClient localClient = ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
+            CreateRuntimeState.Scope createStateScope = CreateRuntimeState.activate(localClient);
+            return new Scope(slotScope, stateScope, createStateScope);
         } catch (RuntimeException | Error error) {
             slotScope.close();
             throw error;
@@ -91,11 +96,17 @@ public final class SlotExecution {
     public static final class Scope implements AutoCloseable {
         private final SlotScope.Scope slotScope;
         private final MinecraftClientStateScope stateScope;
+        private final CreateRuntimeState.Scope createStateScope;
         private boolean closed;
 
-        private Scope(SlotScope.Scope slotScope, MinecraftClientStateScope stateScope) {
+        private Scope(
+            SlotScope.Scope slotScope,
+            MinecraftClientStateScope stateScope,
+            CreateRuntimeState.Scope createStateScope
+        ) {
             this.slotScope = slotScope;
             this.stateScope = stateScope;
+            this.createStateScope = createStateScope;
         }
 
         @Override
@@ -106,9 +117,18 @@ public final class SlotExecution {
             this.closed = true;
             RuntimeException error = null;
             try {
-                this.stateScope.close();
+                this.createStateScope.close();
             } catch (RuntimeException closeError) {
                 error = closeError;
+            }
+            try {
+                this.stateScope.close();
+            } catch (RuntimeException closeError) {
+                if (error == null) {
+                    error = closeError;
+                } else {
+                    error.addSuppressed(closeError);
+                }
             } finally {
                 try {
                     this.slotScope.close();

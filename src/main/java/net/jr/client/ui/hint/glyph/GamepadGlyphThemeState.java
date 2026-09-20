@@ -23,11 +23,15 @@ public final class GamepadGlyphThemeState {
     }
 
     public static Asset currentFont() {
-        return currentTheme().font();
+        return font(currentTheme());
     }
 
     public static Asset font(ControllerGlyphTheme theme) {
-        return Objects.requireNonNull(theme, "theme").font();
+        ControllerGlyphTheme resolved = Objects.requireNonNull(theme, "theme");
+        return switch (resolved) {
+            case PS, PS_OLD -> ControllerGlyphTheme.PS.font();
+            default -> ControllerGlyphTheme.XBOX.font();
+        };
     }
 
     public static ControllerGlyphTheme themeForCurrentClient() {
@@ -72,7 +76,7 @@ public final class GamepadGlyphThemeState {
             return ControllerGlyphTheme.XBOX;
         }
 
-        return ControllerGlyphTheme.XBOX;
+        return ControllerGlyphTheme.GENERIC_A;
     }
 
     private static boolean isPlayStation5(String text, int product) {

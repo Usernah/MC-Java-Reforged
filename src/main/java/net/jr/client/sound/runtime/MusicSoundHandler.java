@@ -91,6 +91,16 @@ public final class MusicSoundHandler {
         }
     }
 
+    public static void stopSounds(SoundEngine engine) {
+        SoundEngineAccessor accessor = accessor(engine);
+        if (!accessor.javaReforged$isLoaded()) return;
+        for (SoundInstance sound : new ArrayList<>(accessor.javaReforged$instanceToChannel().keySet())) {
+            if (sound.getSource() != SoundSource.MUSIC) engine.stop(sound);
+        }
+        accessor.javaReforged$queuedSounds().keySet().removeIf(sound -> sound.getSource() != SoundSource.MUSIC);
+        accessor.javaReforged$queuedTickableSounds().removeIf(sound -> sound.getSource() != SoundSource.MUSIC);
+    }
+
     public static void fadeSounds(SoundEngine engine, float ticks) {
         SoundEngineAccessor accessor = accessor(engine);
         if (!accessor.javaReforged$isLoaded()) return;

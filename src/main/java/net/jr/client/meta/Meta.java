@@ -2,6 +2,7 @@ package net.jr.client.meta;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public final class Meta {
@@ -110,7 +111,8 @@ public final class Meta {
     }
 
     public record Animation(int frames, int frameWidth, int frameHeight, int duration,
-                            String unit, boolean interpolation, Map<Integer, Integer> frameDurations) {
+                            String unit, boolean interpolation, Map<Integer, Integer> frameDurations,
+                            String mode) {
         public static Animation from(Map<String, Object> root) {
             Map<String, Object> animation = child(root, "animation");
             Map<String, Object> size = child(animation, "frame_size");
@@ -127,7 +129,8 @@ public final class Meta {
             }
             return new Animation(integer(animation, "frames"), integer(size, "width"),
                 integer(size, "height"), integer(animation, "duration"), unit,
-                bool(animation, "interpolation"), Collections.unmodifiableMap(durations));
+                bool(animation, "interpolation"), Collections.unmodifiableMap(durations),
+                animation == null ? "loop" : String.valueOf(animation.getOrDefault("mode", "loop")));
         }
     }
 
@@ -147,11 +150,17 @@ public final class Meta {
                 || animation.frameHeight <= 0 || animation.duration <= 0) {
                 throw new IllegalArgumentException("Incomplete animation metadata");
             }
-            if (!switch (animation.unit.toLowerCase()) {
+            if (!switch (animation.unit.toLowerCase(Locale.ROOT)) {
                 case "ms", "ticks", "seconds", "minutes" -> true;
                 default -> false;
             }) {
                 throw new IllegalArgumentException("Unsupported animation unit: " + animation.unit);
+            }
+            if (!switch (animation.mode.toLowerCase(Locale.ROOT).replace('-', '_')) {
+                case "loop", "ping_pong" -> true;
+                default -> false;
+            }) {
+                throw new IllegalArgumentException("Unsupported animation mode: " + animation.mode);
             }
         }
     }

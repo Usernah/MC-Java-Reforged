@@ -239,6 +239,7 @@ public final class UiElement {
                 animation.unit().resolve(context),
                 animation.interpolation().resolve(context)
             );
+            this.image.setAnimationMode(animation.mode().resolve(context));
             Map<Integer, Integer> durations = new LinkedHashMap<>();
             for (int frame = 0; frame < animation.frameDurations().size(); frame++) {
                 durations.put(frame, animation.frameDurations().get(frame).resolve(context));

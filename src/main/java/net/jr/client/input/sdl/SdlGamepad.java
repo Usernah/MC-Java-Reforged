@@ -186,6 +186,25 @@ public final class SdlGamepad {
         return snapshot(deviceId).identity();
     }
 
+    /**
+     * SDL instance IDs are recreated after a hot-plug. These two values come
+     * from the opened joystick and are stable enough to correlate a returning
+     * physical controller with its previous instance when SDL provides them.
+     */
+    public static String serial(long deviceId) {
+        synchronized (SDL_LOCK) {
+            OpenDevice device = openDevices.get(deviceId);
+            return device == null ? "" : device.serial();
+        }
+    }
+
+    public static String path(long deviceId) {
+        synchronized (SDL_LOCK) {
+            OpenDevice device = openDevices.get(deviceId);
+            return device == null ? "" : device.path();
+        }
+    }
+
     public static String debugStatus() {
         if (!initialized) {
             if (!initializationFailureReason.isBlank()) {
@@ -627,7 +646,13 @@ public final class SdlGamepad {
             dev.isxander.sdl3java.api.gamepad.SdlGamepad.SDL_CloseGamepad(opened);
             return false;
         }
-        openDevices.put(instanceId, new OpenDevice(instanceId, opened, openedJoystick));
+        openDevices.put(instanceId, new OpenDevice(
+            instanceId,
+            opened,
+            openedJoystick,
+            deviceIdentifier(SdlJoystick.SDL_GetJoystickSerial(openedJoystick)),
+            deviceIdentifier(SdlJoystick.SDL_GetJoystickPath(openedJoystick))
+        ));
         long steamHandle = dev.isxander.sdl3java.api.gamepad.SdlGamepad.SDL_GetGamepadSteamHandle(opened);
         if (steamHandle != 0L) {
             Java_reforged.LOGGER.debug("[SplitSDL] Steam Input handle detectado para gamepad id {}: {}", deviceId.longValue(), steamHandle);
@@ -660,7 +685,13 @@ public final class SdlGamepad {
             SdlJoystick.SDL_CloseJoystick(opened);
             return false;
         }
-        openDevices.put(instanceId, new OpenDevice(instanceId, null, opened));
+        openDevices.put(instanceId, new OpenDevice(
+            instanceId,
+            null,
+            opened,
+            deviceIdentifier(SdlJoystick.SDL_GetJoystickSerial(opened)),
+            deviceIdentifier(SdlJoystick.SDL_GetJoystickPath(opened))
+        ));
         printedDebug = false;
         Java_reforged.LOGGER.info("[SplitSDL] Opened raw joystick instance={}", instanceId);
         return true;
@@ -897,6 +928,10 @@ public final class SdlGamepad {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    private static String deviceIdentifier(String value) {
+        return value == null ? "" : value.trim();
+    }
+
     private static SdlGamepadSnapshot firstSnapshot() {
         return snapshots.values().stream().findFirst().orElseGet(SdlGamepadSnapshot::disconnected);
     }
@@ -905,7 +940,13 @@ public final class SdlGamepad {
         return snapshots.getOrDefault(deviceId, SdlGamepadSnapshot.disconnected());
     }
 
-    private record OpenDevice(long instanceId, SDL_Gamepad gamepad, SDL_Joystick joystick) {
+    private record OpenDevice(
+        long instanceId,
+        SDL_Gamepad gamepad,
+        SDL_Joystick joystick,
+        String serial,
+        String path
+    ) {
     }
 
 }

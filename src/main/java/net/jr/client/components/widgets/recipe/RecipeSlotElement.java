@@ -116,7 +116,7 @@ public class RecipeSlotElement extends CompactSlotElement<RecipeEntryView, Recip
         graphics.pose().scale(scale, scale);
 
         ItemRenderOpacity.draw(
-                craftable ? 1.0F : 0.3F,
+                craftable ? 1.0F : 0.70F,
                 () -> graphics.item(recipe.icon(), 0, 0)
         );
 

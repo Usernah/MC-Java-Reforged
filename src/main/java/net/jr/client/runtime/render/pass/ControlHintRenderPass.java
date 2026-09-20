@@ -20,7 +20,9 @@ public final class ControlHintRenderPass {
     private static final FramebufferMetrics HD = new FramebufferMetrics(1280, 720);
     private static final FramebufferMetrics FULL_HD = new FramebufferMetrics(1920, 1080);
     private static final int INTERNAL_RASTER_SCALE = 1;
+    private static final int HINT_FRAMEBUFFER_HEIGHT = 100;
     private static final float PIXEL_BIAS = 0.35F;
+    private static final float HUD_BOTTOM_SAFE_GAP = 4.0F;
     private static final int HUD_TARGET = 0;
     private static final int MENU_TARGET = 1;
     private static final UILayoutRenderTarget[][] TARGETS =
@@ -29,8 +31,31 @@ public final class ControlHintRenderPass {
     private ControlHintRenderPass() {
     }
 
-    public static void renderHud(GuiGraphicsExtractor graphics) {
-        renderResolved(ControlHintPipeline.resolveHud(), graphics);
+    @Nullable
+    public static PreparedHud prepareHud(GuiGraphicsExtractor graphics) {
+        ControlHintPipeline.Result result = ControlHintPipeline.resolveHud();
+        HintCompositionLayout layout = resolveLayout(graphics);
+        if (layout == null) {
+            return null;
+        }
+
+        float bottomInset =
+            ControlHintRenderer.reservedScreenBottomHeight() * layout.scale()
+                + HUD_BOTTOM_SAFE_GAP;
+        return new PreparedHud(result, layout, bottomInset);
+    }
+
+    public static void renderHud(PreparedHud prepared, GuiGraphicsExtractor graphics) {
+        ControlHintPipeline.Result result = prepared.result();
+        if (result == null || result.hints().isEmpty()) {
+            return;
+        }
+        renderComposed(
+            result.context(),
+            graphics,
+            result.hints(),
+            prepared.layout()
+        );
     }
 
     public static void renderScreen(Screen screen, GuiGraphicsExtractor graphics) {
@@ -56,7 +81,8 @@ public final class ControlHintRenderPass {
         if (result == null || result.hints().isEmpty()) {
             return;
         }
-        if (!renderComposed(result.context(), graphics, result.hints())) {
+        HintCompositionLayout layout = resolveLayout(graphics);
+        if (layout == null) {
             ControlHintRenderer.renderDirect(
                 result.context(),
                 graphics,
@@ -64,24 +90,34 @@ public final class ControlHintRenderPass {
                 graphics.guiWidth(),
                 graphics.guiHeight()
             );
+            return;
         }
+        renderComposed(result.context(), graphics, result.hints(), layout);
     }
 
-    private static boolean renderComposed(
-        ControlHintContext context,
-        GuiGraphicsExtractor parentGraphics,
-        List<ResolvedControlHint> hints
+    @Nullable
+    private static HintCompositionLayout resolveLayout(
+        GuiGraphicsExtractor parentGraphics
     ) {
         Integer slotId = SlotScope.idOrNull();
         if (slotId == null || !ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
-            return false;
+            return null;
         }
 
-        HintCompositionLayout layout = resolveLayout(
+        return resolveLayout(
             parentGraphics,
             ClientRuntime.INSTANCE.viewports().viewport(slotId),
-            ControlHintRenderer.compositionHeight(context, hints)
+            HINT_FRAMEBUFFER_HEIGHT
         );
+    }
+
+    private static void renderComposed(
+        ControlHintContext context,
+        GuiGraphicsExtractor parentGraphics,
+        List<ResolvedControlHint> hints,
+        HintCompositionLayout layout
+    ) {
+        int slotId = SlotScope.requireId();
         int targetKind = context.isHud() ? HUD_TARGET : MENU_TARGET;
         UILayoutRenderTarget target = target(slotId, targetKind);
         target.extractCompositionAndSubmit(
@@ -118,7 +154,6 @@ public final class ControlHintRenderPass {
         } finally {
             parentGraphics.pose().popMatrix();
         }
-        return true;
     }
 
     private static UILayoutRenderTarget target(int slotId, int kind) {
@@ -175,7 +210,14 @@ public final class ControlHintRenderPass {
     private record LogicalViewport(int width, int height) {
     }
 
-    private record HintCompositionLayout(
+    public record PreparedHud(
+        @Nullable ControlHintPipeline.Result result,
+        HintCompositionLayout layout,
+        float bottomInset
+    ) {
+    }
+
+    public record HintCompositionLayout(
         int targetWidth,
         int targetHeight,
         float canvasWidth,

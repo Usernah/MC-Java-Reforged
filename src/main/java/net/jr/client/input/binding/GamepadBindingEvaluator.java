@@ -74,6 +74,10 @@ final class GamepadBindingEvaluator {
         this.appliedStates.putAll(nextStates);
     }
 
+    boolean isApplied(KeyMapping keyMapping) {
+        return this.appliedStates.getOrDefault(keyMapping.getName(), false);
+    }
+
     void release(GamepadBindingRegistry bindings) {
         for (String keyName : this.appliedStates.keySet()) {
             KeyMapping keyMapping = bindings.keyMapping(keyName);

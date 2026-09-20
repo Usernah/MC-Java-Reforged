@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.createxaero",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "XaeroTrainMapMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

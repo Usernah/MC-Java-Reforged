@@ -68,6 +68,16 @@ public final class ControllerGlyphDefinitions {
         return availableVariantTextures.contains(variant) ? variant : base;
     }
 
+    static Asset controlTexture(ControllerGlyphTheme theme) {
+        Asset base = theme.baseControlTexture();
+        String folder = UiPresentation.resourceVariantFolder();
+        if (folder.isEmpty()) {
+            return base;
+        }
+        Asset variant = theme.variantControlTexture(folder);
+        return availableVariantTextures.contains(variant) ? variant : base;
+    }
+
     private static Definition activeDefinition(ControllerGlyphTheme theme) {
         String folder = UiPresentation.resourceVariantFolder();
         if (!folder.isEmpty()) {
@@ -225,6 +235,8 @@ public final class ControllerGlyphDefinitions {
                 EnumMap<ControllerGlyphTheme, Definition> byTheme = new EnumMap<>(ControllerGlyphTheme.class);
                 for (ControllerGlyphTheme theme : ControllerGlyphTheme.values()) {
                     byTheme.put(theme, loadVariantDefinition(manager, theme, folder, loaded.get(theme)));
+                    Asset control = theme.variantControlTexture(folder);
+                    if (control.find(manager).isPresent()) textures.add(control);
                     for (ControllerGlyph glyph : theme.supportedGlyphs()) {
                         Asset normal = theme.variantTexture(folder, glyph, false);
                         if (normal != null && normal.find(manager).isPresent()) textures.add(normal);

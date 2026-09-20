@@ -13,10 +13,37 @@ public final class GuiScaleCalculator {
     }
 
     public static int resolve(int width, int height, int requestedScale, boolean enforceUnicode) {
-        int scale = 1;
         boolean smallMetrics = usesSmallMetrics();
         int baseWidth = smallMetrics ? PORTABLE_BASE_WIDTH : STANDARD_BASE_WIDTH;
         int baseHeight = smallMetrics ? PORTABLE_BASE_HEIGHT : STANDARD_BASE_HEIGHT;
+        return resolve(width, height, requestedScale, enforceUnicode, baseWidth, baseHeight);
+    }
+
+    public static int resolveStandard(
+        int width,
+        int height,
+        int requestedScale,
+        boolean enforceUnicode
+    ) {
+        return resolve(
+            width,
+            height,
+            requestedScale,
+            enforceUnicode,
+            STANDARD_BASE_WIDTH,
+            STANDARD_BASE_HEIGHT
+        );
+    }
+
+    private static int resolve(
+        int width,
+        int height,
+        int requestedScale,
+        boolean enforceUnicode,
+        int baseWidth,
+        int baseHeight
+    ) {
+        int scale = 1;
 
         while (scale != requestedScale
             && scale < width
@@ -32,14 +59,7 @@ public final class GuiScaleCalculator {
     }
 
     private static boolean usesSmallMetrics() {
-        if (UiPresentation.isPortable()) {
-            return true;
-        }
-        if (!UiPresentation.isSplitScreen()) {
-            return false;
-        }
-        ViewportLayout layout = ClientRuntime.INSTANCE.viewports().layout();
-        return layout == ViewportLayout.TWO_HORIZONTAL || layout == ViewportLayout.FOUR_GRID;
+        return UiPresentation.isPortable();
     }
 
     public static int maximumForSlot(int slotId, boolean enforceUnicode) {

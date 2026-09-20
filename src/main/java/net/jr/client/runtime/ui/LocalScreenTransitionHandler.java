@@ -7,6 +7,7 @@ import net.jr.client.input.mode.InputMode;
 import net.jr.client.runtime.input.LocalGamepadInputHandler;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
+import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotScope;
 import net.minecraft.client.Minecraft;
@@ -49,6 +50,9 @@ public final class LocalScreenTransitionHandler {
 
     public static void closeCompletedPrimaryJoiningScreen(Minecraft minecraft, @Nullable Screen screen) {
         if (!(screen instanceof LevelLoadingScreen)) {
+            return;
+        }
+        if (PreJoinWorldLoad.shouldHoldLoadingScreen()) {
             return;
         }
         if (LocalClientReadinessPolicy.gameplayBound(0)) {

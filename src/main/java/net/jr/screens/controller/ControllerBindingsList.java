@@ -1,7 +1,12 @@
 package net.jr.screens.controller;
 
+import com.mojang.blaze3d.textures.FilterMode;
 import com.google.common.collect.ImmutableList;
 import net.jr.api.client.render.Draw;
+import net.jr.api.client.split.SplitScreen;
+import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
@@ -15,6 +20,7 @@ import net.jr.client.ui.hint.glyph.KeyboardMouseGlyphResolver;
 import net.jr.client.ui.hint.glyph.KeyboardMouseGlyphTheme;
 import net.jr.client.ui.hint.render.GlyphTextureBounds;
 import net.jr.client.ui.hint.render.GlyphTextureBoundsCache;
+import net.jr.client.ui.layout.render.UILayoutRenderTarget;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -34,11 +40,21 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 
 public class ControllerBindingsList extends ContainerObjectSelectionList<ControllerBindingsList.Entry> {
     private static final int ITEM_HEIGHT = 20;
+    private static final int HD_WIDTH = 1280;
+    private static final int HD_HEIGHT = 720;
+    private static final int FULL_HD_WIDTH = 1920;
+    private static final int FULL_HD_HEIGHT = 1080;
+    private static final float COMPOSITE_PIXEL_BIAS = 0.35F;
     final ControllerBindingsScreen keyBindsScreen;
     private int maxNameWidth;
+    private final UILayoutRenderTarget glyphLayer = new UILayoutRenderTarget();
+    private final List<Consumer<GuiGraphicsExtractor>> pendingGlyphDraws = new ArrayList<>();
+    private float glyphLayerScale = 1.0F;
 
     public ControllerBindingsList(ControllerBindingsScreen keyBindsScreen, Minecraft minecraft) {
         super(
@@ -50,6 +66,88 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
         );
         this.keyBindsScreen = keyBindsScreen;
         rebuildEntries();
+    }
+
+    @Override
+    public void extractWidgetRenderState(
+        GuiGraphicsExtractor graphics,
+        int mouseX,
+        int mouseY,
+        float partialTick
+    ) {
+        this.pendingGlyphDraws.clear();
+        this.glyphLayerScale = this.resolveGlyphLayerScale(graphics);
+        super.extractWidgetRenderState(graphics, mouseX, mouseY, partialTick);
+        this.submitGlyphLayer(graphics);
+    }
+
+    public void closeGlyphLayer() {
+        this.pendingGlyphDraws.clear();
+        this.glyphLayer.close();
+    }
+
+    private void submitGlyphLayer(GuiGraphicsExtractor graphics) {
+        if (this.pendingGlyphDraws.isEmpty()) {
+            return;
+        }
+
+        int targetWidth = Math.max(1, (int)Math.ceil(this.getWidth() / this.glyphLayerScale));
+        int targetHeight = Math.max(1, (int)Math.ceil(this.getHeight() / this.glyphLayerScale));
+        this.enableScissor(graphics);
+        try {
+            this.glyphLayer.extractCompositionAndSubmit(
+                graphics,
+                targetWidth,
+                targetHeight,
+                1,
+                this.getX(),
+                this.getY(),
+                this.glyphLayerScale,
+                this.glyphLayerScale,
+                FilterMode.LINEAR,
+                COMPOSITE_PIXEL_BIAS,
+                compositionGraphics -> {
+                    for (Consumer<GuiGraphicsExtractor> draw : this.pendingGlyphDraws) {
+                        draw.accept(compositionGraphics);
+                    }
+                }
+            );
+        } finally {
+            graphics.disableScissor();
+        }
+    }
+
+    private float resolveGlyphLayerScale(GuiGraphicsExtractor graphics) {
+        int referenceWidth = FULL_HD_WIDTH;
+        int referenceHeight = FULL_HD_HEIGHT;
+        Integer slotId = SlotScope.idOrNull();
+        if (slotId != null && ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
+            ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slotId);
+            if (SplitScreen.isActive()) {
+                referenceWidth = switch (viewport.layout()) {
+                    case TWO_VERTICAL, FOUR_GRID -> HD_WIDTH / 2;
+                    case SINGLE, TWO_HORIZONTAL -> HD_WIDTH;
+                };
+                referenceHeight = switch (viewport.layout()) {
+                    case TWO_HORIZONTAL, FOUR_GRID -> HD_HEIGHT / 2;
+                    case SINGLE, TWO_VERTICAL -> HD_HEIGHT;
+                };
+            }
+        }
+
+        float scale = Math.min(
+            graphics.guiWidth() / (float)referenceWidth,
+            graphics.guiHeight() / (float)referenceHeight
+        );
+        return Float.isFinite(scale) && scale > 0.0F ? scale : 1.0F;
+    }
+
+    private float glyphLayerX(float screenX) {
+        return (screenX - this.getX()) / this.glyphLayerScale;
+    }
+
+    private float glyphLayerY(float screenY) {
+        return (screenY - this.getY()) / this.glyphLayerScale;
     }
 
     public void resetMappingAndUpdateButtons() {
@@ -203,9 +301,9 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
             changeButton.setPosition(changeX, buttonY);
             changeButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
             if (shouldRenderKeyboardGlyphs()) {
-                renderKeyboardGlyphs(graphics);
+                ControllerBindingsList.this.pendingGlyphDraws.add(this::renderKeyboardGlyphs);
             } else if (shouldRenderGamepadGlyphs()) {
-                renderGamepadGlyphs(graphics);
+                ControllerBindingsList.this.pendingGlyphDraws.add(this::renderGamepadGlyphs);
             }
 
             graphics.text(
@@ -297,9 +395,14 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
             }
 
             KeyboardMouseGlyphTheme theme = KeyboardMouseGlyphResolver.currentTheme();
-            float totalWidth = keyboardGlyphsWidth(theme, glyphs);
-            float currentX = changeButton.getX() + (changeButton.getWidth() - totalWidth) / 2.0F;
-            float centerY = changeButton.getY() + changeButton.getHeight() / 2.0F;
+            GlyphLineMetrics line = keyboardGlyphsMetrics(theme, glyphs);
+            float buttonCenterX = ControllerBindingsList.this.glyphLayerX(
+                changeButton.getX() + changeButton.getWidth() / 2.0F
+            );
+            float currentX = buttonCenterX - line.visibleWidth() / 2.0F - line.visibleLeft();
+            float centerY = ControllerBindingsList.this.glyphLayerY(
+                changeButton.getY() + changeButton.getHeight() / 2.0F
+            );
             int joinerWidth = ControllerBindingsList.this.minecraft.font.width("+");
 
             for (int i = 0; i < glyphs.size(); i++) {
@@ -321,7 +424,8 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
                 GlyphTextureBounds metrics = GlyphTextureBoundsCache.get(theme.texture(glyph));
                 float iconHeight = theme.hintHeight(glyph);
                 float iconWidth = metrics.drawWidthForHeight(iconHeight);
-                Draw.image(theme.texture(glyph), currentX, centerY - iconHeight / 2.0F, iconWidth, iconHeight)
+                float iconY = centeredVisibleY(centerY, metrics, iconHeight);
+                Draw.image(theme.texture(glyph), currentX, iconY, iconWidth, iconHeight)
                     .uvSize(metrics.sourceWidth(), metrics.sourceHeight())
                     .atlasSize(metrics.sourceWidth(), metrics.sourceHeight())
                     .draw(graphics);
@@ -329,18 +433,30 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
             }
         }
 
-        private float keyboardGlyphsWidth(KeyboardMouseGlyphTheme theme, List<KeyboardMouseGlyph> glyphs) {
-            float width = 0.0F;
+        private GlyphLineMetrics keyboardGlyphsMetrics(
+            KeyboardMouseGlyphTheme theme,
+            List<KeyboardMouseGlyph> glyphs
+        ) {
+            float cursor = 0.0F;
+            float visibleLeft = Float.POSITIVE_INFINITY;
+            float visibleRight = Float.NEGATIVE_INFINITY;
             int joinerWidth = ControllerBindingsList.this.minecraft.font.width("+");
             for (int i = 0; i < glyphs.size(); i++) {
                 if (i > 0) {
-                    width += 4.0F + joinerWidth;
+                    cursor += 2.0F;
+                    visibleLeft = Math.min(visibleLeft, cursor);
+                    cursor += joinerWidth;
+                    visibleRight = Math.max(visibleRight, cursor);
+                    cursor += 2.0F;
                 }
                 KeyboardMouseGlyph glyph = glyphs.get(i);
                 GlyphTextureBounds metrics = GlyphTextureBoundsCache.get(theme.texture(glyph));
-                width += metrics.drawWidthForHeight(theme.hintHeight(glyph));
+                float drawWidth = metrics.drawWidthForHeight(theme.hintHeight(glyph));
+                visibleLeft = Math.min(visibleLeft, cursor + metrics.visibleLeft(drawWidth));
+                visibleRight = Math.max(visibleRight, cursor + metrics.visibleRight(drawWidth));
+                cursor += drawWidth;
             }
-            return width;
+            return new GlyphLineMetrics(cursor, visibleLeft, visibleRight);
         }
 
         private void refreshGamepadEntry() {
@@ -431,9 +547,14 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
                 return;
             }
 
-            float totalWidth = gamepadGlyphsWidth(theme, chord);
-            float currentX = changeButton.getX() + (changeButton.getWidth() - totalWidth) / 2.0F;
-            float centerY = changeButton.getY() + changeButton.getHeight() / 2.0F;
+            GlyphLineMetrics line = gamepadGlyphsMetrics(theme, chord);
+            float buttonCenterX = ControllerBindingsList.this.glyphLayerX(
+                changeButton.getX() + changeButton.getWidth() / 2.0F
+            );
+            float currentX = buttonCenterX - line.visibleWidth() / 2.0F - line.visibleLeft();
+            float centerY = ControllerBindingsList.this.glyphLayerY(
+                changeButton.getY() + changeButton.getHeight() / 2.0F
+            );
             int joinerWidth = ControllerBindingsList.this.minecraft.font.width("+");
             for (int i = 0; i < chord.inputs().size(); i++) {
                 if (i > 0) {
@@ -454,7 +575,8 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
                 GlyphTextureBounds metrics = GlyphTextureBoundsCache.get(theme.texture(glyph));
                 float iconHeight = theme.hintHeight(glyph);
                 float iconWidth = metrics.drawWidthForHeight(iconHeight);
-                Draw.image(theme.texture(glyph), currentX, centerY - iconHeight / 2.0F, iconWidth, iconHeight)
+                float iconY = centeredVisibleY(centerY, metrics, iconHeight);
+                Draw.image(theme.texture(glyph), currentX, iconY, iconWidth, iconHeight)
                     .uvSize(metrics.sourceWidth(), metrics.sourceHeight())
                     .atlasSize(metrics.sourceWidth(), metrics.sourceHeight())
                     .draw(graphics);
@@ -462,18 +584,40 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
             }
         }
 
-        private float gamepadGlyphsWidth(ControllerGlyphTheme theme, GamepadInputChord chord) {
-            float width = 0.0F;
+        private GlyphLineMetrics gamepadGlyphsMetrics(
+            ControllerGlyphTheme theme,
+            GamepadInputChord chord
+        ) {
+            float cursor = 0.0F;
+            float visibleLeft = Float.POSITIVE_INFINITY;
+            float visibleRight = Float.NEGATIVE_INFINITY;
             int joinerWidth = ControllerBindingsList.this.minecraft.font.width("+");
             for (int i = 0; i < chord.inputs().size(); i++) {
                 if (i > 0) {
-                    width += 4.0F + joinerWidth;
+                    cursor += 2.0F;
+                    visibleLeft = Math.min(visibleLeft, cursor);
+                    cursor += joinerWidth;
+                    visibleRight = Math.max(visibleRight, cursor);
+                    cursor += 2.0F;
                 }
                 ControllerGlyph glyph = ControllerGlyph.forInput(chord.inputs().get(i));
                 GlyphTextureBounds metrics = GlyphTextureBoundsCache.get(theme.texture(glyph));
-                width += metrics.drawWidthForHeight(theme.hintHeight(glyph));
+                float drawWidth = metrics.drawWidthForHeight(theme.hintHeight(glyph));
+                visibleLeft = Math.min(visibleLeft, cursor + metrics.visibleLeft(drawWidth));
+                visibleRight = Math.max(visibleRight, cursor + metrics.visibleRight(drawWidth));
+                cursor += drawWidth;
             }
-            return width;
+            return new GlyphLineMetrics(cursor, visibleLeft, visibleRight);
+        }
+
+        private float centeredVisibleY(
+            float centerY,
+            GlyphTextureBounds metrics,
+            float drawHeight
+        ) {
+            float visibleTop = metrics.visibleTop(drawHeight);
+            float visibleBottom = metrics.visibleBottom(drawHeight);
+            return centerY - (visibleBottom - visibleTop) / 2.0F - visibleTop;
         }
 
         private boolean hasCompleteGlyphSet(ControllerGlyphTheme theme, GamepadInputChord chord) {
@@ -484,6 +628,12 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
                 }
             }
             return true;
+        }
+    }
+
+    private record GlyphLineMetrics(float totalWidth, float visibleLeft, float visibleRight) {
+        private float visibleWidth() {
+            return this.visibleRight - this.visibleLeft;
         }
     }
 }

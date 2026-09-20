@@ -59,6 +59,7 @@ public enum ControllerGlyphTheme {
     private final Asset font;
     private final Asset textureFolder;
     private final Asset definitions;
+    private final Asset controlTexture;
     private final Set<ControllerGlyph> supportedGlyphs;
     private final Map<ControllerGlyph, Asset> textures = new EnumMap<>(ControllerGlyph.class);
     private final Map<ControllerGlyph, Asset> pressedTextures = new EnumMap<>(ControllerGlyph.class);
@@ -76,6 +77,7 @@ public enum ControllerGlyphTheme {
         this.font = Asset.MOD(themePath);
         this.textureFolder = Asset.MOD("textures/" + themePath);
         this.definitions = textureFolder.child("definitions.json");
+        this.controlTexture = textureFolder.child("control.png");
         this.supportedGlyphs = Set.copyOf(supportedGlyphs);
 
         if (!this.supportedGlyphs.containsAll(pressGlyphs)) {
@@ -122,6 +124,10 @@ public enum ControllerGlyphTheme {
         return ControllerGlyphDefinitions.height(this, glyph);
     }
 
+    public Asset controlTexture() {
+        return ControllerGlyphDefinitions.controlTexture(this);
+    }
+
     @Nullable
     public Asset pressedTexture(ControllerGlyph glyph) {
         return ControllerGlyphDefinitions.texture(this, glyph, true);
@@ -130,6 +136,14 @@ public enum ControllerGlyphTheme {
     @Nullable
     Asset baseTexture(ControllerGlyph glyph, boolean pressed) {
         return pressed ? this.pressedTextures.get(glyph) : this.textures.get(glyph);
+    }
+
+    Asset baseControlTexture() {
+        return this.controlTexture;
+    }
+
+    Asset variantControlTexture(String folder) {
+        return this.textureFolder.child(folder).child("control.png");
     }
 
     @Nullable

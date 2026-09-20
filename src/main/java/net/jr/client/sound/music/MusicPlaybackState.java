@@ -8,4 +8,6 @@ public final class MusicPlaybackState {
     boolean resumeAfterWorldExit;
     boolean initialPlayback = true;
     boolean worldExitIntervalArmed;
+    MusicPlaybackPolicy.Selection appliedPolicy = MusicPlaybackPolicy.VANILLA;
+    int overrideRetryTicks;
 }

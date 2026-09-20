@@ -35,6 +35,9 @@ import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.jr.screens.controller.ControllerBindingsScreen;
 import net.jr.screens.StonecutterScreen;
 import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
+import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardController;
+import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardScreen;
+import net.jr.client.ui.overlay.ScreenOverlays;
 import net.jr.screens.crafting.AbstractCraftingScreen;
 import net.minecraft.util.Util;
 import net.minecraft.client.KeyMapping;
@@ -61,8 +64,13 @@ public final class LocalInputActionHandler {
     private static final long UI_NAV_REPEAT_INTERVAL_MS = 100L;
     private static final long UI_DOUBLE_CLICK_INTERVAL_MS = 250L;
     private static final ActionState[] STATES = createStates();
+    private static boolean dispatchingControllerPointerClick;
 
     private LocalInputActionHandler() {
+    }
+
+    public static boolean isDispatchingControllerPointerClick() {
+        return dispatchingControllerPointerClick;
     }
 
     @SubscribeEvent
@@ -199,18 +207,25 @@ public final class LocalInputActionHandler {
     private static void processCurrentSlot(Minecraft minecraft, boolean gamepadInput) {
         ActionState state = state();
         Screen currentScreen = minecraft.gui.screen();
+        boolean overlayOwnsInput = currentScreen != null
+            && ScreenOverlays.ownsInput(currentScreen);
 
         if (gamepadInput) {
             InputApi.ensureBindingsLoaded(minecraft);
-            BindingContext actionContext = resolveActionContext(currentScreen);
-            if (actionContext != state.lastActionContext) {
+            if (overlayOwnsInput) {
                 InputApi.releaseBindings();
-                drainUiActionClickCounters();
                 InputApi.suppressHeldBindings();
-                syncUiButtonLatches(state);
-                state.lastActionContext = actionContext;
+            } else {
+                BindingContext actionContext = resolveActionContext(currentScreen);
+                if (actionContext != state.lastActionContext) {
+                    InputApi.releaseBindings();
+                    drainUiActionClickCounters();
+                    InputApi.suppressHeldBindings();
+                    syncUiButtonLatches(state);
+                    state.lastActionContext = actionContext;
+                }
+                InputApi.applyBindings(actionContext);
             }
-            InputApi.applyBindings(actionContext);
         } else {
             InputApi.releaseBindings();
             state.lastActionContext = BindingContext.GAMEPLAY;
@@ -228,7 +243,12 @@ public final class LocalInputActionHandler {
         }
 
         if (currentScreen != null) {
-            handleMenuActions(minecraft, currentScreen, state, gamepadInput);
+            if (ScreenOverlays.tick(currentScreen)) {
+                drainUiActionClickCounters();
+                syncUiButtonLatches(state);
+            } else {
+                handleMenuActions(minecraft, currentScreen, state, gamepadInput);
+            }
         } else if (player != null) {
             state.wasPauseButtonDown = GameplayActionHandler.handle(
                 minecraft, player, gamepadInput, state.wasPauseButtonDown, state.hotbarRepeatState
@@ -526,13 +546,21 @@ public final class LocalInputActionHandler {
         if (pauseButtonDown) {
             InputApi.markGamepadInput();
         }
-        if (pauseButtonDown && !state.wasPauseButtonDown && screen instanceof PauseScreen) {
-            closeScreenWithBackFeedback(state, screen);
+        if (pauseButtonDown && !state.wasPauseButtonDown) {
+            if (screen instanceof GamepadKeyboardScreen keyboardScreen
+                    && keyboardScreen.gamepadKeyboardSubmit()) {
+                state.suppressNextScreenTransitionSoundFrom = screen;
+                InputActionSounds.playClick();
+            } else if (screen instanceof PauseScreen) {
+                closeScreenWithBackFeedback(state, screen);
+            }
         }
         state.wasPauseButtonDown = pauseButtonDown;
 
         boolean controllerUiActive = controllerConnected && InputApi.isGamepadMode();
-        boolean textInputFocused = isTextInputFocused(screen);
+        // Controller focus is navigation only. Text editing starts after an explicit
+        // primary activation, when GamepadKeyboardController takes ownership.
+        boolean textInputFocused = isTextInputFocused(screen) && !controllerUiActive;
 
         if (tabNavigation != null
                 && tabNavigation.process(controllerConnected, !textInputFocused)) {
@@ -597,7 +625,12 @@ public final class LocalInputActionHandler {
             action.hasPressPosition = false;
             action.containerQuickCraft = false;
             RecipeSlotElement.ActivationFeedback recipeFeedback = null;
-            if (UiInputModeController.isFocusNavigationActive() && !textInputFocused) {
+            if (action.mouseButton == 0
+                    && GamepadKeyboardController.activateFocusedFromPrimaryAction(screen)) {
+                handled = true;
+                handledByFocusedElement = true;
+                screen.afterKeyboardAction();
+            } else if (UiInputModeController.isFocusNavigationActive() && !textInputFocused) {
                 boolean focusedContainerSlot =
                         hasFocusedContainerSlot(screen);
 
@@ -626,7 +659,6 @@ public final class LocalInputActionHandler {
                 if (shouldBeginContainerQuickCraft(screen, true)) {
                     handled = clickScreen(screen, action, mouseX, mouseY);
                     if (handled) {
-                        screen.mouseDragged(mouseEvent(mouseX, mouseY, action.mouseButton), 0.0D, 0.0D);
                         action.containerQuickCraft = true;
                         action.dragX = mouseX;
                         action.dragY = mouseY;
@@ -678,7 +710,6 @@ public final class LocalInputActionHandler {
                 boolean beginQuickCraft = shouldBeginContainerQuickCraft(screen, false);
                 handled = clickScreen(screen, action, mouseX, mouseY);
                 if (handled && beginQuickCraft) {
-                    screen.mouseDragged(mouseEvent(mouseX, mouseY, action.mouseButton), 0.0D, 0.0D);
                     action.containerQuickCraft = true;
                     action.dragX = mouseX;
                     action.dragY = mouseY;
@@ -694,6 +725,12 @@ public final class LocalInputActionHandler {
             }
 
             if (handled) {
+                boolean openedTextInput = action.mouseButton == 0
+                    && GamepadKeyboardController.activatePointed(screen, mouseX, mouseY);
+                if (openedTextInput) {
+                    screen.mouseReleased(mouseEvent(mouseX, mouseY, action.mouseButton));
+                    handledByFocusedElement = true;
+                }
 
                 state.suppressNextScreenTransitionSoundFrom = screen;
                 action.pressX = mouseX;
@@ -803,7 +840,13 @@ public final class LocalInputActionHandler {
         long now = Util.getMillis();
         boolean doubleClick = action.lastClickScreen == screen
             && now - action.lastClickTimeMs < UI_DOUBLE_CLICK_INTERVAL_MS;
-        boolean handled = screen.mouseClicked(mouseEvent(mouseX, mouseY, action.mouseButton), doubleClick);
+        boolean handled;
+        dispatchingControllerPointerClick = true;
+        try {
+            handled = screen.mouseClicked(mouseEvent(mouseX, mouseY, action.mouseButton), doubleClick);
+        } finally {
+            dispatchingControllerPointerClick = false;
+        }
         if (handled) {
             action.lastClickScreen = screen;
             action.lastClickTimeMs = now;

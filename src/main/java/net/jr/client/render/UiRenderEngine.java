@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.state.gui.BlitRenderState;
 import net.minecraft.client.renderer.state.gui.TiledBlitRenderState;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.Util;
 import net.minecraft.util.FormattedCharSequence;
 import org.joml.Matrix3x2f;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -41,6 +43,18 @@ public final class UiRenderEngine {
 
     public enum CenterMode { STRETCH, REPEAT }
     public enum TextAlign { LEFT, CENTER, RIGHT }
+    public enum AnimationMode {
+        LOOP,
+        PING_PONG;
+
+        static AnimationMode parse(String mode) {
+            return switch (mode.toLowerCase(Locale.ROOT).replace('-', '_')) {
+                case "loop" -> LOOP;
+                case "ping_pong" -> PING_PONG;
+                default -> throw new IllegalArgumentException("Unsupported animation mode: " + mode);
+            };
+        }
+    }
     public enum AnimUnit {
         MILLISECONDS(1), TICKS(50), SECONDS(1000), MINUTES(60_000);
         private final int milliseconds;
@@ -102,6 +116,8 @@ public final class UiRenderEngine {
         private int animFrameHeight;
         private int animDuration;
         private AnimUnit animUnit = AnimUnit.MILLISECONDS;
+        private AnimationMode animMode = AnimationMode.LOOP;
+        private boolean explicitAnimMode;
         private boolean animInterpolate;
         private Map<Integer, Integer> animFrameDurations = Map.of();
 
@@ -215,6 +231,12 @@ public final class UiRenderEngine {
 
         public ImageBuilder frameDurations(Map<Integer, Integer> frameDurations) {
             this.animFrameDurations = frameDurations == null ? Map.of() : Map.copyOf(frameDurations);
+            return this;
+        }
+
+        public ImageBuilder animationMode(AnimationMode mode) {
+            this.animMode = mode == null ? AnimationMode.LOOP : mode;
+            this.explicitAnimMode = true;
             return this;
         }
 
@@ -441,6 +463,7 @@ public final class UiRenderEngine {
             state.animFrameHeight = this.animFrameHeight;
             state.animDuration = this.animDuration;
             state.animUnit = this.animUnit;
+            state.animMode = this.animMode;
             state.animInterpolate = this.animInterpolate;
             state.animFrameDurations = new LinkedHashMap<>(this.animFrameDurations);
             state.blur = this.blur;
@@ -494,6 +517,9 @@ public final class UiRenderEngine {
                 state.animFrameHeight = animation.frameHeight();
                 state.animDuration = animation.duration();
                 state.animUnit = AnimUnit.parse(animation.unit());
+                if (!this.explicitAnimMode) {
+                    state.animMode = AnimationMode.parse(animation.mode());
+                }
                 state.animInterpolate = animation.interpolation();
                 state.animFrameDurations = new LinkedHashMap<>(animation.frameDurations());
             }
@@ -711,6 +737,11 @@ public final class UiRenderEngine {
             for (int frame = 0; frame < state.animFrames; frame++) {
                 cycle += this.frameDurationMillis(state, frame);
             }
+            if (state.animMode == AnimationMode.PING_PONG) {
+                for (int frame = state.animFrames - 2; frame > 0; frame--) {
+                    cycle += this.frameDurationMillis(state, frame);
+                }
+            }
             if (cycle <= 0L) {
                 return new AnimationFrame(0, 1, 0.0F);
             }
@@ -721,11 +752,22 @@ public final class UiRenderEngine {
                 if (cursor < duration) {
                     return new AnimationFrame(
                         frame,
-                        (frame + 1) % state.animFrames,
+                        frame == state.animFrames - 1
+                            ? (state.animMode == AnimationMode.PING_PONG ? frame - 1 : 0)
+                            : frame + 1,
                         cursor / (float) duration
                     );
                 }
                 cursor -= duration;
+            }
+            if (state.animMode == AnimationMode.PING_PONG) {
+                for (int frame = state.animFrames - 2; frame > 0; frame--) {
+                    int duration = this.frameDurationMillis(state, frame);
+                    if (cursor < duration) {
+                        return new AnimationFrame(frame, frame - 1, cursor / (float) duration);
+                    }
+                    cursor -= duration;
+                }
             }
             return new AnimationFrame(state.animFrames - 1, 0, 1.0F);
         }
@@ -882,6 +924,7 @@ public final class UiRenderEngine {
             private int animFrameHeight;
             private int animDuration;
             private AnimUnit animUnit;
+            private AnimationMode animMode;
             private boolean animInterpolate;
             private Map<Integer, Integer> animFrameDurations = Map.of();
             private boolean blur;
@@ -1119,11 +1162,19 @@ public final class UiRenderEngine {
         }
 
         private FormattedCharSequence styledSequence() {
-            if (this.shadowColor == null) {
+            if (this.fontLocation == null && this.shadowColor == null) {
                 return this.charSequenceText;
             }
-            return sink -> this.charSequenceText.accept((index, style, codePoint) ->
-                sink.accept(index, style.withShadowColor(this.shadowColor), codePoint));
+            return sink -> this.charSequenceText.accept((index, style, codePoint) -> {
+                Style resolvedStyle = style;
+                if (this.fontLocation != null) {
+                    resolvedStyle = resolvedStyle.withFont(this.fontLocation.asFontDescription());
+                }
+                if (this.shadowColor != null) {
+                    resolvedStyle = resolvedStyle.withShadowColor(this.shadowColor);
+                }
+                return sink.accept(index, resolvedStyle, codePoint);
+            });
         }
 
         private void drawOutlinedText(

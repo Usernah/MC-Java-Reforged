@@ -18,6 +18,7 @@ import net.jr.client.runtime.terrain.ClientWorkBackpressure;
 import net.jr.client.runtime.session.LocalClientDisconnectHandler;
 import net.jr.client.runtime.ui.LocalScreenManager;
 import net.jr.client.runtime.ui.LocalScreenTransitionHandler;
+import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
@@ -159,7 +160,7 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "isPaused", at = @At("HEAD"), cancellable = true)
     private void javaReforged$neverFreezeForLocalMultiplayer(CallbackInfoReturnable<Boolean> cir) {
-        cir.setReturnValue(false);
+        cir.setReturnValue(PreJoinWorldLoad.shouldForcePause());
     }
 
     @Redirect(
@@ -167,7 +168,7 @@ public abstract class MinecraftMixin {
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;pause:Z", opcode = Opcodes.GETFIELD)
     )
     private boolean javaReforged$readPauseAsFalseForLocalMultiplayer(Minecraft minecraft) {
-        return false;
+        return PreJoinWorldLoad.shouldForcePause();
     }
 
     @Redirect(
@@ -175,7 +176,7 @@ public abstract class MinecraftMixin {
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;pause:Z", opcode = Opcodes.PUTFIELD)
     )
     private void javaReforged$writePauseAsFalseForLocalMultiplayer(Minecraft minecraft, boolean pause) {
-        this.pause = false;
+        this.pause = pause && PreJoinWorldLoad.shouldForcePause();
     }
 
     @Redirect(
@@ -188,7 +189,9 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "runTick", at = @At("TAIL"))
     private void javaReforged$closeCompletedTestJoiningScreen(boolean renderLevel, CallbackInfo ci) {
-        LocalScreenTransitionHandler.closeCompletedPrimaryJoiningScreen((Minecraft) (Object) this);
+        Minecraft minecraft = (Minecraft) (Object) this;
+        PreJoinWorldLoad.tick(minecraft);
+        LocalScreenTransitionHandler.closeCompletedPrimaryJoiningScreen(minecraft);
     }
 
     @Inject(method = "tick", at = @At("RETURN"))
@@ -215,6 +218,7 @@ public abstract class MinecraftMixin {
             boolean stopSound,
             CallbackInfo ci
     ) {
+        PreJoinWorldLoad.onMinecraftDisconnect();
         LocalClientDisconnectHandler.returnToPrimaryOnly(
                 (Minecraft)(Object)this
         );

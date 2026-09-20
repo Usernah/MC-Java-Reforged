@@ -23,12 +23,12 @@ public final class LocalClientSession {
     private volatile Connection connection;
     private volatile boolean connectionAttemptInFlight;
     private volatile long connectionAttemptGeneration;
-    private long lastConnectAttemptMs;
-    private boolean joining;
-    private boolean joinedWorldOnce;
-    private boolean positionSynchronized;
-    private int worldReadyValidationTicks;
-    private long generation;
+    private volatile long lastConnectAttemptMs;
+    private volatile boolean joining;
+    private volatile boolean joinedWorldOnce;
+    private volatile boolean positionSynchronized;
+    private volatile int worldReadyValidationTicks;
+    private volatile long generation;
 
     public LocalClientSession(int slotId, @Nullable GameProfile profile) {
         this.slotId = slotId;
@@ -66,20 +66,19 @@ public final class LocalClientSession {
         this.lastConnectAttemptMs = now;
 
         if (minecraft.getSingleplayerServer() != null) {
-            this.replaceConnection(
-                SecondaryClientConnector.connectToIntegratedServer(
-                    minecraft,
-                    connections,
-                    this.slotId,
-                    this.profile
-                )
+            this.beginSecondaryConnectionAttempt();
+            Connection openedConnection = SecondaryClientConnector.connectToIntegratedServer(
+                minecraft,
+                connections,
+                this.slotId,
+                this.profile
             );
-            this.joining = true;
+            this.installSecondaryConnection(openedConnection);
             return;
         }
 
         if (minecraft.getCurrentServer() == null) {
-            this.joining = true;
+            this.setJoiningInProgress(true);
             return;
         }
 
@@ -87,21 +86,26 @@ public final class LocalClientSession {
     }
 
     public void disconnect(ConnectionSlotRegistry connections) {
-        this.connectionAttemptGeneration++;
-        if (this.connection != null) {
-            Connection closingConnection = this.connection;
+        Connection closingConnection;
+        synchronized (this) {
+            this.connectionAttemptGeneration++;
+            closingConnection = this.connection;
+            this.connection = null;
+            if (closingConnection != null) {
+                this.generation++;
+            }
+            this.connectionAttemptInFlight = false;
+            this.joining = this.isSecondary();
+            this.joinedWorldOnce = !this.isSecondary();
+            this.positionSynchronized = !this.isSecondary();
+            this.worldReadyValidationTicks = 0;
+        }
+        if (closingConnection != null) {
             SlotScope.run(this.slotId, () ->
                 closingConnection.disconnect(Component.literal("Closing local client session"))
             );
             connections.unbind(closingConnection);
-            this.connection = null;
-            this.generation++;
         }
-        this.connectionAttemptInFlight = false;
-        this.joining = this.isSecondary();
-        this.joinedWorldOnce = !this.isSecondary();
-        this.positionSynchronized = !this.isSecondary();
-        this.worldReadyValidationTicks = 0;
     }
 
     private static Connection requirePrimaryConnection(Minecraft minecraft) {
@@ -140,24 +144,36 @@ public final class LocalClientSession {
         return this.joining;
     }
 
-    public void setJoiningInProgress(boolean joining) {
-        this.joining = this.isSecondary() && !this.joinedWorldOnce && joining;
+    public synchronized void setJoiningInProgress(boolean joining) {
+        if (!this.isSecondary()) {
+            this.joining = false;
+            return;
+        }
+        this.joining = joining;
+        if (joining) {
+            this.joinedWorldOnce = false;
+        }
     }
 
-    public void markWorldReady() {
+    public synchronized void markWorldReady() {
         if (this.isSecondary()) {
             this.joinedWorldOnce = true;
             this.joining = false;
         }
     }
 
-    public boolean validateWorldReadyCandidate(boolean readyCandidate) {
-        if (!this.isSecondary() || this.joinedWorldOnce) {
-            return true;
+    public synchronized boolean validateWorldReadyCandidate(boolean readyCandidate) {
+        if (!this.isSecondary()) {
+            return readyCandidate;
         }
         if (!readyCandidate) {
             this.worldReadyValidationTicks = 0;
+            this.joinedWorldOnce = false;
+            this.joining = true;
             return false;
+        }
+        if (this.joinedWorldOnce && !this.joining) {
+            return true;
         }
         return ++this.worldReadyValidationTicks >= 2;
     }
@@ -166,14 +182,14 @@ public final class LocalClientSession {
         return this.positionSynchronized;
     }
 
-    public void markPositionSynchronized() {
-        this.positionSynchronized = true;
+    public synchronized void markPositionSynchronized(Connection source) {
+        if (this.connection == source) {
+            this.positionSynchronized = true;
+        }
     }
 
-    public void markWorldCleared() {
-        if (this.joinedWorldOnce) {
-            this.generation++;
-        }
+    public synchronized void markWorldCleared() {
+        this.generation++;
         this.joinedWorldOnce = false;
         this.positionSynchronized = !this.isSecondary();
         this.worldReadyValidationTicks = 0;
@@ -182,13 +198,41 @@ public final class LocalClientSession {
         }
     }
 
-    private void replaceConnection(Connection connection) {
+    public synchronized boolean owns(Connection connection) {
+        return this.connection == connection;
+    }
+
+    public synchronized boolean isWorldReadyFor(Connection connection) {
+        return !this.isSecondary()
+            || this.connection == connection
+                && connection != null
+                && connection.isConnected()
+                && !this.joining
+                && this.joinedWorldOnce
+                && this.positionSynchronized;
+    }
+
+    private synchronized void replaceConnection(Connection connection) {
         if (this.connection != connection) {
-            this.connection = connection;
             this.generation++;
-            this.positionSynchronized = !this.isSecondary();
+            this.joining = false;
+            this.joinedWorldOnce = true;
+            this.positionSynchronized = true;
             this.worldReadyValidationTicks = 0;
+            this.connection = connection;
         }
+    }
+
+    private synchronized void beginSecondaryConnectionAttempt() {
+        this.generation++;
+        this.joining = true;
+        this.joinedWorldOnce = false;
+        this.positionSynchronized = false;
+        this.worldReadyValidationTicks = 0;
+    }
+
+    private synchronized void installSecondaryConnection(Connection connection) {
+        this.connection = connection;
     }
 
     private void connectToRemoteServerAsync(
@@ -196,8 +240,12 @@ public final class LocalClientSession {
         ConnectionSlotRegistry connections,
         ServerData serverData
     ) {
-        this.connectionAttemptInFlight = true;
-        long attemptGeneration = ++this.connectionAttemptGeneration;
+        long attemptGeneration;
+        synchronized (this) {
+            this.connectionAttemptInFlight = true;
+            this.beginSecondaryConnectionAttempt();
+            attemptGeneration = ++this.connectionAttemptGeneration;
+        }
         Thread connectionThread = new Thread(() -> {
             Connection openedConnection = null;
             try {
@@ -208,26 +256,42 @@ public final class LocalClientSession {
                     this.profile,
                     serverData
                 );
-                if (attemptGeneration != this.connectionAttemptGeneration) {
+                if (!this.installConnection(attemptGeneration, openedConnection)) {
                     connections.unbind(openedConnection);
                     openedConnection.disconnect(Component.literal("Local client session was closed while connecting"));
                     return;
                 }
-                this.replaceConnection(openedConnection);
-                this.joining = true;
             } catch (Exception exception) {
                 if (openedConnection != null) {
                     connections.unbind(openedConnection);
                     openedConnection.disconnect(Component.literal("Failed to open remote local client session"));
                 }
-                this.connection = null;
+                synchronized (this) {
+                    if (attemptGeneration == this.connectionAttemptGeneration) {
+                        this.connection = null;
+                        this.joining = true;
+                        this.joinedWorldOnce = false;
+                        this.positionSynchronized = false;
+                        this.worldReadyValidationTicks = 0;
+                    }
+                }
             } finally {
-                if (attemptGeneration == this.connectionAttemptGeneration) {
-                    this.connectionAttemptInFlight = false;
+                synchronized (this) {
+                    if (attemptGeneration == this.connectionAttemptGeneration) {
+                        this.connectionAttemptInFlight = false;
+                    }
                 }
             }
         }, "JavaReforged-RemoteLocalClient-" + this.slotId);
         connectionThread.setDaemon(true);
         connectionThread.start();
+    }
+
+    private synchronized boolean installConnection(long attemptGeneration, Connection connection) {
+        if (attemptGeneration != this.connectionAttemptGeneration) {
+            return false;
+        }
+        this.installSecondaryConnection(connection);
+        return true;
     }
 }

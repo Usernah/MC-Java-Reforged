@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.jr.client.sound.music.WorldMusicTransitionHandler;
 import net.jr.client.sound.music.WorldMusicTransitionState;
+import net.jr.client.runtime.audio.SlotSoundRouter;
 import net.jr.screens.inventory.CreativeInventoryHandler;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -64,7 +65,11 @@ public abstract class MinecraftMixin {
     @Redirect(method = "updateLevelInEngines(Lnet/minecraft/client/multiplayer/ClientLevel;Z)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/sounds/SoundManager;stop()V"))
     private void javaReforged$guardLevelTransitionStop(SoundManager soundManager) {
-        if (WorldMusicTransitionHandler.allowForcedLevelStop(this.javaReforged$musicTransitionState)) soundManager.stop();
+        if (WorldMusicTransitionHandler.allowForcedLevelStop(this.javaReforged$musicTransitionState)) {
+            soundManager.stop();
+        } else {
+            SlotSoundRouter.stopAllEffects(soundManager);
+        }
     }
 
     @Redirect(method = "doWorldLoad", at = @At(value = "INVOKE",

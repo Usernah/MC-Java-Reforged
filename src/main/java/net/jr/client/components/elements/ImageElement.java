@@ -43,6 +43,8 @@ public class ImageElement implements VisualElementsInterface {
     private int animFrameHeight;
     private int animDuration;
     private Draw.AnimUnit animUnit = Draw.AnimUnit.MILLISECONDS;
+    private Draw.AnimationMode animMode = Draw.AnimationMode.LOOP;
+    private boolean hasAnimMode;
     private boolean animInterpolate;
     private final Map<Integer, Integer> animFrameDurations = new LinkedHashMap<>();
 
@@ -189,8 +191,15 @@ public class ImageElement implements VisualElementsInterface {
         this.animFrameHeight = 0;
         this.animDuration = 0;
         this.animUnit = Draw.AnimUnit.MILLISECONDS;
+        this.animMode = Draw.AnimationMode.LOOP;
+        this.hasAnimMode = false;
         this.animInterpolate = false;
         this.animFrameDurations.clear();
+    }
+
+    public void setAnimationMode(Draw.AnimationMode mode) {
+        this.animMode = mode == null ? Draw.AnimationMode.LOOP : mode;
+        this.hasAnimMode = mode != null;
     }
 
     public void setFrameDuration(int frame, int duration) {
@@ -263,6 +272,9 @@ public class ImageElement implements VisualElementsInterface {
                     this.animInterpolate
             );
             builder.frameDurations(this.animFrameDurations);
+        }
+        if (this.hasAnimMode) {
+            builder.animationMode(this.animMode);
         }
         if (this.hasBlur) {
             builder.blur(this.blur);

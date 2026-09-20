@@ -15,7 +15,7 @@ public final class UiPresentation {
     }
 
     public static InterfaceProfile effectiveProfile() {
-        return isSplitScreen() ? InterfaceProfile.STANDARD : selectedProfile();
+        return selectedProfile();
     }
 
     public static boolean isPortable() {

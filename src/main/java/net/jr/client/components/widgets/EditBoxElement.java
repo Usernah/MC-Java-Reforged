@@ -8,12 +8,13 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
+import net.jr.experimental_features.gamepad_keyboard.GamepadTextInput;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public class EditBoxElement extends JavaBaseWidget {
+public class EditBoxElement extends JavaBaseWidget implements GamepadTextInput {
     private String value = "";
     private int maxLength = 32;
     private int cursorPosition;
@@ -247,6 +248,32 @@ public class EditBoxElement extends JavaBaseWidget {
 
     public void setFont(Font font) {
         this.font = font;
+    }
+
+    @Override
+    public boolean gamepadKeyboardCanConsumeInput() {
+        return this.canConsumeInput();
+    }
+
+    @Override
+    public String gamepadKeyboardValue() {
+        return this.value();
+    }
+
+    @Override
+    public int gamepadKeyboardCursor() {
+        return this.cursorPosition();
+    }
+
+    @Override
+    public int gamepadKeyboardMaxLength() {
+        return this.maxLength();
+    }
+
+    @Override
+    public void gamepadKeyboardApply(String value, int cursor) {
+        this.setValue(value);
+        this.moveCursorTo(cursor);
     }
 
     public String visibleText(int pixelWidth) {

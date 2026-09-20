@@ -4,10 +4,16 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "ClientEventsMixin",
+    "GuiMapMixin",
+    "MapElementRenderHandlerMixin",
     "MapProcessorMixin",
-    "MapSaveLoadMixin",
     "MapRunnerMixin",
-    "WorldMapCoreMixin"
+    "MapSaveLoadMixin",
+    "MiscMixin",
+    "ScreenBaseMixin",
+    "SupportXaeroMinimapAccessor",
+    "WorldMapCoreMixin",
+    "WorldMapSessionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

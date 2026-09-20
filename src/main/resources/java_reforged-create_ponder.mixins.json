@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.createponder",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "FaceCursorPoseMixin",
+    "PonderTickScreensMixin",
+    "PonderUIMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

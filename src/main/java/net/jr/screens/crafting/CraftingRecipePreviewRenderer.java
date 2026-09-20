@@ -23,7 +23,7 @@ import java.util.List;
 final class CraftingRecipePreviewRenderer {
     private static final int MISSING_BACKGROUND = 0x66B82020;
     private static final int MISSING_TINT = 0x1AFF3030;
-    private static final float MISSING_ITEM_ALPHA = 0.65F;
+    private static final float MISSING_ITEM_ALPHA = 0.70F;
 
     private final int columns;
     private final int rows;

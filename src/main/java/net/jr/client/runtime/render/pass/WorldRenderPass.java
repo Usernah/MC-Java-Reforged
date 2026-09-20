@@ -67,11 +67,7 @@ public final class WorldRenderPass {
             // Minecraft's transformed render code resolves these fields through the
             // active slot. Reading the raw fields here would validate J1 while a
             // secondary viewport is being rendered.
-            if (
-                MinecraftClientAccess.level(minecraft) == null
-                    || MinecraftClientAccess.player(minecraft) == null
-                    || MinecraftClientAccess.gameMode(minecraft) == null
-            ) {
+            if (minecraft.level == null || minecraft.player == null || minecraft.gameMode == null) {
                 return false;
             }
             GameRendererAccessor renderer = (GameRendererAccessor)(Object)gameRenderer;

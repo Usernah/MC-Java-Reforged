@@ -28,7 +28,9 @@ import net.jr.client.ui.container.actions.ContainerInventoryActionHandler;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.runtime.input.LocalCursorVisibility;
 import net.jr.client.ui.navigation.UiInputModeController;
+import net.jr.client.ui.overlay.ScreenOverlays;
 import net.jr.client.ui.cursor.MouseCoordinates;
+import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
@@ -179,6 +181,11 @@ public final class LocalGamepadInputHandler {
             } else {
                 activatePhysicalMouseCursor(mc, slotId);
             }
+        }
+
+        if (ScreenOverlays.ownsInput(screen)) {
+            cursorClock(slotId).reset();
+            return;
         }
 
         float stickX = InputApi.axis(GamepadAxis.LEFT_STICK_X, DEADZONE);
@@ -583,6 +590,9 @@ public final class LocalGamepadInputHandler {
 
         if (mouseButton == 0 || mouseButton == 1) {
             GuiEventListener focused = focusedElement(screen);
+            if (mouseButton == 0 && GamepadKeyboardController.activateFocused(screen)) {
+                return true;
+            }
             if (focused instanceof UiActionHandler handler) {
                 boolean handled = handler.handleUiAction(
                         mouseButton == 0 ? UiAction.ACCEPT : UiAction.ALTERNATE
