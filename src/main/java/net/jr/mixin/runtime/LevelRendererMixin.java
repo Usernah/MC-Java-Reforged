@@ -7,8 +7,6 @@ import java.util.function.Consumer;
 import net.minecraft.TracingExecutor;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.terrain.TerrainCoordinator;
-import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.render.experimental.ExperimentalRenderMetrics;
 import net.jr.client.runtime.render.experimental.TerrainMultiDraw;
 import net.jr.client.runtime.render.target.ViewportRenderTargets;
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -22,7 +20,6 @@ import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -32,11 +29,6 @@ import org.joml.Matrix4fc;
 
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
-    @Unique
-    private long javaReforged$drawPreparationStarted;
-    @Unique
-    private boolean javaReforged$customDrawPreparationRecorded;
-
     @Shadow @Nullable
     private ViewArea viewArea;
 
@@ -50,45 +42,10 @@ public abstract class LevelRendererMixin {
         Matrix4fc modelViewMatrix,
         CallbackInfoReturnable<ChunkSectionsToRender> cir
     ) {
-        this.javaReforged$customDrawPreparationRecorded = false;
-        this.javaReforged$drawPreparationStarted = ExperimentalRenderMetrics.startTimer();
         ChunkSectionsToRender prepared = TerrainMultiDraw.prepare((LevelRenderer)(Object)this, modelViewMatrix);
         if (prepared != null) {
-            this.javaReforged$recordDrawPreparation(prepared);
-            this.javaReforged$customDrawPreparationRecorded = true;
             cir.setReturnValue(prepared);
         }
-    }
-
-    @Inject(method = "prepareChunkRenders", at = @At("RETURN"))
-    private void javaReforged$endDrawPreparation(
-        Matrix4fc modelViewMatrix,
-        CallbackInfoReturnable<ChunkSectionsToRender> cir
-    ) {
-        if (this.javaReforged$customDrawPreparationRecorded) {
-            this.javaReforged$customDrawPreparationRecorded = false;
-            return;
-        }
-        this.javaReforged$recordDrawPreparation(cir.getReturnValue());
-    }
-
-    @Unique
-    private void javaReforged$recordDrawPreparation(ChunkSectionsToRender prepared) {
-        int draws = TerrainMultiDraw.preparedLogicalDrawCount(prepared);
-        if (draws < 0) {
-            draws = 0;
-            for (var layerGroups : prepared.drawGroupsPerLayer().values()) {
-                for (var drawGroup : layerGroups.values()) {
-                    draws += drawGroup.size();
-                }
-            }
-        }
-        Integer slotId = SlotScope.idOrNull();
-        ExperimentalRenderMetrics.recordDrawPreparation(
-            slotId == null ? -1 : slotId,
-            System.nanoTime() - this.javaReforged$drawPreparationStarted,
-            draws
-        );
     }
 
     @WrapOperation(

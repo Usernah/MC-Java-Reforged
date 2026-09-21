@@ -7,13 +7,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
-import java.lang.ref.WeakReference;
 import javax.annotation.Nullable;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
-import net.minecraft.client.renderer.chunk.SectionMesh;
-import net.minecraft.client.renderer.chunk.CompiledSectionMesh;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 
@@ -28,7 +24,7 @@ public final class SharedTerrainStore implements AutoCloseable {
     private final ArrayDeque<SectionRenderDispatcher.RenderSection> reusable = new ArrayDeque<>();
     private final AtomicInteger nextIndex = new AtomicInteger();
     private volatile long frame;
-    private volatile boolean closed;
+    private boolean closed;
 
     public SharedTerrainStore(SectionRenderDispatcher dispatcher) {
         this.dispatcher = dispatcher;
@@ -36,16 +32,6 @@ public final class SharedTerrainStore implements AutoCloseable {
 
     public SectionRenderDispatcher dispatcher() {
         return this.dispatcher;
-    }
-
-    public Diagnostics diagnostics() {
-        return new Diagnostics(
-            this.sections.size(),
-            this.reverse.size(),
-            this.retired.size(),
-            this.reusable.size(),
-            this.nextIndex.get()
-        );
     }
 
     public void beginFrame() {
@@ -98,7 +84,6 @@ public final class SharedTerrainStore implements AutoCloseable {
     public void invalidateCompiledGeometry() {
         this.ensureOpen();
         for (Entry entry : this.sections.values()) {
-            entry.markDirty();
             entry.section().reset();
         }
         for (SectionRenderDispatcher.RenderSection section : this.reusable) {
@@ -147,111 +132,6 @@ public final class SharedTerrainStore implements AutoCloseable {
             entry.taskStarted();
             entry.invalidateRetirement();
         }
-    }
-
-    public void markDirty(ClientLevel level, long sectionNode) {
-        Entry entry = this.sections.get(key(level, sectionNode));
-        if (entry != null) {
-            entry.markDirty(level);
-        }
-    }
-
-    public @Nullable ClientLevel latestUpdateSource(SectionRenderDispatcher.RenderSection section) {
-        Entry entry = this.entry(section);
-        return entry == null ? null : entry.latestSource.get();
-    }
-
-    long revision(SectionRenderDispatcher.RenderSection section) {
-        Entry entry = this.entry(section);
-        return entry == null ? -1L : entry.revision();
-    }
-
-    public boolean needsRebuild(SectionRenderDispatcher.RenderSection section) {
-        Entry entry = this.entry(section);
-        return !this.closed && entry != null
-            && (entry.publishedRevision != entry.revision()
-                || section.getSectionMesh() == CompiledSectionMesh.UNCOMPILED);
-    }
-
-    public boolean hasPendingBuild(SectionRenderDispatcher.RenderSection section) {
-        Entry entry = this.entry(section);
-        BuildTicket ticket = entry == null ? null : entry.latestBuild;
-        return ticket != null && !ticket.finished && ticket.isCurrent();
-    }
-
-    public @Nullable SnapshotVersion snapshotVersion(SectionRenderDispatcher.RenderSection section) {
-        Entry entry = this.entry(section);
-        return entry == null ? null : new SnapshotVersion(this, entry, entry.revision());
-    }
-
-    public @Nullable BuildTicket beginBuild(SectionRenderDispatcher.RenderSection section, @Nullable SnapshotVersion snapshot) {
-        Entry entry = this.entry(section);
-        if (entry == null || this.closed) {
-            return null;
-        }
-        synchronized (entry) {
-            long revision = snapshot == null ? entry.revision()
-                : snapshot.store == this && snapshot.entry == entry ? snapshot.revision : -1;
-            BuildTicket ticket = new BuildTicket(this, entry, revision);
-            entry.latestBuild = ticket;
-            return ticket;
-        }
-    }
-
-    public record SnapshotVersion(SharedTerrainStore store, Entry entry, long revision) {}
-
-    public static final class BuildTicket {
-        private final SharedTerrainStore store;
-        private final Entry entry;
-        private final long revision;
-        private volatile boolean meshOwned;
-        private volatile boolean finished;
-        private volatile boolean abandoned;
-
-        private BuildTicket(SharedTerrainStore store, Entry entry, long revision) {
-            this.store = store;
-            this.entry = entry;
-            this.revision = revision;
-        }
-
-        public boolean isCurrent() {
-            return !this.abandoned && !this.store.closed && this.entry.references() != 0
-                && this.entry.latestBuild == this && this.entry.revision() == this.revision
-                && this.store.entry(this.entry.section()) == this.entry;
-        }
-
-        public void attachMesh() {
-            this.meshOwned = true;
-        }
-
-        public void taskFinished() {
-            if (!this.meshOwned) {
-                this.abandon();
-            }
-        }
-
-        public void abandon() {
-            this.abandoned = true;
-            this.finished = true;
-        }
-
-        public SectionMesh publish(SectionMesh candidate, Supplier<SectionMesh> swap) {
-            synchronized (this.entry) {
-                if (!this.isCurrent()) {
-                    this.abandon();
-                    return candidate;
-                }
-                SectionMesh previous = swap.get();
-                this.entry.publishedRevision = this.revision;
-                this.finished = true;
-                return previous;
-            }
-        }
-    }
-
-    @Nullable AtomicInteger referenceMaskForTask(SectionRenderDispatcher.RenderSection section) {
-        Entry entry = this.entry(section);
-        return entry == null ? null : entry.references;
     }
 
     public void taskFinished(SectionRenderDispatcher.RenderSection section) {
@@ -350,16 +230,6 @@ public final class SharedTerrainStore implements AutoCloseable {
         this.reusable.clear();
     }
 
-    public record Diagnostics(
-        int liveSections,
-        int reverseEntries,
-        int queuedRetirements,
-        int reusableSections,
-        int allocatedSections
-    ) {
-        public static final Diagnostics EMPTY = new Diagnostics(0, 0, 0, 0, 0);
-    }
-
     private void ensureOpen() {
         if (this.closed) {
             throw new IllegalStateException("Shared terrain store is closed");
@@ -371,10 +241,6 @@ public final class SharedTerrainStore implements AutoCloseable {
         private final AtomicInteger references = new AtomicInteger();
         private final AtomicInteger tasks = new AtomicInteger();
         private final AtomicLong retirementEpoch = new AtomicLong();
-        private final AtomicLong revision = new AtomicLong();
-        private volatile long publishedRevision = -1;
-        private volatile BuildTicket latestBuild;
-        private volatile WeakReference<ClientLevel> latestSource = new WeakReference<>(null);
 
         private Entry(SectionRenderDispatcher.RenderSection section) {
             this.section = section;
@@ -410,21 +276,6 @@ public final class SharedTerrainStore implements AutoCloseable {
 
         private long retirementEpoch() {
             return this.retirementEpoch.get();
-        }
-
-        private synchronized void markDirty() {
-            this.revision.incrementAndGet();
-        }
-
-        private synchronized void markDirty(ClientLevel source) {
-            if (this.latestSource.get() != source) {
-                this.latestSource = new WeakReference<>(source);
-            }
-            this.revision.incrementAndGet();
-        }
-
-        private long revision() {
-            return this.revision.get();
         }
 
         private void addReference(int slotMask) {

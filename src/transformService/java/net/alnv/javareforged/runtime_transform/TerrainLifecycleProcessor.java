@@ -50,7 +50,7 @@ public final class TerrainLifecycleProcessor implements ClassProcessor {
             return ComputeFlags.NO_REWRITE;
         }
         context.audit("installed JavaReforged terrain lifecycle hooks", Integer.toString(hooks));
-        return ComputeFlags.COMPUTE_MAXS;
+        return ComputeFlags.SIMPLE_REWRITE;
     }
 
     private static int rewriteTerrainLifecycle(ClassNode classNode, MethodNode method) {
@@ -101,9 +101,6 @@ public final class TerrainLifecycleProcessor implements ClassProcessor {
     private static int rewriteSectionTaskLifecycle(ClassNode classNode, MethodNode method) {
         int hooks = 0;
         if ("<init>".equals(method.name)) {
-            if (COMPILE_TASK_OWNER.equals(classNode.name)) {
-                return 0;
-            }
             for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
                 if (insn.getOpcode() != Opcodes.RETURN) {
                     continue;
@@ -117,13 +114,11 @@ public final class TerrainLifecycleProcessor implements ClassProcessor {
                     "L" + RENDER_SECTION_OWNER + ";"
                 ));
                 hook.add(new VarInsnNode(Opcodes.ALOAD, 0));
-                hook.add(new InsnNode(Opcodes.ICONST_0));
-                hook.add(new InsnNode(Opcodes.ACONST_NULL));
                 hook.add(new MethodInsnNode(
                     Opcodes.INVOKESTATIC,
                     TERRAIN_SECTION_OWNERS_OWNER,
                     "taskCreated",
-                    "(L" + RENDER_SECTION_OWNER + ";Ljava/lang/Object;ZLnet/minecraft/client/renderer/chunk/RenderSectionRegion;)V",
+                    "(L" + RENDER_SECTION_OWNER + ";Ljava/lang/Object;)V",
                     false
                 ));
                 method.instructions.insertBefore(insn, hook);

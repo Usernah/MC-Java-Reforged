@@ -13,7 +13,7 @@ public final class ClientConfig {
         .comment("Orientation used by the two-player split-screen layout")
         .defineEnum("splitOrientation", SplitOrientation.VERTICAL);
     public static final ModConfigSpec.BooleanValue EXPERIMENTAL_RENDER_OPTIMIZATIONS = BUILDER
-        .comment("Enable experimental render optimizations")
+        .comment("Enable Java Reforged native terrain multi-draw indirect")
         .define("experimentalRenderOptimizations", false);
     public static final ModConfigSpec SPEC = BUILDER.build();
 

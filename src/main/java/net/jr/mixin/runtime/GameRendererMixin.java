@@ -3,8 +3,6 @@ package net.jr.mixin.runtime;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.jr.client.runtime.render.tick.CameraTicker;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.render.experimental.FrameHardwareMetrics;
 import net.jr.client.runtime.viewport.ViewportProjection;
 import net.jr.client.runtime.render.tick.HandRendererTicker;
 import net.jr.client.runtime.render.target.ViewportRenderTargets;
@@ -20,9 +18,7 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightmapRenderStateExtractor;
 import net.minecraft.client.renderer.extract.LevelExtractor;
 import net.minecraft.client.renderer.state.LightmapRenderState;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
@@ -33,34 +29,6 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
-    @Shadow @Final
-    private net.minecraft.client.Minecraft minecraft;
-
-    @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
-    private void javaReforged$skipHandWhileSlotIsTransitioning(
-        net.minecraft.client.renderer.state.level.CameraRenderState camera,
-        float partialTick,
-        org.joml.Matrix4fc projection,
-        CallbackInfo ci
-    ) {
-        if (this.minecraft.level == null
-                || this.minecraft.player == null
-                || this.minecraft.gameMode == null
-                || !LocalClientReadinessPolicy.currentGameplayReady()) {
-            ci.cancel();
-        }
-    }
-
-    @Inject(method = "render", at = @At("HEAD"))
-    private void javaReforged$beginGpuTiming(CallbackInfo ci) {
-        FrameHardwareMetrics.beginGpu();
-    }
-
-    @Inject(method = "render", at = @At("RETURN"))
-    private void javaReforged$endGpuTiming(CallbackInfo ci) {
-        FrameHardwareMetrics.endGpu();
-    }
-
     @Inject(method = "mainRenderTarget", at = @At("HEAD"), cancellable = true)
     private void javaReforged$resolveActiveMainTarget(CallbackInfoReturnable<RenderTarget> cir) {
         RenderTarget activeTarget = ViewportRenderTargets.activeMainOrNull();
@@ -79,7 +47,6 @@ public abstract class GameRendererMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     private void javaReforged$closeSlotRenderTargets(CallbackInfo ci) {
-        FrameHardwareMetrics.close();
         ControlHintRenderPass.closeAll();
         ViewportRenderTargets.closeAll();
     }

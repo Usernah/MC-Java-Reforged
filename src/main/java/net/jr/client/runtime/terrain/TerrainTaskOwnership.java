@@ -4,18 +4,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
-import net.minecraft.client.renderer.chunk.RenderSectionRegion;
-import net.minecraft.client.renderer.chunk.CompiledSectionMesh;
 import net.minecraft.world.phys.Vec3;
 
 public final class TerrainTaskOwnership {
     private static final ConcurrentMap<Object, TaskContext> TASKS = new ConcurrentHashMap<>();
-    private static final ConcurrentMap<SectionRenderDispatcher.RenderSection, Object> PENDING_COMPILES =
-        new ConcurrentHashMap<>();
 
     private TerrainTaskOwnership() {
     }
@@ -28,55 +23,30 @@ public final class TerrainTaskOwnership {
         return context.cameraPosition();
     }
 
-    public static void taskCreated(
-        SectionRenderDispatcher.RenderSection section,
-        Object task,
-        boolean compileTask,
-        @Nullable RenderSectionRegion region
-    ) {
-        synchronized (task) {
-            if (TASKS.containsKey(task)) {
-                return;
-            }
-            Vec3 cameraPosition = TerrainStateStore.terrain().nullableCameraPosition();
-            if (cameraPosition == null) {
-                cameraPosition = Vec3.ZERO;
-            }
-            SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
-            AtomicInteger referenceMask = null;
-            long revision = -1L;
-            SharedTerrainStore.SnapshotVersion snapshot = region == null ? null
-                : ((TerrainSnapshotVersion)(Object)region).javaReforged$snapshotVersion();
+    public static void taskCreated(SectionRenderDispatcher.RenderSection section, Object task) {
+        Vec3 cameraPosition = TerrainStateStore.terrain().nullableCameraPosition();
+        if (cameraPosition == null) {
+            throw new IllegalStateException("Cannot create terrain task without an active player camera");
+        }
+        SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
+        if (store != null) {
+            store.taskStarted(section);
+        }
+        TaskContext previous = TASKS.putIfAbsent(
+            task,
+            new TaskContext(section, store, new AtomicReference<>(cameraPosition), new AtomicBoolean())
+        );
+        if (previous != null) {
             if (store != null) {
-                referenceMask = store.referenceMaskForTask(section);
-                revision = snapshot == null ? store.revision(section) : snapshot.revision();
+                store.taskFinished(section);
             }
-            SharedTerrainStore.BuildTicket buildTicket = compileTask && store != null
-                ? store.beginBuild(section, snapshot)
-                : null;
-            TaskContext context = new TaskContext(
-                section,
-                store,
-                referenceMask,
-                revision,
-                new AtomicReference<>(cameraPosition),
-                new AtomicBoolean(),
-                compileTask,
-                buildTicket
-            );
-            TASKS.put(task, context);
-            if (store != null) {
-                store.taskStarted(section);
-            }
-            if (compileTask) {
-                PENDING_COMPILES.put(section, task);
-            }
+            throw new IllegalStateException("Terrain task was registered twice");
         }
     }
 
     public static void taskFinished(Object task) {
         TaskContext context = TASKS.remove(task);
-        release(task, context);
+        release(context);
     }
 
     public static void taskExecuting(Object task) {
@@ -89,76 +59,21 @@ public final class TerrainTaskOwnership {
     public static void taskCancelled(Object task) {
         TaskContext context = TASKS.get(task);
         if (context != null && !context.executing().get() && TASKS.remove(task, context)) {
-            release(task, context);
+            release(context);
         }
     }
 
-    public static boolean hasPendingCompile(SectionRenderDispatcher.RenderSection section) {
-        return PENDING_COMPILES.containsKey(section);
-    }
-
-    public static boolean pendingCompileCoversCurrentRevision(
-        SectionRenderDispatcher.RenderSection section
-    ) {
-        Object task = PENDING_COMPILES.get(section);
-        TaskContext context = task == null ? null : TASKS.get(task);
-        if (context == null) {
-            return false;
-        }
-        return context.buildTicket() != null
-            ? context.buildTicket().isCurrent()
-            : context.store() == null || context.revision() == context.store().revision(section);
-    }
-
-    public static boolean isCurrent(Object task) {
-        TaskContext context = TASKS.get(task);
-        if (context != null && context.buildTicket() != null) {
-            return context.buildTicket().isCurrent();
-        }
-        return context == null
-            || context.store() == null
-            || context.revision() == context.store().revision(context.section());
-    }
-
-    public static void attachMesh(Object task, CompiledSectionMesh mesh) {
-        TaskContext context = TASKS.get(task);
-        if (context != null && context.buildTicket() != null) {
-            ((TerrainMeshVersion)(Object)mesh).javaReforged$buildTicket(context.buildTicket());
-        }
-    }
-
-    public static boolean isTracked(Object task) {
-        return TASKS.containsKey(task);
-    }
-
-    private static void release(Object task, @Nullable TaskContext context) {
-        if (context == null) {
-            return;
-        }
-        if (context.buildTicket() != null) {
-            context.buildTicket().taskFinished();
-        }
-        if (context.compileTask()) {
-            PENDING_COMPILES.remove(context.section(), task);
-        }
-        if (context.store() != null) {
+    private static void release(@Nullable TaskContext context) {
+        if (context != null && context.store() != null) {
             context.store().taskFinished(context.section());
         }
     }
 
-    static @Nullable TaskContext context(Object task) {
-        return TASKS.get(task);
-    }
-
-    record TaskContext(
+    private record TaskContext(
         SectionRenderDispatcher.RenderSection section,
         @Nullable SharedTerrainStore store,
-        @Nullable AtomicInteger referenceMask,
-        long revision,
         AtomicReference<Vec3> cameraPosition,
-        AtomicBoolean executing,
-        boolean compileTask,
-        @Nullable SharedTerrainStore.BuildTicket buildTicket
+        AtomicBoolean executing
     ) {
     }
 }

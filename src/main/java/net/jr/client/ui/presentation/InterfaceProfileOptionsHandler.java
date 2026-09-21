@@ -5,6 +5,9 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.OptionsList;
 
 public final class InterfaceProfileOptionsHandler {
     private InterfaceProfileOptionsHandler() {
@@ -23,5 +26,22 @@ public final class InterfaceProfileOptionsHandler {
         extended[original.length] = InterfaceProfileOption.INSTANCE;
         extended[original.length + 1] = SplitOrientationOption.INSTANCE;
         return extended;
+    }
+
+    public static void updateSplitLock(OptionsList list) {
+        if (list == null) {
+            return;
+        }
+        AbstractWidget widget = list.findOption(InterfaceProfileOption.INSTANCE);
+        if (widget == null) {
+            return;
+        }
+        boolean split = UiPresentation.isSplitScreen();
+        widget.active = !split;
+        if (widget instanceof CycleButton<?> rawButton) {
+            @SuppressWarnings("unchecked")
+            CycleButton<InterfaceProfile> button = (CycleButton<InterfaceProfile>)rawButton;
+            button.setValue(split ? InterfaceProfile.STANDARD : InterfaceProfileOption.INSTANCE.get());
+        }
     }
 }

@@ -30,8 +30,8 @@
   "creative_tab.java_reforged.spawn_eggs": "Huevos de aparición",
   "creative_tab.java_reforged.search": "Buscar",
   "creative_tab.java_reforged.search_placeholder": "Buscar...",
-  "menu.java_reforged.video.optimize_experimental": "Optimización experimental",
-  "menu.java_reforged.video.optimize_experimental.description": "Activa optimizaciones de renderizado experimentales. Estas funciones están en desarrollo y pueden cambiar durante las pruebas.",
+  "menu.java_reforged.video.optimize_experimental": "MDI de terreno nativo",
+  "menu.java_reforged.video.optimize_experimental.description": "Activa la ruta multi-draw indirect de terreno propia de Java Reforged.",
   "prompt.java_reforged.join.prefix": "Presiona",
   "prompt.java_reforged.join.suffix": "para unirte"
 }

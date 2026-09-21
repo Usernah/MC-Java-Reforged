@@ -9,10 +9,7 @@
     "ServerRecipeBookMixin",
     "accessors.BlockItemAccessor",
     "experimental_features.copper_golem.CopperGolemMemoryMixin",
-    "experimental_features.copper_golem.TransportItemsBetweenContainersMixin",
-    "runtime.ChunkMapMixin",
-    "runtime.DistanceManagerMixin",
-    "runtime.MinecraftServerChunkAdmissionMixin"
+    "experimental_features.copper_golem.TransportItemsBetweenContainersMixin"
   ],
   "client": [
     "AbstractContainerScreenMixin",
@@ -62,7 +59,6 @@
     "accessors.MusicManagerAccessor",
     "accessors.OptionsAccessor",
     "accessors.ParticleEngineAccessor",
-    "accessors.SectionRenderDispatcherAccessor",
     "accessors.SoundEngineAccessor",
     "accessors.SoundManagerAccessor",
     "bugfix.minecraft.ServerDataMixin",
@@ -103,17 +99,11 @@
     "runtime.ParticleEngineMixin",
     "runtime.PauseScreenMixin",
     "runtime.RenderSectionBufferGenerationMixin",
-    "runtime.RenderSectionTaskCreationMixin",
     "runtime.ScreenMixin",
     "runtime.ScreenRectangleMixin",
-    "runtime.SectionCompileTaskMixin",
-    "runtime.SectionRenderDispatcherSchedulingMixin",
-    "runtime.SectionTaskDynamicQueueMixin",
     "runtime.SectionToNodeMapMixin",
     "runtime.SkyRendererMixin",
     "runtime.SoundManagerMixin",
-    "runtime.TerrainMeshVersionMixin",
-    "runtime.TerrainSnapshotVersionMixin",
     "runtime.ToggleKeyMappingMixin",
     "runtime.ViewAreaMixin"
   ],

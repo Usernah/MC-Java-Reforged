@@ -1,23 +1,16 @@
 package net.jr.mixin.runtime;
 
 import javax.annotation.Nullable;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
 
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.render.pass.BedrockBridgeOutlinePass;
 import net.jr.client.runtime.terrain.TerrainSectionUpdateRouter;
 import net.jr.client.runtime.terrain.TerrainCoordinator;
-import net.jr.client.runtime.terrain.TerrainUpdateBatch;
-import net.jr.client.runtime.terrain.TerrainStateStore;
 import net.jr.mixin.accessors.LevelExtractorAccessor;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.SectionUpdateTracker;
-import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.extract.LevelExtractor;
@@ -35,31 +28,6 @@ public abstract class LevelExtractorMixin {
     private Minecraft minecraft;
     @Shadow @Nullable
     private ClientLevel level;
-    @Shadow @Nullable
-    private SectionUpdateTracker sectionUpdateTracker;
-
-    @WrapOperation(
-        method = "extract",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/SectionUpdateTracker$SectionDirtyState;isDirty()Z")
-    )
-    private boolean javaReforged$collectBeforeCopyingTerrain(
-        SectionUpdateTracker.SectionDirtyState dirty,
-        Operation<Boolean> original,
-        @Local SectionRenderDispatcher.RenderSection section
-    ) {
-        boolean isDirty = original.call(dirty);
-        var store = TerrainStateStore.nullableTerrainStore();
-        if (store != null && store.needsRebuild(section) && !store.hasPendingBuild(section)) {
-            dirty.setDirty(false);
-            isDirty = true;
-        }
-        if (isDirty && this.level != null && this.sectionUpdateTracker != null
-            && TerrainUpdateBatch.defer(this.level, this.sectionUpdateTracker, section, dirty)) {
-            return false;
-        }
-        return isDirty;
-    }
-
     @Inject(method = "allChanged", at = @At("HEAD"), cancellable = true)
     private void javaReforged$routeGlobalGeometryInvalidation(CallbackInfo ci) {
         if (TerrainCoordinator.routeGlobalAllChanged()) {
