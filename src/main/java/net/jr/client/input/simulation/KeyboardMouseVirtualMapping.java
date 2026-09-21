@@ -2,7 +2,7 @@ package net.jr.client.input.simulation;
 
 import java.util.HashMap;
 import java.util.Map;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import org.lwjgl.glfw.GLFW;
 
 final class KeyboardMouseVirtualMapping {

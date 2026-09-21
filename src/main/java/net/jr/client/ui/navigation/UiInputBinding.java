@@ -2,7 +2,7 @@ package net.jr.client.ui.navigation;
 
 import java.util.Objects;
 import net.jr.client.input.InputApi;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 
 public sealed interface UiInputBinding

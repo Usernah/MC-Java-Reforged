@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import net.jr.client.ui.layout.render.UILayoutRenderTarget;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Renders a fixed canvas at a fixed presentation scale. */
+/** Renders a fixed canvas into a GUI viewport. */
 public final class GuiCompositionLayer implements AutoCloseable {
     private final UILayoutRenderTarget target = new UILayoutRenderTarget();
     private final int canvasWidth;
@@ -34,6 +34,35 @@ public final class GuiCompositionLayer implements AutoCloseable {
         float destinationHeight = this.canvasHeight * this.presentationScale;
         float destinationX = (parentGraphics.guiWidth() - destinationWidth) / 2.0F;
         float destinationY = (parentGraphics.guiHeight() - destinationHeight) / 2.0F;
+        this.submitAt(parentGraphics, filter, pixelBias, extractor,
+            destinationX, destinationY, this.presentationScale, this.presentationScale);
+    }
+
+    /** Scales the canvas uniformly to the GUI height and anchors its top-right corner. */
+    public void submitTopRight(
+        GuiGraphicsExtractor parentGraphics,
+        FilterMode filter,
+        float pixelBias,
+        Consumer<Canvas> extractor
+    ) {
+        float scale = parentGraphics.guiHeight() / (float)this.canvasHeight;
+        if (scale <= 0.0F) {
+            return;
+        }
+        float destinationX = parentGraphics.guiWidth() - this.canvasWidth * scale;
+        this.submitAt(parentGraphics, filter, pixelBias, extractor, destinationX, 0.0F, scale, scale);
+    }
+
+    private void submitAt(
+        GuiGraphicsExtractor parentGraphics,
+        FilterMode filter,
+        float pixelBias,
+        Consumer<Canvas> extractor,
+        float destinationX,
+        float destinationY,
+        float scaleX,
+        float scaleY
+    ) {
         this.target.extractCompositionAndSubmit(
             parentGraphics,
             this.canvasWidth,
@@ -41,15 +70,16 @@ public final class GuiCompositionLayer implements AutoCloseable {
             1,
             destinationX,
             destinationY,
-            this.presentationScale,
-            this.presentationScale,
+            scaleX,
+            scaleY,
             filter,
             pixelBias,
             canvasGraphics -> extractor.accept(new Canvas(
                 canvasGraphics,
                 destinationX,
                 destinationY,
-                this.presentationScale
+                scaleX,
+                scaleY
             ))
         );
     }
@@ -58,18 +88,21 @@ public final class GuiCompositionLayer implements AutoCloseable {
         private final GuiGraphicsExtractor graphics;
         private final float destinationX;
         private final float destinationY;
-        private final float presentationScale;
+        private final float scaleX;
+        private final float scaleY;
 
         private Canvas(
             GuiGraphicsExtractor graphics,
             float destinationX,
             float destinationY,
-            float presentationScale
+            float scaleX,
+            float scaleY
         ) {
             this.graphics = graphics;
             this.destinationX = destinationX;
             this.destinationY = destinationY;
-            this.presentationScale = presentationScale;
+            this.scaleX = scaleX;
+            this.scaleY = scaleY;
         }
 
         public GuiGraphicsExtractor graphics() {
@@ -77,11 +110,11 @@ public final class GuiCompositionLayer implements AutoCloseable {
         }
 
         public float toCanvasX(float viewportX) {
-            return (viewportX - this.destinationX) / this.presentationScale;
+            return (viewportX - this.destinationX) / this.scaleX;
         }
 
         public float toCanvasY(float viewportY) {
-            return (viewportY - this.destinationY) / this.presentationScale;
+            return (viewportY - this.destinationY) / this.scaleY;
         }
     }
 

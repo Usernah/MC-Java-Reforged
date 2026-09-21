@@ -9,7 +9,7 @@ import net.jr.client.components.elements.TextElement;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.Button;
 import net.jr.client.input.InputApi;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.overlay.ScreenOverlayCloseReason;
 import net.jr.client.ui.overlay.ScreenOverlayContext;

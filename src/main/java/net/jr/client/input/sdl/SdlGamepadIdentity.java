@@ -5,7 +5,7 @@ import dev.isxander.sdl3java.api.joystick.SDL_Joystick;
 import dev.isxander.sdl3java.api.joystick.SDL_JoystickID;
 import dev.isxander.sdl3java.api.joystick.SdlJoystick;
 import java.util.Locale;
-import net.jr.client.input.gamepad.GamepadIdentity;
+import net.jr.api.client.input.GamepadIdentity;
 
 final class SdlGamepadIdentity {
     private SdlGamepadIdentity() {

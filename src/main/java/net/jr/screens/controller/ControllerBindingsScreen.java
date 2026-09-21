@@ -5,7 +5,7 @@ import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Options;

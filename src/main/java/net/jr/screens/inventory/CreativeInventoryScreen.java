@@ -15,7 +15,7 @@ import net.jr.client.components.widgets.item.CreativeItemGridElement;
 import net.jr.client.components.widgets.item.CreativeItemSlotElement;
 import net.jr.client.ui.navigation.UiInputBinding;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.runtime.input.LocalGamepadInputHandler;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.slots.CustomSlotLayout;

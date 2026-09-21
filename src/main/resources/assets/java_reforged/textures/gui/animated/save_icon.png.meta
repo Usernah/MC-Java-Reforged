@@ -1,0 +1,18 @@
+image: {
+    size: {
+        width: 44,
+        height: 380,
+    },
+},
+
+animation: {
+    frames: 5,
+    frame_size: {
+        width: 44,
+        height: 76,
+    },
+    duration: 100,
+    unit: ms,
+    interpolation: true,
+    mode: ping_pong,
+}

@@ -194,6 +194,11 @@ public final class Draw {
             return this;
         }
 
+        public ImageBuilder animationStartMillis(long startMillis) {
+            this.delegate.animationStartMillis(startMillis);
+            return this;
+        }
+
         public ImageBuilder animationMode(AnimationMode mode) {
             this.delegate.animationMode(mode == AnimationMode.PING_PONG
                 ? UiRenderEngine.AnimationMode.PING_PONG

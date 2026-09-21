@@ -18,15 +18,25 @@ public final class ViewportPanoramaRenderer {
     }
 
     public static void extract(GuiGraphicsExtractor graphics, int width, int height) {
+        Minecraft.getInstance().gameRenderer.panorama().extractRenderState(graphics, width, height);
+    }
+
+    public static void captureForActiveViewport(Runnable extraction) {
+        if (!ViewportRenderScope.hasActiveViewport()) {
+            extraction.run();
+            return;
+        }
+
         ViewportArea viewport = ViewportRenderScope.activeViewport();
-        Minecraft minecraft = Minecraft.getInstance();
-        GuiRenderState guiState = minecraft.gameRenderer.gameRenderState().guiRenderState;
+        GuiRenderState guiState = Minecraft.getInstance().gameRenderer.gameRenderState().guiRenderState;
         PanoramaRenderState previousGlobalPanorama = guiState.panoramaRenderState;
-
-        minecraft.gameRenderer.panorama().extractRenderState(graphics, width, height);
-        PanoramaRenderState viewportPanorama = guiState.panoramaRenderState;
-        guiState.panoramaRenderState = previousGlobalPanorama;
-
+        PanoramaRenderState viewportPanorama;
+        try {
+            extraction.run();
+            viewportPanorama = guiState.panoramaRenderState;
+        } finally {
+            guiState.panoramaRenderState = previousGlobalPanorama;
+        }
         if (viewportPanorama != null) {
             PENDING.add(new Request(viewport, viewportPanorama));
         }

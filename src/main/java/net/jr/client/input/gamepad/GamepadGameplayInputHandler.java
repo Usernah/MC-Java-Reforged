@@ -1,5 +1,8 @@
 package net.jr.client.input.gamepad;
 
+import net.jr.api.client.input.GamepadAxis;
+import net.jr.api.client.input.ISlotInput;
+
 import java.util.function.DoubleSupplier;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.options.OptionsStateResolver;
@@ -17,9 +20,9 @@ public final class GamepadGameplayInputHandler {
     private GamepadGameplayInputHandler() {
     }
 
-    public static void applyMovement(MovementInputUpdateEvent event) {
-        float leftStickX = InputApi.axis(GamepadAxis.LEFT_STICK_X, DEADZONE);
-        float leftStickY = InputApi.axis(GamepadAxis.LEFT_STICK_Y, DEADZONE);
+    public static void applyMovement(MovementInputUpdateEvent event, ISlotInput input) {
+        float leftStickX = input.axis(GamepadAxis.LEFT_STICK_X, DEADZONE);
+        float leftStickY = input.axis(GamepadAxis.LEFT_STICK_Y, DEADZONE);
         if (leftStickX == 0.0F && leftStickY == 0.0F) return;
 
         InputApi.markGamepadInput();
@@ -37,9 +40,9 @@ public final class GamepadGameplayInputHandler {
         );
     }
 
-    public static boolean turnCamera(LocalPlayer player, DoubleSupplier frameScale) {
-        float rightStickX = GamepadInputCurve.response(InputApi.axis(GamepadAxis.RIGHT_STICK_X, DEADZONE));
-        float rightStickY = GamepadInputCurve.response(InputApi.axis(GamepadAxis.RIGHT_STICK_Y, DEADZONE));
+    public static boolean turnCamera(LocalPlayer player, ISlotInput input, DoubleSupplier frameScale) {
+        float rightStickX = GamepadInputCurve.response(input.axis(GamepadAxis.RIGHT_STICK_X, DEADZONE));
+        float rightStickY = GamepadInputCurve.response(input.axis(GamepadAxis.RIGHT_STICK_Y, DEADZONE));
         if (Math.abs(rightStickX) <= CAMERA_INPUT_EPSILON
             && Math.abs(rightStickY) <= CAMERA_INPUT_EPSILON) {
             return false;

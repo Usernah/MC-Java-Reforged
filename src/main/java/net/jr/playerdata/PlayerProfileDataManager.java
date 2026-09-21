@@ -4,6 +4,7 @@ import net.jr.Java_reforged;
 import net.jr.client.runtime.player.SecondaryPlayerProfileFactory;
 import net.jr.util.LegacyPlayerColors;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -13,6 +14,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
+import java.util.Optional;
 
 @EventBusSubscriber(modid = Java_reforged.MODID)
 public final class PlayerProfileDataManager {
@@ -94,6 +97,8 @@ public final class PlayerProfileDataManager {
         player.setData(PLAYER_PROFILE, PlayerProfileData.DEFAULT
                 .withLegacyColorIndex(findAvailableColorIndex(player))
                 .withSplitOrdinal(splitOrdinal));
+
+        refreshWaypointColor(player);
     }
 
     private static void ensureSessionColor(ServerPlayer player) {
@@ -126,5 +131,17 @@ public final class PlayerProfileDataManager {
             }
         }
         return 0;
+    }
+
+    private static void refreshWaypointColor(ServerPlayer player) {
+        ServerLevel level = player.level();
+
+        level.getWaypointManager().untrackWaypoint(player);
+
+        player.waypointIcon().color = Optional.of(
+                getLegacyColor(player)
+        );
+
+        level.getWaypointManager().trackWaypoint(player);
     }
 }

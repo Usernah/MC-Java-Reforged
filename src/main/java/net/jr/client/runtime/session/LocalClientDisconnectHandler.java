@@ -4,7 +4,6 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.client.LocalClient;
 import net.jr.client.runtime.context.LocalClientScope;
-import net.jr.client.runtime.input.InputDeviceRouter;
 import net.jr.experimental_features.pre_join.PreJoinRoster;
 import net.minecraft.client.Minecraft;
 
@@ -27,7 +26,7 @@ public final class LocalClientDisconnectHandler {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         InputApi.resetSlotInputState(slotId);
         runtime.clients().disconnectSecondary(slotId);
-        InputDeviceRouter.unassignSlot(slotId);
+        runtime.input().mutableAssignments().unassignSlot(slotId);
         if (runtime.viewports().isPresented(slotId)) {
             runtime.viewports().hide(slotId);
         }
@@ -47,8 +46,8 @@ public final class LocalClientDisconnectHandler {
         // can then recreate their same split slots in the next world. A device
         // that remained disconnected is deliberately forgotten at this
         // session boundary instead.
-        InputDeviceRouter.clearDisconnectedAssignments();
-        PreJoinRoster.forgetDisconnectedDevices(InputDeviceRouter.connectedGamepads());
+        runtime.input().mutableAssignments().clearDisconnectedAssignments();
+        PreJoinRoster.forgetDisconnectedDevices(runtime.input().devices().gamepads());
         runtime.viewports().presentPrimaryOnly();
         runtime.inputFocus().clampToSlots(runtime.viewports().presentedSlotIds());
         runtime.viewportResize().applyLayoutTransition(minecraft);

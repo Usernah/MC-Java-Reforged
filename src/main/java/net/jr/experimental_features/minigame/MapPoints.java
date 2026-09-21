@@ -19,23 +19,37 @@ public class MapPoints {
 
     private void createpointsmaps(){
         List<PointPos> centralSpawns = new ArrayList<>();
-                centralSpawns.add(new PointPos(19,-60,5));
-                centralSpawns.add(new PointPos(13,-60,6));
-                centralSpawns.add(new PointPos(7,-60,5));
-                centralSpawns.add(new PointPos(6,-60,-1));
-                centralSpawns.add(new PointPos(7,-60,-7));
-                centralSpawns.add(new PointPos(13,-60,-8));
-                centralSpawns.add(new PointPos(19,-60,-7));
-                centralSpawns.add(new PointPos(20,-60,-1));
+                centralSpawns.add(new PointPos(213,69,-220));
+                centralSpawns.add(new PointPos(215,69,-224));
+                centralSpawns.add(new PointPos(219,69,-226));
+                centralSpawns.add(new PointPos(223,69,-224));
+                centralSpawns.add(new PointPos(225,69,-220));
+                centralSpawns.add(new PointPos(223,69,-216));
+                centralSpawns.add(new PointPos(219,69,-214));
+                centralSpawns.add(new PointPos(215,69,-216));
 
         List<PointPos> secondarySpawns = new ArrayList<>();
-                secondarySpawns.add(new PointPos(13,-60,14));
-                secondarySpawns.add(new PointPos(-2,-60,-1));
-                secondarySpawns.add(new PointPos(13,-60,-16));
-                secondarySpawns.add(new PointPos(28,-60,-1));
+                //secondarySpawns.add(new PointPos(13,68,14));
+                //secondarySpawns.add(new PointPos(-2,68,-1));
+                //secondarySpawns.add(new PointPos(13,68,-16));
+                //secondarySpawns.add(new PointPos(28,68,-1));
+
+        List<PointPos> centralChest = new ArrayList<>();
+                centralChest.add(new PointPos(218, 63, -221));
+                centralChest.add(new PointPos(218, 63, -219));
+                centralChest.add(new PointPos(220, 63, -219));
+                centralChest.add(new PointPos(220, 63, -221));
+                centralChest.add(new PointPos(219, 64, -220));
+
+        List<PointPos> secondaryChest = new ArrayList<>();
+                secondaryChest.add(new PointPos(2, 68, 10));
+                secondaryChest.add(new PointPos(24, 68, -12));
+
 
         this.pointsMap.put(PointGroup.SPAWN_CENTRAL,centralSpawns);
         this.pointsMap.put(PointGroup.SPAWN_SECONDARY,secondarySpawns);
+        this.pointsMap.put(PointGroup.CHEST_CENTRAL,centralChest);
+        this.pointsMap.put(PointGroup.CHEST_SECONDARY,secondaryChest);
     }
 
     public List<PointPos> getPoints(PointGroup group) {

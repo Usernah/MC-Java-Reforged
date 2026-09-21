@@ -1,7 +1,7 @@
 package net.jr.client.ui.hint.glyph;
 
 import javax.annotation.Nullable;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 
 public enum ControllerGlyph {
     BUTTON_DOWN('\uE000', "button_down"),

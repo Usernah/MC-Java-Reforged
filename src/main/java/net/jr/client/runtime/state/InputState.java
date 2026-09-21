@@ -2,7 +2,7 @@ package net.jr.client.runtime.state;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
-import net.jr.client.input.mode.InputMode;
+import net.jr.api.client.input.InputMode;
 import net.jr.client.runtime.input.binding.KeyMappingState;
 import net.jr.client.ui.overlay.ScreenOverlayManager;
 import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardState;

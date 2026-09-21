@@ -120,6 +120,7 @@ public final class UiRenderEngine {
         private boolean explicitAnimMode;
         private boolean animInterpolate;
         private Map<Integer, Integer> animFrameDurations = Map.of();
+        private long animStartMillis;
 
         private boolean useMeta;
         private String metaConfigId;
@@ -231,6 +232,11 @@ public final class UiRenderEngine {
 
         public ImageBuilder frameDurations(Map<Integer, Integer> frameDurations) {
             this.animFrameDurations = frameDurations == null ? Map.of() : Map.copyOf(frameDurations);
+            return this;
+        }
+
+        public ImageBuilder animationStartMillis(long startMillis) {
+            this.animStartMillis = startMillis;
             return this;
         }
 
@@ -466,6 +472,7 @@ public final class UiRenderEngine {
             state.animMode = this.animMode;
             state.animInterpolate = this.animInterpolate;
             state.animFrameDurations = new LinkedHashMap<>(this.animFrameDurations);
+            state.animStartMillis = this.animStartMillis;
             state.blur = this.blur;
             state.antialiasing = this.antialiasing;
             state.metaScale = 1.0F;
@@ -746,7 +753,7 @@ public final class UiRenderEngine {
                 return new AnimationFrame(0, 1, 0.0F);
             }
 
-            long cursor = Util.getMillis() % cycle;
+            long cursor = Math.floorMod(Util.getMillis() - state.animStartMillis, cycle);
             for (int frame = 0; frame < state.animFrames; frame++) {
                 int duration = this.frameDurationMillis(state, frame);
                 if (cursor < duration) {
@@ -927,6 +934,7 @@ public final class UiRenderEngine {
             private AnimationMode animMode;
             private boolean animInterpolate;
             private Map<Integer, Integer> animFrameDurations = Map.of();
+            private long animStartMillis;
             private boolean blur;
             private boolean antialiasing;
             private float metaScale = 1.0F;

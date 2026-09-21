@@ -2,7 +2,7 @@ package net.jr.client.input.sdl;
 
 import dev.isxander.sdl3java.api.gamepad.SDL_GamepadButton;
 import java.util.Arrays;
-import net.jr.client.input.gamepad.GamepadIdentity;
+import net.jr.api.client.input.GamepadIdentity;
 import net.jr.client.input.gamepad.RawGamepadInput;
 
 record SdlGamepadSnapshot(

@@ -21,7 +21,7 @@ import net.jr.client.input.GameplayActionHandler;
 import net.jr.client.input.binding.BindingContext;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
 import net.jr.client.input.binding.ModKeyBindings;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.sound.action.WidgetInputSounds;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;

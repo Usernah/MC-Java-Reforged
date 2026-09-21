@@ -10,7 +10,7 @@ import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
 import net.jr.client.ui.hint.glyph.GamepadGlyphComponents;

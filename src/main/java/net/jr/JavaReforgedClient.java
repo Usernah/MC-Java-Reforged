@@ -5,6 +5,7 @@ import net.jr.client.input.InputApi;
 import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.client.meta.MetaManager;
 import net.jr.client.render.pipeline.ModRenderPipelines;
+import net.jr.client.runtime.render.BuiltInGuiRenderObjects;
 import net.jr.client.ui.dsl.UiDocumentManager;
 import net.jr.api.client.render.font.FontRegister;
 import net.jr.registry.ModFonts;
@@ -28,6 +29,7 @@ import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 public class JavaReforgedClient {
     public JavaReforgedClient(ModContainer container) {
         container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        BuiltInGuiRenderObjects.register();
         ModFonts.bootstrap();
         ModUi.bootstrap();
         ModVideos.bootstrap();

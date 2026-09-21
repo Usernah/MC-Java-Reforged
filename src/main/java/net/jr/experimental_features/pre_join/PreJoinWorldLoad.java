@@ -3,18 +3,17 @@ package net.jr.experimental_features.pre_join;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.annotation.Nullable;
+import net.jr.api.client.input.IGamepad;
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClientJoinHandler;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.input.InputDeviceRouter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
 
 /** Holds the selected local players while vanilla opens the primary world. */
 public final class PreJoinWorldLoad {
-    private static final Map<Integer, Long> PENDING_PLAYERS = new TreeMap<>();
+    private static final Map<Integer, IGamepad> PENDING_PLAYERS = new TreeMap<>();
 
     private static boolean active;
     private static boolean loadingObserved;
@@ -24,7 +23,7 @@ public final class PreJoinWorldLoad {
     private PreJoinWorldLoad() {
     }
 
-    public static void begin(Screen source, Map<Integer, Long> pendingPlayers, Runnable openWorld) {
+    public static void begin(Screen source, Map<Integer, IGamepad> pendingPlayers, Runnable openWorld) {
         reset();
         sourceScreen = source;
         PENDING_PLAYERS.putAll(pendingPlayers);
@@ -61,7 +60,7 @@ public final class PreJoinWorldLoad {
             return;
         }
 
-        LocalClientJoinHandler.presentJoinedPlayers(minecraft, PENDING_PLAYERS.keySet());
+        ClientRuntime.INSTANCE.input().join().presentJoinedPlayers(minecraft, PENDING_PLAYERS.keySet());
         reset();
     }
 
@@ -100,7 +99,7 @@ public final class PreJoinWorldLoad {
     private static boolean joinNextPlayerInOrder(Minecraft minecraft) {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         try {
-            for (Map.Entry<Integer, Long> entry : PENDING_PLAYERS.entrySet()) {
+            for (Map.Entry<Integer, IGamepad> entry : PENDING_PLAYERS.entrySet()) {
                 int slotId = entry.getKey();
                 if (runtime.clients().hasClient(slotId)
                     || runtime.clients().sessionOrNull(slotId) != null) {
@@ -110,7 +109,7 @@ public final class PreJoinWorldLoad {
                     continue;
                 }
 
-                LocalClientJoinHandler.joinWithoutPresenting(
+                runtime.input().join().joinWithoutPresenting(
                     minecraft,
                     entry.getValue(),
                     slotId
@@ -128,13 +127,13 @@ public final class PreJoinWorldLoad {
 
     private static void rollbackPreparedPlayers() {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
-        for (Map.Entry<Integer, Long> entry : PENDING_PLAYERS.entrySet()) {
+        for (Map.Entry<Integer, IGamepad> entry : PENDING_PLAYERS.entrySet()) {
             int slotId = entry.getKey();
             if (runtime.clients().hasClient(slotId)
                 || runtime.clients().sessionOrNull(slotId) != null) {
                 runtime.clients().disconnectSecondary(slotId);
             }
-            InputDeviceRouter.unassignGamepad(entry.getValue());
+            runtime.input().mutableAssignments().unassign(entry.getValue());
         }
     }
 }

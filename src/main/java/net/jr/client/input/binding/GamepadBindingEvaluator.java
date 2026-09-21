@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import net.jr.client.input.InputApi;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 
 final class GamepadBindingEvaluator {

@@ -7,14 +7,14 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.jr.api.client.input.IGamepad;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.split.SplitScreen;
 import net.jr.client.components.elements.TextElement;
 import net.jr.client.input.InputApi;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
-import net.jr.client.input.sdl.SdlGamepad;
-import net.jr.client.runtime.input.InputDeviceRouter;
+import net.jr.api.client.input.GamepadDigitalInput;
+import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
 import net.jr.client.ui.hint.glyph.GamepadGlyphThemeState;
@@ -52,8 +52,8 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
 
     private final Screen sourceScreen;
     private final Runnable openWorld;
-    private final Long[] assignedDevices = new Long[4];
-    private final Map<Long, ButtonState> buttons = new HashMap<>();
+    private final IGamepad[] assignedDevices = new IGamepad[4];
+    private final Map<IGamepad, ButtonState> buttons = new HashMap<>();
     private final TextElement[] playerNames = new TextElement[4];
     private final TextElement joinLabel = text(Component.translatable("menu.java_reforged.pre_join.join"));
     private final GuiCompositionLayer controllerLayer =
@@ -71,7 +71,7 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
         for (int slotId = 1; slotId < this.playerNames.length; slotId++) {
             this.playerNames[slotId] = text(Component.literal(primaryName + " (" + (slotId + 1) + ")"));
         }
-        PreJoinRoster.restoreInto(this.assignedDevices, SdlGamepad.deviceIds());
+        PreJoinRoster.restoreInto(this.assignedDevices, gamepads());
     }
 
     public static boolean shouldOpen() {
@@ -92,20 +92,20 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
 
     @Override
     public void tick(ScreenOverlayContext context) {
-        List<Long> connected = SdlGamepad.deviceIds();
+        List<IGamepad> connected = gamepads();
         this.assignedDevicesForDisconnectedControllers(connected);
-        this.buttons.keySet().removeIf(deviceId -> !connected.contains(deviceId));
+        this.buttons.keySet().removeIf(gamepad -> !connected.contains(gamepad));
 
-        for (long deviceId : connected) {
-            ButtonState state = this.buttons.computeIfAbsent(deviceId, ignored -> new ButtonState());
-            boolean confirm = edge(deviceId, GamepadDigitalInput.BUTTON_DOWN, state.confirmDown);
-            boolean back = edge(deviceId, GamepadDigitalInput.BUTTON_RIGHT, state.backDown);
-            boolean start = edge(deviceId, GamepadDigitalInput.BUTTON_START, state.startDown);
-            state.confirmDown = pressed(deviceId, GamepadDigitalInput.BUTTON_DOWN);
-            state.backDown = pressed(deviceId, GamepadDigitalInput.BUTTON_RIGHT);
-            state.startDown = pressed(deviceId, GamepadDigitalInput.BUTTON_START);
+        for (IGamepad gamepad : connected) {
+            ButtonState state = this.buttons.computeIfAbsent(gamepad, ignored -> new ButtonState());
+            boolean confirm = edge(gamepad, GamepadDigitalInput.BUTTON_DOWN, state.confirmDown);
+            boolean back = edge(gamepad, GamepadDigitalInput.BUTTON_RIGHT, state.backDown);
+            boolean start = edge(gamepad, GamepadDigitalInput.BUTTON_START, state.startDown);
+            state.confirmDown = pressed(gamepad, GamepadDigitalInput.BUTTON_DOWN);
+            state.backDown = pressed(gamepad, GamepadDigitalInput.BUTTON_RIGHT);
+            state.startDown = pressed(gamepad, GamepadDigitalInput.BUTTON_START);
 
-            int assignedPanel = this.panelForDevice(deviceId);
+            int assignedPanel = this.panelForDevice(gamepad);
             if (back) {
                 if (assignedPanel > 0) {
                     this.assignedDevices[assignedPanel] = null;
@@ -121,7 +121,7 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
             if (confirm && assignedPanel < 0) {
                 int freePanel = this.firstFreeSecondaryPanel();
                 if (freePanel >= 0 && this.assignedSecondaryCount() < connected.size()) {
-                    this.assignedDevices[freePanel] = deviceId;
+                    this.assignedDevices[freePanel] = gamepad;
                 }
                 return;
             }
@@ -137,7 +137,7 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
         ControllerGlyphTheme placeholderTheme = rotatingTheme != null
             ? rotatingTheme
             : rotatingTheme(this.connectedThemes());
-        int secondaryCapacity = Math.min(this.assignedDevices.length - 1, SdlGamepad.deviceIds().size());
+        int secondaryCapacity = Math.min(this.assignedDevices.length - 1, gamepads().size());
 
         for (int panel = 0; panel < 4; panel++) {
             int x = left + (panel % 2) * (PANEL_WIDTH + HORIZONTAL_GAP);
@@ -261,17 +261,17 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
         return themes.get((int)((Util.getMillis() / 1000L) % themes.size()));
     }
 
-    private ControllerGlyphTheme themeForDevice(Long deviceId) {
-        return deviceId == null
+    private ControllerGlyphTheme themeForDevice(IGamepad gamepad) {
+        return gamepad == null
             ? null
-            : GamepadGlyphThemeState.themeForIdentity(SdlGamepad.identity(deviceId));
+            : GamepadGlyphThemeState.themeForGamepad(gamepad);
     }
 
     private List<ControllerGlyphTheme> availableThemes() {
         EnumSet<ControllerGlyphTheme> unique = EnumSet.noneOf(ControllerGlyphTheme.class);
-        for (long deviceId : SdlGamepad.deviceIds()) {
-            if (this.panelForDevice(deviceId) < 0) {
-                unique.add(GamepadGlyphThemeState.themeForIdentity(SdlGamepad.identity(deviceId)));
+        for (IGamepad gamepad : gamepads()) {
+            if (this.panelForDevice(gamepad) < 0) {
+                unique.add(GamepadGlyphThemeState.themeForGamepad(gamepad));
             }
         }
         return new ArrayList<>(unique);
@@ -279,18 +279,18 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
 
     private List<ControllerGlyphTheme> connectedThemes() {
         EnumSet<ControllerGlyphTheme> unique = EnumSet.noneOf(ControllerGlyphTheme.class);
-        for (long deviceId : SdlGamepad.deviceIds()) {
-            unique.add(GamepadGlyphThemeState.themeForIdentity(SdlGamepad.identity(deviceId)));
+        for (IGamepad gamepad : gamepads()) {
+            unique.add(GamepadGlyphThemeState.themeForGamepad(gamepad));
         }
         return new ArrayList<>(unique);
     }
 
     private void confirm(ScreenOverlayContext context) {
-        Map<Integer, Long> players = new LinkedHashMap<>();
+        Map<Integer, IGamepad> players = new LinkedHashMap<>();
         for (int slotId = 1; slotId < this.assignedDevices.length; slotId++) {
-            Long deviceId = this.assignedDevices[slotId];
-            if (deviceId != null) {
-                players.put(slotId, deviceId);
+            IGamepad gamepad = this.assignedDevices[slotId];
+            if (gamepad != null) {
+                players.put(slotId, gamepad);
             }
         }
         PreJoinRoster.remember(players);
@@ -299,26 +299,26 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
     }
 
     private void synchronizeButtons() {
-        for (long deviceId : SdlGamepad.deviceIds()) {
-            ButtonState state = this.buttons.computeIfAbsent(deviceId, ignored -> new ButtonState());
-            state.confirmDown = pressed(deviceId, GamepadDigitalInput.BUTTON_DOWN);
-            state.backDown = pressed(deviceId, GamepadDigitalInput.BUTTON_RIGHT);
-            state.startDown = pressed(deviceId, GamepadDigitalInput.BUTTON_START);
+        for (IGamepad gamepad : gamepads()) {
+            ButtonState state = this.buttons.computeIfAbsent(gamepad, ignored -> new ButtonState());
+            state.confirmDown = pressed(gamepad, GamepadDigitalInput.BUTTON_DOWN);
+            state.backDown = pressed(gamepad, GamepadDigitalInput.BUTTON_RIGHT);
+            state.startDown = pressed(gamepad, GamepadDigitalInput.BUTTON_START);
         }
     }
 
-    private void assignedDevicesForDisconnectedControllers(List<Long> connected) {
+    private void assignedDevicesForDisconnectedControllers(List<IGamepad> connected) {
         for (int panel = 1; panel < this.assignedDevices.length; panel++) {
-            Long deviceId = this.assignedDevices[panel];
-            if (deviceId != null && !connected.contains(deviceId)) {
+            IGamepad gamepad = this.assignedDevices[panel];
+            if (gamepad != null && !connected.contains(gamepad)) {
                 this.assignedDevices[panel] = null;
             }
         }
     }
 
-    private int panelForDevice(long deviceId) {
+    private int panelForDevice(IGamepad gamepad) {
         for (int panel = 1; panel < this.assignedDevices.length; panel++) {
-            if (this.assignedDevices[panel] != null && this.assignedDevices[panel] == deviceId) {
+            if (this.assignedDevices[panel] == gamepad) {
                 return panel;
             }
         }
@@ -348,12 +348,17 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
         return count;
     }
 
-    private static boolean edge(long deviceId, GamepadDigitalInput input, boolean wasDown) {
-        return pressed(deviceId, input) && !wasDown;
+    private static boolean edge(IGamepad gamepad, GamepadDigitalInput input, boolean wasDown) {
+        return pressed(gamepad, input) && !wasDown;
     }
 
-    private static boolean pressed(long deviceId, GamepadDigitalInput input) {
-        return SdlGamepad.input(deviceId, input, InputApi.DIGITAL_PRESS_THRESHOLD);
+    private static boolean pressed(IGamepad gamepad, GamepadDigitalInput input) {
+        return gamepad.input().pressed(input);
+    }
+
+    private static List<IGamepad> gamepads() {
+        return ClientRuntime.INSTANCE.input().join().preJoinCandidates().stream()
+            .map(candidate -> candidate.gamepad()).toList();
     }
 
     private static TextElement text(Component component) {

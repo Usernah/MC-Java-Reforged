@@ -47,6 +47,8 @@ public class ImageElement implements VisualElementsInterface {
     private boolean hasAnimMode;
     private boolean animInterpolate;
     private final Map<Integer, Integer> animFrameDurations = new LinkedHashMap<>();
+    private long animationStartMillis;
+    private boolean hasAnimationStart;
 
     private boolean hasBlur;
     private boolean blur;
@@ -195,6 +197,7 @@ public class ImageElement implements VisualElementsInterface {
         this.hasAnimMode = false;
         this.animInterpolate = false;
         this.animFrameDurations.clear();
+        this.clearAnimationStartMillis();
     }
 
     public void setAnimationMode(Draw.AnimationMode mode) {
@@ -216,6 +219,16 @@ public class ImageElement implements VisualElementsInterface {
         for (Map.Entry<Integer, Integer> entry : frameDurations.entrySet()) {
             this.setFrameDuration(entry.getKey(), entry.getValue());
         }
+    }
+
+    public void setAnimationStartMillis(long startMillis) {
+        this.animationStartMillis = startMillis;
+        this.hasAnimationStart = true;
+    }
+
+    public void clearAnimationStartMillis() {
+        this.animationStartMillis = 0L;
+        this.hasAnimationStart = false;
     }
 
     public void setBlur(boolean blur) {
@@ -275,6 +288,9 @@ public class ImageElement implements VisualElementsInterface {
         }
         if (this.hasAnimMode) {
             builder.animationMode(this.animMode);
+        }
+        if (this.hasAnimationStart) {
+            builder.animationStartMillis(this.animationStartMillis);
         }
         if (this.hasBlur) {
             builder.blur(this.blur);

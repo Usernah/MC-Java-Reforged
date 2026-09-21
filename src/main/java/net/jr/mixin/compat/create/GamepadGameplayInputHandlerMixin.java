@@ -2,6 +2,7 @@ package net.jr.mixin.compat.create;
 
 import net.jr.client.compat.create.CreateRuntimeState;
 import net.jr.client.input.gamepad.GamepadGameplayInputHandler;
+import net.jr.api.client.input.ISlotInput;
 import net.jr.mixin.accessors.ClientInputAccessor;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec2;
@@ -24,6 +25,7 @@ abstract class GamepadGameplayInputHandlerMixin {
     )
     private static void javaReforged$clearPlayerMovementWhileDrivingCreate(
             MovementInputUpdateEvent event,
+            ISlotInput input,
             CallbackInfo ci
     ) {
         if (CreateRuntimeState.isTrainControlsActive()) {

@@ -3,6 +3,7 @@ package net.jr.client.runtime;
 import net.jr.ClientConfig;
 import net.jr.client.runtime.client.LocalClientManager;
 import net.jr.client.runtime.input.InputFocus;
+import net.jr.client.runtime.input.InputRuntime;
 import net.jr.client.runtime.minimap.MinimapEngine;
 import net.jr.client.runtime.network.ConnectionSlotRegistry;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
@@ -14,6 +15,7 @@ public final class ClientRuntime {
     public static final ClientRuntime INSTANCE = new ClientRuntime();
 
     private final LocalClientSlotRegistry slots = new LocalClientSlotRegistry();
+    private final InputRuntime input = new InputRuntime();
     private final PlayerOptionsStorage playerOptions = new PlayerOptionsStorage(this.slots);
     private final ConnectionSlotRegistry connections = new ConnectionSlotRegistry();
     private final ViewportManager viewports = new ViewportManager(this.slots);
@@ -28,6 +30,10 @@ public final class ClientRuntime {
 
     public LocalClientSlotRegistry slots() {
         return this.slots;
+    }
+
+    public InputRuntime input() {
+        return this.input;
     }
 
     public PlayerOptionsStorage playerOptions() {

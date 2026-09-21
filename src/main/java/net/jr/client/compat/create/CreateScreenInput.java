@@ -1,10 +1,8 @@
 package net.jr.client.compat.create;
 
-import net.jr.api.client.ui.Viewport;
-import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
-import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.api.client.input.IScreenInput;
+import net.jr.api.client.input.Inputs;
+import net.jr.client.input.InputApi;
 import net.minecraft.client.MouseHandler;
 
 public final class CreateScreenInput {
@@ -12,51 +10,38 @@ public final class CreateScreenInput {
     }
 
     public static double localWindowX(MouseHandler mouseHandler) {
-        int slotId = slotId();
-        if (LocalGamepadInputHandler.isVirtualCursorActive(slotId)) {
-            return LocalGamepadInputHandler.cursorX(slotId) * viewport().windowWidth() / Viewport.width(slotId);
-        }
-        return mouseHandler.xpos() - viewport().windowX();
+        return screen().localWindowX(mouseHandler);
     }
 
     public static double localWindowY(MouseHandler mouseHandler) {
-        int slotId = slotId();
-        if (LocalGamepadInputHandler.isVirtualCursorActive(slotId)) {
-            return LocalGamepadInputHandler.cursorY(slotId) * viewport().windowHeight() / Viewport.height(slotId);
-        }
-        return mouseHandler.ypos() - viewport().windowY();
+        return screen().localWindowY(mouseHandler);
     }
 
     public static int guiWidth() {
-        return Viewport.width(slotId());
+        return screen().guiWidth();
     }
 
     public static int guiHeight() {
-        return Viewport.height(slotId());
+        return screen().guiHeight();
     }
 
     public static int screenWidth() {
-        return viewport().windowWidth();
+        return screen().windowWidth();
     }
 
     public static int screenHeight() {
-        return viewport().windowHeight();
+        return screen().windowHeight();
     }
 
     public static int framebufferWidth() {
-        return Viewport.pixelWidth(slotId());
+        return screen().framebufferWidth();
     }
 
     public static int framebufferHeight() {
-        return Viewport.pixelHeight(slotId());
+        return screen().framebufferHeight();
     }
 
-    private static int slotId() {
-        Integer slotId = SlotScope.idOrNull();
-        return slotId != null ? slotId : 0;
-    }
-
-    private static ViewportArea viewport() {
-        return ClientRuntime.INSTANCE.viewports().viewport(slotId());
+    private static IScreenInput screen() {
+        return Inputs.slot(InputApi.currentSlotId()).screen();
     }
 }

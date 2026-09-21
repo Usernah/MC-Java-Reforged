@@ -1,6 +1,6 @@
 package net.jr.client.input.binding;
 
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 
 import java.util.LinkedHashSet;
 import java.util.List;

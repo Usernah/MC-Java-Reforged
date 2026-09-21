@@ -1,5 +1,7 @@
 package net.jr.client.input.gamepad;
 
+import net.jr.api.client.input.GamepadIdentity;
+
 import java.util.Objects;
 
 public record RawGamepadInputPress(long deviceId, GamepadIdentity identity, RawGamepadInput input, long timestampMs) {

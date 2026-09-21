@@ -1,11 +1,7 @@
 package net.jr.client.runtime.input;
 
-import java.util.List;
-import javax.annotation.Nullable;
-import net.jr.client.input.gamepad.GamepadIdentity;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
 import net.jr.client.input.binding.GamepadBindingRegistry;
-import net.jr.client.input.mode.InputMode;
+import net.jr.api.client.input.InputMode;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.input.binding.KeyMappingState;
@@ -21,7 +17,7 @@ public final class LocalInputContext {
     }
 
     public static void markKeyboardMouseInput() {
-        inputState(InputDeviceRouter.KEYBOARD_MOUSE_SLOT).markKeyboardMouseInput();
+        inputState(InputAssignment.KEYBOARD_MOUSE_SLOT).markKeyboardMouseInput();
     }
 
     public static void markGamepadInput() {
@@ -37,46 +33,24 @@ public final class LocalInputContext {
     }
 
     public static int keyboardMouseSlotId() {
-        return InputDeviceRouter.keyboardMouseSlotId();
+        return InputAssignment.KEYBOARD_MOUSE_SLOT;
     }
 
     public static boolean canPhysicalMouseDriveSlot(int slotId) {
-        return InputDeviceRouter.canPhysicalMouseDriveSlot(slotId);
+        return ClientRuntime.INSTANCE.slots().slot(slotId).input().keyboardMouse() != null;
     }
 
     public static boolean canPhysicalKeyboardDriveSlot(int slotId) {
-        return InputDeviceRouter.canPhysicalKeyboardDriveSlot(slotId);
+        return ClientRuntime.INSTANCE.slots().slot(slotId).input().keyboardMouse() != null;
     }
 
     public static boolean hasGamepadForSlot(int slotId) {
-        return InputDeviceRouter.hasGamepadForSlot(slotId);
-    }
-
-    public static List<Device> devices() {
-        return InputDeviceRouter.devices().stream()
-            .map(device -> new Device(device.deviceId(), device.identity()))
-            .toList();
-    }
-
-    public static void assignGamepad(long deviceId, int slotId) {
-        InputDeviceRouter.assignGamepad(deviceId, slotId);
-    }
-
-    public static void unassignGamepad(long deviceId) {
-        InputDeviceRouter.unassignGamepad(deviceId);
-    }
-
-    public static List<Long> selectedGamepadIds() {
-        return InputDeviceRouter.gamepadsForSlot(currentSlotId());
-    }
-
-    public static boolean suppressForJoinChord(long deviceId, GamepadDigitalInput input) {
-        return GamepadJoinTicker.suppressForJoinChord(deviceId, input);
+        return ClientRuntime.INSTANCE.slots().slot(slotId).input().hasGamepad();
     }
 
     public static int currentSlotId() {
         Integer slotId = SlotScope.idOrNull();
-        return slotId != null ? slotId : InputDeviceRouter.KEYBOARD_MOUSE_SLOT;
+        return slotId != null ? slotId : InputAssignment.KEYBOARD_MOUSE_SLOT;
     }
 
     private static KeyMappingState keyMappingState(KeyMapping keyMapping) {
@@ -126,6 +100,4 @@ public final class LocalInputContext {
         return ClientRuntime.INSTANCE.slots().slot(slotId).inputState();
     }
 
-    public record Device(long deviceId, @Nullable GamepadIdentity identity) {
-    }
 }

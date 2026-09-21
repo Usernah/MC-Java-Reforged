@@ -11,7 +11,7 @@ import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.runtime.options.OptionsStateResolver;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.jr.client.runtime.viewport.ViewportArea;
-import net.jr.client.input.gamepad.GamepadAxis;
+import net.jr.api.client.input.GamepadAxis;
 import net.jr.client.input.gamepad.GamepadGameplayInputHandler;
 import net.jr.client.input.gamepad.GamepadInputCurve;
 import net.jr.client.input.InputApi;
@@ -81,12 +81,12 @@ public final class LocalGamepadInputHandler {
     public static void onMovementInput(MovementInputUpdateEvent event) {
         for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
             int slotId = client.slotId();
-            if (event.getEntity() != client.player() || !InputApi.hasGamepadForSlot(slotId)) {
+            if (event.getEntity() != client.player() || !client.input().hasGamepad()) {
                 continue;
             }
             LocalClientExecution.runForClient(slotId, () -> {
                 if (ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen() == null) {
-                    GamepadGameplayInputHandler.applyMovement(event);
+                    GamepadGameplayInputHandler.applyMovement(event, client.input());
                 }
             });
             return;
@@ -113,7 +113,7 @@ public final class LocalGamepadInputHandler {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         for (LocalClientSlot slot : runtime.viewports().presentedSlots()) {
             int slotId = slot.id();
-            if (!InputApi.hasGamepadForSlot(slotId)) {
+            if (!slot.input().hasGamepad()) {
                 LocalCursorVisibility.setHiddenForSlot(slotId, false);
                 resetCameraTiming(slotId);
                 cursorClock(slotId).reset();
@@ -155,7 +155,7 @@ public final class LocalGamepadInputHandler {
         LocalClient client = ClientRuntime.INSTANCE.clients().clientOrNull(slotId);
         LocalPlayer player = client != null ? client.player() : null;
         if (!minecraft.isPaused() && player != null) {
-            if (!GamepadGameplayInputHandler.turnCamera(player, () -> cameraClock(slotId).sample())) {
+            if (!GamepadGameplayInputHandler.turnCamera(player, client.input(), () -> cameraClock(slotId).sample())) {
                 resetCameraTiming(slotId);
             }
         } else {
@@ -188,8 +188,8 @@ public final class LocalGamepadInputHandler {
             return;
         }
 
-        float stickX = InputApi.axis(GamepadAxis.LEFT_STICK_X, DEADZONE);
-        float stickY = InputApi.axis(GamepadAxis.LEFT_STICK_Y, DEADZONE);
+        float stickX = ClientRuntime.INSTANCE.slots().slot(slotId).input().axis(GamepadAxis.LEFT_STICK_X, DEADZONE);
+        float stickY = ClientRuntime.INSTANCE.slots().slot(slotId).input().axis(GamepadAxis.LEFT_STICK_Y, DEADZONE);
 
         stickX = GamepadInputCurve.response(stickX);
         stickY = GamepadInputCurve.response(stickY);
@@ -910,7 +910,7 @@ public final class LocalGamepadInputHandler {
 
     private static boolean hasAnyGamepadConnected() {
         for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
-            if (InputApi.hasGamepadForSlot(slotId)) {
+            if (ClientRuntime.INSTANCE.slots().slot(slotId).input().hasGamepad()) {
                 return true;
             }
         }

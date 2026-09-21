@@ -5,14 +5,18 @@ import javax.annotation.Nullable;
 import net.jr.client.input.binding.BindingContext;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
-import net.jr.client.input.gamepad.GamepadAxis;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
-import net.jr.client.input.gamepad.GamepadIdentity;
+import net.jr.api.client.input.GamepadAxis;
+import net.jr.api.client.input.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadIdentity;
+import net.jr.api.client.input.IGamepad;
+import net.jr.api.client.input.ISlotInput;
 import net.jr.client.input.gamepad.GamepadInput;
 import net.jr.client.input.gamepad.RawGamepadInput;
 import net.jr.client.input.gamepad.RawGamepadInputPress;
-import net.jr.client.input.mode.InputMode;
+import net.jr.api.client.input.InputMode;
 import net.jr.client.runtime.input.LocalInputContext;
+import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.input.SdlCalibrationBridge;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
@@ -97,24 +101,29 @@ public final class InputApi {
         return hasGamepadForSlot(currentSlotId());
     }
 
-    public static List<GamepadDevice> gamepads() {
-        return LocalInputContext.devices().stream()
-            .map(device -> new GamepadDevice(device.deviceId(), device.identity()))
-            .toList();
+    public static List<IGamepad> gamepads() {
+        return ClientRuntime.INSTANCE.input().devices().gamepads();
     }
 
-    public static void assignGamepad(long deviceId, int slotId) {
-        LocalInputContext.assignGamepad(deviceId, slotId);
+    @Nullable
+    public static IGamepad currentGamepad() {
+        List<IGamepad> selected = slotInput().gamepads();
+        return selected.isEmpty() ? null : selected.getFirst();
     }
 
-    public static void unassignGamepad(long deviceId) {
-        LocalInputContext.unassignGamepad(deviceId);
+    public static void assignGamepad(IGamepad gamepad, int slotId) {
+        ClientRuntime.INSTANCE.input().mutableAssignments().assign(gamepad, slotId);
+        ClientRuntime.INSTANCE.slots().slot(slotId).inputState().markGamepadInput();
+    }
+
+    public static void unassignGamepad(IGamepad gamepad) {
+        ClientRuntime.INSTANCE.input().mutableAssignments().unassign(gamepad);
     }
 
     @Nullable
     public static GamepadIdentity currentGamepadIdentity() {
-        List<Long> ids = selectedGamepadIds();
-        return ids.isEmpty() ? null : GamepadInput.identity(ids.getFirst());
+        IGamepad gamepad = currentGamepad();
+        return gamepad == null ? null : gamepad.identity();
     }
 
     public static void initializeGamepads() {
@@ -138,37 +147,27 @@ public final class InputApi {
     }
 
     public static boolean isPressed(GamepadDigitalInput input) {
-        if (GamepadInput.isSimulationActive()) {
-            return GamepadInput.isPressed(List.of(), input);
-        }
-        List<Long> selected = selectedGamepadIds();
-        for (long deviceId : selected) {
-            if (LocalInputContext.suppressForJoinChord(deviceId, input)) {
-                continue;
-            }
-            if (GamepadInput.isPressed(List.of(deviceId), input)) return true;
-        }
-        return false;
+        return slotInput().pressed(input);
     }
 
-    public static boolean isPressed(long deviceId, GamepadDigitalInput input) {
-        return GamepadInput.isPressed(deviceId, input);
+    public static boolean isPressed(IGamepad gamepad, GamepadDigitalInput input) {
+        return gamepad.input().pressed(input);
     }
 
     public static float axis(GamepadAxis axis, float deadzone) {
-        return GamepadInput.axis(selectedGamepadIds(), axis, deadzone);
+        return slotInput().axis(axis, deadzone);
     }
 
-    public static float axis(long deviceId, GamepadAxis axis, float deadzone) {
-        return GamepadInput.axis(deviceId, axis, deadzone);
+    public static float axis(IGamepad gamepad, GamepadAxis axis, float deadzone) {
+        return gamepad.input().axis(axis, deadzone);
     }
 
     public static float rawAxis(GamepadAxis axis) {
-        return GamepadInput.rawAxis(selectedGamepadIds(), axis);
+        return slotInput().rawAxis(axis);
     }
 
-    public static float rawAxis(long deviceId, GamepadAxis axis) {
-        return GamepadInput.rawAxis(deviceId, axis);
+    public static float rawAxis(IGamepad gamepad, GamepadAxis axis) {
+        return gamepad.input().rawAxis(axis);
     }
 
     public static void clearCalibrationPresses() {
@@ -176,20 +175,21 @@ public final class InputApi {
     }
 
     @Nullable
-    public static RawGamepadInputPress pollCalibrationPress() {
-        return GamepadInput.pollCalibrationPress();
+    public static CalibrationPress pollCalibrationPress() {
+        RawGamepadInputPress press = GamepadInput.pollCalibrationPress();
+        if (press == null) {
+            return null;
+        }
+        IGamepad gamepad = SdlCalibrationBridge.gamepad(press);
+        return new CalibrationPress(gamepad, press.identity(), press.input(), press.timestampMs());
     }
 
     public static boolean hasActiveCalibrationInput() {
         return GamepadInput.hasActiveCalibrationInput();
     }
 
-    public static boolean hasActiveCalibrationInput(long deviceId) {
-        return GamepadInput.hasActiveCalibrationInput(deviceId);
-    }
-
-    public static boolean isRawInputActive(long deviceId, RawGamepadInput input) {
-        return GamepadInput.isRawInputActive(deviceId, input);
+    public static boolean hasActiveCalibrationInput(IGamepad gamepad) {
+        return gamepad.input().calibrationInputActive();
     }
 
     public static void ensureBindingsLoaded(Minecraft minecraft) {
@@ -253,10 +253,15 @@ public final class InputApi {
         return LocalInputContext.currentSlotId();
     }
 
-    private static List<Long> selectedGamepadIds() {
-        return LocalInputContext.selectedGamepadIds();
+    private static ISlotInput slotInput() {
+        return ClientRuntime.INSTANCE.slots().slot(currentSlotId()).input();
     }
 
-    public record GamepadDevice(long deviceId, @Nullable GamepadIdentity identity) {
+    public record CalibrationPress(
+        @Nullable IGamepad gamepad,
+        GamepadIdentity identity,
+        RawGamepadInput input,
+        long timestampMs
+    ) {
     }
 }

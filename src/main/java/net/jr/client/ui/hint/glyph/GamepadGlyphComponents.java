@@ -5,7 +5,7 @@ import java.util.function.Supplier;
 
 import net.jr.api.client.resource.Asset;
 import net.jr.client.input.binding.GamepadInputChord;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 

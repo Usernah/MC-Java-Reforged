@@ -2,7 +2,7 @@ package net.jr.client.input.simulation;
 
 import java.util.EnumSet;
 import java.util.Set;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 
 public enum VirtualGamepadProfile {
     XBOX(

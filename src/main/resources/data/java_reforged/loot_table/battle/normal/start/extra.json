@@ -1,0 +1,59 @@
+{
+  "type": "minecraft:chest",
+  "battle": {
+    "group": "start_extra",
+    "target_score": 20,
+    "allow_overflow": true
+  },
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:apple"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "apple",
+            "kp_score": 2
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:cooked_porkchop"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "cooked_porkchop",
+            "kp_score": 4
+          }
+        }
+      ]
+    }
+  ]
+}

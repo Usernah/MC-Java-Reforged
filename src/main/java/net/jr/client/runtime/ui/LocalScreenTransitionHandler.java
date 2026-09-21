@@ -3,7 +3,7 @@ package net.jr.client.runtime.ui;
 import javax.annotation.Nullable;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.input.LocalCursorVisibility;
-import net.jr.client.input.mode.InputMode;
+import net.jr.api.client.input.InputMode;
 import net.jr.client.runtime.input.LocalGamepadInputHandler;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;

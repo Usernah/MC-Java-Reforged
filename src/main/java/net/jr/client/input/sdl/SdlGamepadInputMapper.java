@@ -1,8 +1,8 @@
 package net.jr.client.input.sdl;
 
 import net.jr.client.input.gamepad.GamepadCalibrationRegistry;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
-import net.jr.client.input.gamepad.GamepadIdentity;
+import net.jr.api.client.input.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadIdentity;
 import net.jr.client.input.gamepad.RawGamepadInput;
 import net.minecraft.client.Minecraft;
 

@@ -30,6 +30,7 @@ public final class LocalClientManager {
     private final ConnectionSlotRegistry connections;
     private final LocalClient[] clients = new LocalClient[LocalClientSlotRegistry.MAX_SLOTS];
     private final LocalClientSession[] sessions = new LocalClientSession[LocalClientSlotRegistry.MAX_SLOTS];
+    private int tickOwnerSlotId = -1;
 
     public LocalClientManager(LocalClientSlotRegistry slots, ConnectionSlotRegistry connections) {
         this.slots = slots;
@@ -200,17 +201,38 @@ public final class LocalClientManager {
         }
     }
 
+    public int resolveTickOwnerSlot() {
+        for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
+            if (LocalClientReadinessPolicy.gameplayReady(slotId)) {
+                this.tickOwnerSlotId = slotId;
+                return slotId;
+            }
+        }
+
+        this.tickOwnerSlotId = -1;
+        return -1;
+    }
+
+    public int tickOwnerSlotId() {
+        return this.tickOwnerSlotId;
+    }
     public void tickSecondarySessions(Minecraft minecraft) {
-        if (!LocalClientReadinessPolicy.gameplayReady(0)) {
+        int ownerSlotId = this.tickOwnerSlotId;
+        if (ownerSlotId < 0) {
             return;
         }
 
         for (int slotId = 1; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
+            if (slotId == ownerSlotId) {
+                continue;
+            }
+
             LocalClient client = this.clients[slotId];
             LocalClientSession session = this.sessions[slotId];
             if (client == null || session == null) {
                 continue;
             }
+
             session.ensureConnected(minecraft, this.connections);
             this.tickSecondarySession(minecraft, client, session);
         }

@@ -1,0 +1,157 @@
+{
+  "type": "minecraft:chest",
+  "battle": {
+    "group": "outer_kit"
+  },
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:loot_table",
+          "weight": 100,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:wooden_axe"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "axe",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 100,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:bow"
+                  }
+                ]
+              },
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:arrow",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_count",
+                        "count": 5,
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "bow",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 100,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:wooden_pickaxe",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:sharpness": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "pickaxe",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 100,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:wooden_shovel",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:sharpness": 2
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "shovel",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 100,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:wooden_sword"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "sword",
+            "kp_score": 10
+          }
+        }
+      ]
+    }
+  ]
+}

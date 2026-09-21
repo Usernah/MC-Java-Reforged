@@ -3,7 +3,7 @@ package net.jr.mixin.runtime;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.bridge.GuiScreenAccess;
 import net.jr.client.runtime.input.LocalScreenInputHandler;
-import net.jr.client.runtime.render.pass.GuiRenderPass;
+import net.jr.client.runtime.render.GuiRenderPipeline;
 import net.jr.client.runtime.render.pass.ToastRenderPass;
 import net.jr.client.runtime.ui.LocalChatRouter;
 import net.jr.client.runtime.ui.LocalScreenManager;
@@ -52,7 +52,7 @@ public abstract class GuiMixin {
 
     @Overwrite
     public void extractRenderState(DeltaTracker deltaTracker, boolean shouldRenderLevel, boolean gameLoadFinished) {
-        GuiRenderPass.extract(
+        GuiRenderPipeline.extract(
                 (Gui) (Object) this,
                 this.guiRenderState,
                 deltaTracker,

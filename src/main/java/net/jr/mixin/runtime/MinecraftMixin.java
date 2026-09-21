@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.LocalClientReadinessPolicy;
+import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.context.PrimaryTickScope;
 import net.jr.client.runtime.context.SlotResolver;
 import net.jr.client.runtime.input.LocalScreenInputHandler;
@@ -104,6 +105,30 @@ public abstract class MinecraftMixin {
         PrimaryTickScope.end();
     }
 
+    @WrapOperation(
+            method = "runTick",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/Minecraft;tick()V"
+            )
+    )
+    private void javaReforged$tickWithOwner(
+            Minecraft minecraft,
+            Operation<Void> original
+    ) {
+        int ownerSlotId = ClientRuntime.INSTANCE.clients().resolveTickOwnerSlot();
+
+        if (ownerSlotId <= 0) {
+            original.call(minecraft);
+            return;
+        }
+
+        try (LocalClientExecution.Scope ignored =
+                     LocalClientExecution.enterForClient(minecraft, ownerSlotId)) {
+            original.call(minecraft);
+        }
+    }
+
     @Redirect(method = "renderFrame", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;pick(F)V"))
     private void javaReforged$pickForVisiblePlayers(Minecraft minecraft, float partialTicks) {
         WorldExtractionPass.pickVisibleSlots(minecraft, partialTicks);
@@ -185,6 +210,25 @@ public abstract class MinecraftMixin {
     )
     private void javaReforged$bootstrapPrimaryScreen(Gui gui, Screen screen) {
         LocalScreenManager.bootstrapPrimary((Minecraft) (Object) this, screen);
+    }
+
+    @WrapOperation(
+        method = "setScreenAndShow",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;renderFrame(Z)V")
+    )
+    private void javaReforged$skipBlackForcedFrameDuringLocalWorld(
+        Minecraft minecraft,
+        boolean advanceGameTime,
+        Operation<Void> original
+    ) {
+        // A forced no-time frame clears the entire shared target without rendering any world.
+        // Keep it for the initial world load, but not for a local respawn or transition.
+        boolean localWorldVisible = ClientRuntime.INSTANCE.viewports().presentedCount() > 1
+            || ClientRuntime.INSTANCE.clients().all().stream()
+                .anyMatch(LocalClientReadinessPolicy::worldReady);
+        if (!localWorldVisible) {
+            original.call(minecraft, advanceGameTime);
+        }
     }
 
     @Inject(method = "runTick", at = @At("TAIL"))

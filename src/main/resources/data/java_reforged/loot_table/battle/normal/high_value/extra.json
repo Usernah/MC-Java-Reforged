@@ -1,0 +1,376 @@
+{
+  "type": "minecraft:chest",
+  "battle": {
+    "group": "high_value_extra",
+    "target_score": 18,
+    "allow_overflow": false
+  },
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:apple"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "apple",
+            "kp_score": 1
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:cooked_porkchop"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "cooked_porkchop",
+            "kp_score": 1
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:golden_apple"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "golden_apple",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:golden_boots",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:protection": 2
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "golden_boots_protection_2",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:golden_chestplate",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:protection": 2
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "golden_chestplate_protection_2",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:golden_helmet",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:protection": 2
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "golden_helmet_protection_2",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:golden_leggings",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:protection": 2
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "golden_leggings_protection_2",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:iron_boots",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:thorns": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "iron_boots_thorns_1",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:iron_chestplate",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:thorns": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "iron_chestplate_thorns_1",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:iron_helmet",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:thorns": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "iron_helmet_thorns_1",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:iron_leggings",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:thorns": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "iron_leggings_thorns_1",
+            "kp_score": 3
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:tipped_arrow",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_count",
+                        "count": 5,
+                        "add": false
+                      },
+                      {
+                        "function": "minecraft:set_components",
+                        "components": {
+                          "minecraft:potion_contents": {
+                            "custom_effects": [
+                              {
+                                "id": "minecraft:poison",
+                                "amplifier": 0,
+                                "duration": 200,
+                                "ambient": false,
+                                "show_particles": true,
+                                "show_icon": true
+                              }
+                            ],
+                            "custom_name": "poison"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "poison_arrows_5",
+            "kp_score": 3
+          }
+        }
+      ]
+    }
+  ]
+}

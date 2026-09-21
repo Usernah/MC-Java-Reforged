@@ -3,7 +3,7 @@ package net.jr.client.runtime.state;
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.util.Util;
 

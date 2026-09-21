@@ -2,6 +2,7 @@ package net.jr.client.runtime.client;
 
 import javax.annotation.Nullable;
 import net.jr.client.runtime.input.SlotCursorView;
+import net.jr.api.client.input.ISlotInput;
 import net.jr.client.runtime.slot.LocalClientSlot;
 import net.jr.client.runtime.state.*;
 import net.minecraft.client.Camera;
@@ -49,7 +50,11 @@ public final class LocalClient {
         return this.slot.screenState();
     }
 
-    public InputState input() {
+    public ISlotInput input() {
+        return this.slot.input();
+    }
+
+    public InputState inputState() {
         return this.slot.inputState();
     }
 

@@ -1,8 +1,8 @@
 package net.jr.client.input.simulation;
 
 import javax.annotation.Nullable;
-import net.jr.client.input.gamepad.GamepadAxis;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadAxis;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.input.gamepad.RawGamepadInputPress;
 
 public interface InputSimulationProvider {

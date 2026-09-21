@@ -3,7 +3,6 @@ package net.jr.client.ui.overlay;
 import net.jr.api.client.render.gui.GuiRenderContext;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.input.InputDeviceRouter;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -64,8 +63,7 @@ public final class ScreenOverlays {
     private static void renderGamepadDisconnectedNotice(
         GuiGraphicsExtractor graphics, int slotId, ViewportArea viewport
     ) {
-        if (InputDeviceRouter.isKeyboardMouseSlot(slotId)
-            || !InputDeviceRouter.hasDisconnectedGamepadForSlot(slotId)) {
+        if (slotId == 0 || !ClientRuntime.INSTANCE.slots().slot(slotId).input().hasDisconnectedGamepad()) {
             return;
         }
 

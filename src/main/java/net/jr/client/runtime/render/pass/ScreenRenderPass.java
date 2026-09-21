@@ -67,6 +67,7 @@ public final class ScreenRenderPass {
             renderScreen.getClass().getCanonicalName()
         );
 
+        LocalGamepadInputHandler.trackFocusedCursorDuringScroll(renderScreen);
         ControlHintRenderPass.renderScreen(renderScreen, graphics);
         return renderScreen;
     }

@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import net.jr.Java_reforged;
-import net.jr.client.input.gamepad.GamepadIdentity;
+import net.jr.api.client.input.GamepadIdentity;
 import net.jr.client.input.gamepad.RawGamepadInput;
 import net.jr.client.input.gamepad.RawGamepadInputPress;
 

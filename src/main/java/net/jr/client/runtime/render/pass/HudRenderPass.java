@@ -8,9 +8,8 @@ import net.jr.client.runtime.client.LocalClientReadinessPolicy;
 import net.jr.client.runtime.context.LocalClientExecution;
 import net.jr.client.runtime.render.state.HudStateScope;
 import net.jr.client.runtime.ui.LocalChatRouter;
-import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.runtime.ui.SecondaryWorldLoadingScreen;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
-import net.jr.client.runtime.viewport.ViewportRenderScope;
 import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -18,6 +17,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.debug.DebugOptionsScreen;
 
 public final class HudRenderPass {
     private HudRenderPass() {
@@ -49,8 +49,8 @@ public final class HudRenderPass {
     }
 
     public static void extractCurrent(
-        Hud hud,
-        HudRenderContext context
+            Hud hud,
+            HudRenderContext context
     ) {
         LocalClient client = context.client();
         if (!LocalClientReadinessPolicy.gameplayReady(client)) {
@@ -61,7 +61,7 @@ public final class HudRenderPass {
         Screen screen = client.screen();
         if (screen != null) {
             try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-                ((HudAccessor)hud).javaReforged$extractCameraEffects(
+                ((HudAccessor) hud).javaReforged$extractCameraEffects(
                         graphics,
                         deltaTracker
                 );
@@ -71,30 +71,38 @@ public final class HudRenderPass {
 
         try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
             ControlHintRenderPass.PreparedHud preparedHints =
-                ControlHintRenderPass.prepareHud(graphics);
+                    ControlHintRenderPass.prepareHud(graphics);
             float bottomInset = preparedHints != null
-                ? preparedHints.bottomInset()
-                : 0.0F;
+                    ? preparedHints.bottomInset()
+                    : 0.0F;
             try (
-                ViewportHudLayout.BottomInsetScope ignoredInset =
-                    ViewportHudLayout.pushBottomInset(bottomInset)
+                    ViewportHudLayout.BottomInsetScope ignoredInset =
+                            ViewportHudLayout.pushBottomInset(bottomInset)
             ) {
                 hud.extractRenderState(graphics, deltaTracker);
             }
             if (preparedHints != null) {
                 ControlHintRenderPass.renderHud(preparedHints, graphics);
             }
-            GuiRenderObjects.renderHud(context);
+            try (
+                    ViewportHudLayout.BottomInsetScope ignoredInset =
+                            ViewportHudLayout.pushBottomInset(bottomInset)
+            ) {
+                GuiRenderObjects.renderHud(context);
+            }
         }
     }
 
-    public static Integer guiWidthOrNull() {
-        ViewportArea viewport = ViewportRenderScope.activeViewportOrNull();
-        return viewport == null ? null : viewport.guiWidth();
-    }
+    public static void extractTail(Hud hud, HudRenderContext context) {
+        if (SecondaryWorldLoadingScreen.shouldPresent(context.slot())) {
+            return;
+        }
 
-    public static Integer guiHeightOrNull() {
-        ViewportArea viewport = ViewportRenderScope.activeViewportOrNull();
-        return viewport == null ? null : viewport.guiHeight();
+        if (!(context.client().screen() instanceof DebugOptionsScreen)) {
+            hud.extractDebugOverlay(context.graphics());
+            GuiRenderObjects.renderHudTail(context);
+        }
+
+        hud.extractDeferredSubtitles();
     }
 }

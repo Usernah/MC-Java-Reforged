@@ -1,7 +1,7 @@
 package net.jr.client.ui.hint;
 
 import javax.annotation.Nullable;
-import net.jr.client.input.mode.InputMode;
+import net.jr.api.client.input.InputMode;
 import net.jr.client.input.InputApi;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;

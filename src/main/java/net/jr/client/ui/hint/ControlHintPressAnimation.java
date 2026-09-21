@@ -4,7 +4,7 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.state.ControlHintAnimationState;
 import net.jr.client.input.InputApi;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 
 final class ControlHintPressAnimation {

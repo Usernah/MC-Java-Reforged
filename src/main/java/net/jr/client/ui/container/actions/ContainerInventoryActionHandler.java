@@ -2,6 +2,8 @@ package net.jr.client.ui.container.actions;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.jr.experimental_features.minigame.client.BattleClientState;
+import net.jr.experimental_features.minigame.network.BattleNetwork;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
@@ -13,6 +15,7 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 public final class ContainerInventoryActionHandler {
     private ContainerInventoryActionHandler() {
@@ -67,6 +70,16 @@ public final class ContainerInventoryActionHandler {
         int containerSlotCount = containerSlotCount(screen);
         if (containerSlotCount < 0) {
             return false;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (BattleClientState.isBattle()
+            && minecraft.getConnection() != null
+            && minecraft.getConnection().hasChannel(BattleNetwork.TakeAllRequest.TYPE)) {
+            ClientPacketDistributor.sendToServer(
+                new BattleNetwork.TakeAllRequest(screen.getMenu().containerId)
+            );
+            return true;
         }
 
         int playerSlotEnd = screen.getMenu().slots.size();

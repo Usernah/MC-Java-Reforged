@@ -1,6 +1,7 @@
 package net.jr.client.runtime.slot;
 
 import net.jr.client.runtime.input.SlotCursorView;
+import net.jr.client.runtime.input.SlotInput;
 import net.jr.client.runtime.state.ChatState;
 import net.jr.client.runtime.state.ClientRenderState;
 import net.jr.client.runtime.state.GameplayState;
@@ -16,12 +17,14 @@ public final class LocalClientSlot {
     private final GameplayState gameplayState = new GameplayState();
     private final ScreenState screenState = new ScreenState();
     private final InputState inputState = new InputState();
+    private final SlotInput input;
     private final ToastState toastState = new ToastState();
     private final OptionsState optionsState;
     private final SlotCursorView cursor;
 
     LocalClientSlot(int id) {
         this.id = id;
+        this.input = new SlotInput(id);
         this.optionsState = new OptionsState(id);
         this.cursor = new SlotCursorView(id);
     }
@@ -48,6 +51,10 @@ public final class LocalClientSlot {
 
     public InputState inputState() {
         return this.inputState;
+    }
+
+    public SlotInput input() {
+        return this.input;
     }
 
     public ToastState toastState() {

@@ -2,7 +2,6 @@ package net.jr.api.client.split;
 
 import net.jr.api.client.local.LocalClients;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.input.InputDeviceRouter;
 
 public final class SplitScreen {
     private static volatile boolean requireMultipleControllersForJoin = true;
@@ -29,6 +28,7 @@ public final class SplitScreen {
     }
 
     public static boolean hasRequiredControllerCountForJoin() {
-        return InputDeviceRouter.connectedGamepads().size() >= requiredControllerCountForJoin();
+        return ClientRuntime.INSTANCE.input().devices().gamepads().size()
+            >= requiredControllerCountForJoin();
     }
 }

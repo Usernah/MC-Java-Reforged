@@ -1,12 +1,12 @@
 package net.jr.client.runtime.render.pass;
 
 import javax.annotation.Nullable;
+import net.jr.api.client.render.gui.GlobalRenderContext;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.split.JoinPromptAnnouncement;
 import net.jr.api.client.split.JoinPromptAnnouncements;
-import net.jr.client.input.gamepad.GamepadIdentity;
-import net.jr.client.input.sdl.SdlGamepad;
+import net.jr.api.client.input.IGamepad;
 import net.jr.client.runtime.viewport.GuiScaleCalculator;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
@@ -50,12 +50,13 @@ public final class JoinPromptRenderPass {
     private JoinPromptRenderPass() {
     }
 
-    public static void render(GuiGraphicsExtractor graphics) {
+    public static void render(GlobalRenderContext context) {
         JoinPromptAnnouncement.Show prompt = current;
         if (prompt == null) {
             return;
         }
 
+        GuiGraphicsExtractor graphics = context.graphics();
         Minecraft minecraft = Minecraft.getInstance();
         double activeScale = minecraft.getWindow().getGuiScale();
         int standardScale = GuiScaleCalculator.resolveStandard(
@@ -69,8 +70,8 @@ public final class JoinPromptRenderPass {
             presentationScale = 1.0F;
         }
 
-        float canvasWidth = graphics.guiWidth() / presentationScale;
-        float canvasHeight = graphics.guiHeight() / presentationScale;
+        float canvasWidth = context.guiWidth() / presentationScale;
+        float canvasHeight = context.guiHeight() / presentationScale;
         float panelX = (canvasWidth - PANEL_WIDTH) / 2.0F;
         float panelY = (canvasHeight - PANEL_HEIGHT) / 2.0F;
 
@@ -105,17 +106,16 @@ public final class JoinPromptRenderPass {
             CONTROLLER_HEIGHT
         ).alpha(blinkAlpha()).draw(graphics);
 
-        renderMessage(graphics, panelX, panelY, prompt.deviceId());
+        renderMessage(graphics, panelX, panelY, prompt.gamepad());
     }
 
     private static void renderMessage(
         GuiGraphicsExtractor graphics,
         float panelX,
         float panelY,
-        long deviceId
+        IGamepad gamepad
     ) {
-        GamepadIdentity identity = SdlGamepad.identity(deviceId);
-        ControllerGlyphTheme theme = GamepadGlyphThemeState.themeForIdentity(identity);
+        ControllerGlyphTheme theme = GamepadGlyphThemeState.themeForGamepad(gamepad);
 
         Draw.TextBuilder prefix = label(Component.translatable("prompt.java_reforged.join.prefix"));
         Draw.TextBuilder start = glyph(theme, ControllerGlyph.BUTTON_SELECT);

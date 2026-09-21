@@ -1,5 +1,8 @@
 package net.jr.client.input.gamepad;
 
+import net.jr.api.client.input.GamepadIdentity;
+import net.jr.api.client.input.GamepadDigitalInput;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.nio.file.Path;

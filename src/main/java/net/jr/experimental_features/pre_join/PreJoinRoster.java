@@ -5,15 +5,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import net.jr.api.client.input.IGamepad;
 
 /** Keeps the local-player composition while moving between worlds in one game session. */
 public final class PreJoinRoster {
-    private static final Map<Integer, Long> LAST_PLAYERS = new LinkedHashMap<>();
+    private static final Map<Integer, IGamepad> LAST_PLAYERS = new LinkedHashMap<>();
 
     private PreJoinRoster() {
     }
 
-    public static void remember(Map<Integer, Long> players) {
+    public static void remember(Map<Integer, IGamepad> players) {
         LAST_PLAYERS.clear();
         LAST_PLAYERS.putAll(players);
     }
@@ -23,20 +24,20 @@ public final class PreJoinRoster {
     }
 
     /** Removes saved players whose controller was absent at a world exit. */
-    public static void forgetDisconnectedDevices(List<Long> connectedDevices) {
+    public static void forgetDisconnectedDevices(List<IGamepad> connectedDevices) {
         LAST_PLAYERS.entrySet().removeIf(entry -> !connectedDevices.contains(entry.getValue()));
     }
 
-    public static void restoreInto(Long[] assignedDevices, List<Long> connectedDevices) {
-        Set<Long> usedDevices = new HashSet<>();
+    public static void restoreInto(IGamepad[] assignedDevices, List<IGamepad> connectedDevices) {
+        Set<IGamepad> usedDevices = new HashSet<>();
 
-        for (Map.Entry<Integer, Long> entry : LAST_PLAYERS.entrySet()) {
+        for (Map.Entry<Integer, IGamepad> entry : LAST_PLAYERS.entrySet()) {
             int slotId = entry.getKey();
-            long deviceId = entry.getValue();
+            IGamepad gamepad = entry.getValue();
             if (validSecondarySlot(slotId, assignedDevices)
-                && connectedDevices.contains(deviceId)
-                && usedDevices.add(deviceId)) {
-                assignedDevices[slotId] = deviceId;
+                && connectedDevices.contains(gamepad)
+                && usedDevices.add(gamepad)) {
+                assignedDevices[slotId] = gamepad;
             }
         }
 
@@ -44,7 +45,7 @@ public final class PreJoinRoster {
             if (!validSecondarySlot(slotId, assignedDevices) || assignedDevices[slotId] != null) {
                 continue;
             }
-            Long replacement = connectedDevices.stream()
+            IGamepad replacement = connectedDevices.stream()
                 .filter(usedDevices::add)
                 .findFirst()
                 .orElse(null);
@@ -55,7 +56,7 @@ public final class PreJoinRoster {
         }
     }
 
-    private static boolean validSecondarySlot(int slotId, Long[] assignedDevices) {
+    private static boolean validSecondarySlot(int slotId, IGamepad[] assignedDevices) {
         return slotId > 0 && slotId < assignedDevices.length;
     }
 }

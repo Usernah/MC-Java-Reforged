@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.util.JsonFileStore;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;

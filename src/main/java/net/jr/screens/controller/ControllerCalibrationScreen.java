@@ -3,10 +3,10 @@ package net.jr.screens.controller;
 import net.jr.Java_reforged;
 import net.jr.api.client.render.Draw;
 import net.jr.client.input.InputApi;
+import net.jr.api.client.input.IGamepad;
 import net.jr.client.input.gamepad.GamepadCalibrationRegistry;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
-import net.jr.client.input.gamepad.GamepadIdentity;
-import net.jr.client.input.gamepad.RawGamepadInputPress;
+import net.jr.api.client.input.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadIdentity;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
 import net.jr.client.ui.hint.glyph.GamepadGlyphThemeState;
@@ -60,7 +60,7 @@ public final class ControllerCalibrationScreen extends Screen implements Control
 
     private final Screen lastScreen;
     private @Nullable GamepadIdentity selectedController;
-    private long selectedDeviceId = -1L;
+    private @Nullable IGamepad selectedGamepad;
     private @Nullable String lastCapturedText;
     private boolean waitingForRelease;
     private long releaseStableSinceMs = -1L;
@@ -106,7 +106,7 @@ public final class ControllerCalibrationScreen extends Screen implements Control
 
         if (waitingForRelease) {
             InputApi.clearCalibrationPresses();
-            if (selectedDeviceId >= 0L && InputApi.hasActiveCalibrationInput(selectedDeviceId)) {
+            if (selectedGamepad != null && InputApi.hasActiveCalibrationInput(selectedGamepad)) {
                 releaseStableSinceMs = -1L;
                 return;
             }
@@ -128,31 +128,28 @@ public final class ControllerCalibrationScreen extends Screen implements Control
             return;
         }
 
-        RawGamepadInputPress press = InputApi.pollCalibrationPress();
+        InputApi.CalibrationPress press = InputApi.pollCalibrationPress();
         if (press == null) {
             return;
         }
         if (selectedController == null) {
             selectedController = press.identity();
-            selectedDeviceId = press.deviceId();
+            selectedGamepad = press.gamepad();
             stepIndex = 0;
             lastCapturedText = "Mando seleccionado: " + press.identity().displayName();
             Java_reforged.LOGGER.info(
-                "Mando seleccionado para calibracion: {} ({}) deviceId={}",
+                "Mando seleccionado para calibracion: {} ({})",
                 press.identity().displayName(),
-                press.identity().key(),
-                press.deviceId()
+                press.identity().key()
             );
             waitForRelease();
             cooldown();
             return;
         }
 
-        if (press.deviceId() != selectedDeviceId) {
+        if (press.gamepad() != selectedGamepad) {
             Java_reforged.LOGGER.debug(
-                "Entrada de calibracion ignorada: deviceId={} no coincide con seleccionado={}.",
-                press.deviceId(),
-                selectedDeviceId
+                "Entrada de calibracion ignorada: el mando no coincide con el seleccionado."
             );
             return;
         }

@@ -3,65 +3,55 @@ package net.jr.client.runtime.input;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.jr.client.input.InputApi;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
-import net.jr.client.input.sdl.SdlGamepad;
-import net.jr.client.runtime.client.LocalClientJoinHandler;
-import net.jr.client.runtime.client.LocalClientJoinPolicy;
+import net.jr.api.client.input.IGamepad;
+import net.jr.api.client.input.GamepadDigitalInput;
+import net.jr.client.runtime.ClientRuntime;
 import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 public final class GamepadJoinTicker {
-    private static final Map<Long, Boolean> JOIN_LATCHED = new HashMap<>();
+    private static final Map<IGamepad, Boolean> JOIN_LATCHED = new HashMap<>();
 
     private GamepadJoinTicker() {
     }
 
     public static void tick(Minecraft minecraft) {
-        InputDeviceRouter.pruneDisconnectedDevices();
+        ClientRuntime.INSTANCE.input().mutableAssignments().pruneDisconnectedDevices();
         JoinPromptAnnouncer.tick(minecraft);
         if (PreJoinWorldLoad.isActive()) {
             return;
         }
-        List<Long> connected = SdlGamepad.deviceIds();
-        JOIN_LATCHED.keySet().removeIf(deviceId -> !connected.contains(deviceId));
+        List<IGamepad> connected = ClientRuntime.INSTANCE.input().devices().gamepads();
+        JOIN_LATCHED.keySet().removeIf(gamepad -> !connected.contains(gamepad));
 
-        for (long deviceId : connected) {
-            boolean startDown = SdlGamepad.input(
-                deviceId,
-                GamepadDigitalInput.BUTTON_START,
-                InputApi.DIGITAL_PRESS_THRESHOLD
-            );
-            boolean selectDown = SdlGamepad.input(
-                deviceId,
-                GamepadDigitalInput.BUTTON_SELECT,
-                InputApi.DIGITAL_PRESS_THRESHOLD
-            );
+        for (IGamepad gamepad : connected) {
+            boolean startDown = gamepad.input().pressed(GamepadDigitalInput.BUTTON_START);
+            boolean selectDown = gamepad.input().pressed(GamepadDigitalInput.BUTTON_SELECT);
 
             if (!startDown && !selectDown) {
-                JOIN_LATCHED.put(deviceId, false);
+                JOIN_LATCHED.put(gamepad, false);
                 continue;
             }
-            if (Boolean.TRUE.equals(JOIN_LATCHED.get(deviceId))) {
+            if (Boolean.TRUE.equals(JOIN_LATCHED.get(gamepad))) {
                 continue;
             }
-            if (InputDeviceRouter.isAwaitingNeutral(deviceId)) {
+            if (ClientRuntime.INSTANCE.input().assignments().awaitingNeutral(gamepad)) {
                 continue;
             }
-            if (InputDeviceRouter.assignedSlot(deviceId) != null || !startDown || !selectDown) {
+            if (ClientRuntime.INSTANCE.input().assignments().assignedSlot(gamepad) != null || !startDown || !selectDown) {
                 continue;
             }
 
-            JOIN_LATCHED.put(deviceId, true);
+            JOIN_LATCHED.put(gamepad, true);
 
-            if (!LocalClientJoinPolicy.canStartJoin(deviceId)) {
+            if (!ClientRuntime.INSTANCE.input().join().canStartJoin(gamepad)) {
                 show(minecraft, "Ya hay 4 jugadores locales");
                 continue;
             }
 
             try {
-                int slotId = LocalClientJoinHandler.join(minecraft, deviceId);
+                int slotId = ClientRuntime.INSTANCE.input().join().join(minecraft, gamepad);
                 JoinPromptAnnouncer.dismiss();
                 show(minecraft, "Mando asignado al jugador " + (slotId + 1));
             } catch (RuntimeException exception) {
@@ -70,8 +60,8 @@ public final class GamepadJoinTicker {
         }
     }
 
-    public static boolean suppressForJoinChord(long deviceId, GamepadDigitalInput input) {
-        return Boolean.TRUE.equals(JOIN_LATCHED.get(deviceId))
+    public static boolean suppressForJoinChord(IGamepad gamepad, GamepadDigitalInput input) {
+        return Boolean.TRUE.equals(JOIN_LATCHED.get(gamepad))
             && (input == GamepadDigitalInput.BUTTON_START
                 || input == GamepadDigitalInput.BUTTON_SELECT);
     }

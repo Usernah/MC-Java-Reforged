@@ -2,7 +2,7 @@ package net.jr.client.input;
 
 import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.api.client.local.LocalClients;
-import net.jr.client.input.gamepad.GamepadDigitalInput;
+import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.screens.crafting.Crafting2x2Screen;
 import net.jr.screens.inventory.CreativeInventoryScreen;

@@ -1,0 +1,287 @@
+{
+  "type": "minecraft:chest",
+  "battle": {
+    "group": "high_value_kit"
+  },
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:stone_sword",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:fire_aspect": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_1",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:iron_axe",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:knockback": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_2",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:diamond_pickaxe"
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_3",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:diamond_shovel",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:knockback": 2
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_4",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:bow",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:power": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_5",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:bow",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:punch": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_6",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:bow",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:flame": 1
+                        },
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_7",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:tnt",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_count",
+                        "count": 3,
+                        "add": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_8",
+            "kp_score": 10
+          }
+        },
+        {
+          "type": "minecraft:loot_table",
+          "weight": 1,
+          "value": {
+            "type": "minecraft:chest",
+            "pools": [
+              {
+                "rolls": 1,
+                "entries": [
+                  {
+                    "type": "minecraft:item",
+                    "name": "minecraft:bow",
+                    "functions": [
+                      {
+                        "function": "minecraft:set_enchantments",
+                        "enchantments": {
+                          "minecraft:infinity": 1
+                        },
+                        "add": false
+                      },
+                      {
+                        "function": "minecraft:set_components",
+                        "components": {
+                          "minecraft:damage": 372
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "battle": {
+            "id": "weapons_and_armour_9",
+            "kp_score": 10
+          }
+        }
+      ]
+    }
+  ]
+}
