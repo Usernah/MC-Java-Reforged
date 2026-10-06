@@ -1,11 +1,13 @@
 package net.jr.client.runtime.network;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.session.DisconnectHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.Connection;
+import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.PacketListener;
 import net.minecraft.network.protocol.Packet;
 
@@ -17,7 +19,7 @@ public final class PacketExecutionRouter {
         int slotId = resolveAndBindSlot(connection);
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft != null && minecraft.isSameThread()) {
-            LocalClientExecution.runForConnection(connection, () -> handle(packet, listener));
+            InstanceExecution.runForConnection(connection, () -> handle(packet, listener));
             return;
         }
 
@@ -29,10 +31,31 @@ public final class PacketExecutionRouter {
     public static void handleQueued(Packet<?> packet, PacketListener listener) {
         if (listener instanceof ClientPacketListener clientListener
                 && ClientRuntime.INSTANCE.connections().has(clientListener.getConnection())) {
-            LocalClientExecution.runForListener(clientListener, () -> handle(packet, listener));
+            InstanceExecution.runForListener(clientListener, () -> handle(packet, listener));
             return;
         }
         handle(packet, listener);
+    }
+
+    public static void handleDisconnect(
+        Connection connection,
+        PacketListener listener,
+        DisconnectionDetails details
+    ) {
+        Integer slotId = ClientRuntime.INSTANCE.connections().slotOrNull(connection);
+        if (slotId == null || slotId == 0) {
+            listener.onDisconnect(details);
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        Runnable disconnect = () ->
+            DisconnectHandler.disconnectSecondaryConnection(minecraft, slotId, connection);
+        if (minecraft.isSameThread()) {
+            disconnect.run();
+        } else {
+            minecraft.execute(disconnect);
+        }
     }
 
     public static void runForListener(ClientPacketListener listener, Runnable action) {
@@ -41,11 +64,11 @@ public final class PacketExecutionRouter {
             action.run();
             return;
         }
-        LocalClientExecution.runForListener(listener, action);
+        InstanceExecution.runForListener(listener, action);
     }
 
     public static Runnable wrapScheduled(Runnable task) {
-        return LocalClientExecution.wrapScheduled(task);
+        return InstanceExecution.wrapScheduled(task);
     }
 
     private static int resolveAndBindSlot(Connection connection) {

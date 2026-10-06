@@ -1,7 +1,8 @@
 package net.jr.client.runtime.input;
 
 import java.util.List;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+
+import net.jr.client.runtime.slot.ClientSlots;
 
 public final class InputFocus {
     private final int slotCount;
@@ -56,7 +57,7 @@ public final class InputFocus {
     }
 
     private void requireSlot(int slotId) {
-        if (slotId < 0 || slotId >= this.slotCount || slotId >= LocalClientSlotRegistry.MAX_SLOTS) {
+        if (slotId < 0 || slotId >= this.slotCount || slotId >= ClientSlots.MAX_SLOTS) {
             throw new IndexOutOfBoundsException("Focused slot id " + slotId + " is not valid");
         }
     }

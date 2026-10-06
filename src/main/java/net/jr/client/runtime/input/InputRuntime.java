@@ -14,7 +14,7 @@ public final class InputRuntime {
         () -> Minecraft.getInstance().level == null,
         InputSimulation::isConnected
     );
-    private final LocalJoinService join = new LocalJoinService(this.devices, this.assignments);
+    private final JoinService join = new JoinService(this.devices, this.assignments);
 
     public IInputDeviceRegistry devices() {
         return this.devices;
@@ -24,7 +24,7 @@ public final class InputRuntime {
         return this.assignments;
     }
 
-    public LocalJoinService join() {
+    public JoinService join() {
         return this.join;
     }
 

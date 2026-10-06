@@ -13,6 +13,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -39,6 +40,7 @@ public final class BattleNetwork {
             }
 
             MinecraftServer server = player.level().getServer();
+            ServerLevel level = player.level().getLevel();
             if (server == null) {
                 return;
             }
@@ -46,7 +48,7 @@ public final class BattleNetwork {
             if (request.toggle() && GameModeContext.isBattle()) {
                 BattleRuntime.stopEngineMinigame(server);
                 player.sendOverlayMessage(Component.literal("Battle stopped"));
-            } else if (BattleRuntime.startEngineMinigame(server)) {
+            } else if (BattleRuntime.startEngineMinigame(server, level)) {
                 player.sendOverlayMessage(Component.literal("Battle started"));
             } else {
                 player.sendOverlayMessage(Component.literal("Battle is already running"));

@@ -30,18 +30,6 @@ import xaero.map.mods.SupportXaeroMinimap;
 @Mixin(value = GuiMap.class, remap = false)
 abstract class GuiMapMixin {
 
-    /*
-     * ============================================================
-     * XAERO STATIC STATE
-     * ============================================================
-     *
-     * GuiMap was written assuming that only one fullscreen map can
-     * exist at a time.
-     *
-     * Java Reforged can have one GuiMap per slot, so these fields
-     * must be rebound to the state of the active slot while Xaero
-     * executes.
-     */
 
     @Shadow
     private static double destScale;
@@ -64,24 +52,11 @@ abstract class GuiMapMixin {
     @Shadow
     private double screenScale;
 
-    /*
-     * The scissor already belongs to Java Reforged's GUI viewport
-     * pipeline. We only cache the reference while Xaero is extracting
-     * this GuiMap.
-     */
     @Unique
     @Nullable
     private ScreenRectangle javaReforged$viewportScissor;
 
-    /*
-     * Calls can nest:
-     *
-     * extractRenderState()
-     *     -> changeZoom()
-     *     -> applyZoomLimits()
-     *
-     * Only the outermost entry swaps the Xaero static state.
-     */
+
     @Unique
     private static final ThreadLocal<Integer> javaReforged$stateDepth =
             ThreadLocal.withInitial(() -> 0);
@@ -168,9 +143,7 @@ abstract class GuiMapMixin {
             return;
         }
 
-        /*
-         * Persist everything Xaero changed while the slot was active.
-         */
+
         state.destScale(destScale);
         state.primaryScaleFbo(primaryScaleFBO);
         state.immediateRenderFbo(immediateRenderFBO);
@@ -187,10 +160,7 @@ abstract class GuiMapMixin {
             minimapScope.close();
         }
 
-        /*
-         * Restore the real global values so code outside the current
-         * slot scope does not inherit the slot-local state.
-         */
+
         XaeroStaticBackup backup =
                 javaReforged$backup.get();
 
@@ -209,19 +179,6 @@ abstract class GuiMapMixin {
         javaReforged$backup.remove();
     }
 
-    /*
-     * ============================================================
-     * CONSTRUCTOR
-     * ============================================================
-     *
-     * GuiMap constructor reads destScale three times:
-     *
-     *   userScale = destScale * ...
-     *   new SlowingAnimation(userScale, destScale, ..., destScale * ...)
-     *
-     * The constructor happens before any ordinary method can be wrapped,
-     * so redirect those static reads to the current slot state.
-     */
 
     @Redirect(
             method = "<init>",
@@ -261,13 +218,6 @@ abstract class GuiMapMixin {
         }
     }
 
-    /*
-     * ============================================================
-     * INIT
-     * ============================================================
-     *
-     * init() reads/writes attachedCamera and reads the GUI scale.
-     */
 
     @WrapMethod(method = "init")
     private void javaReforged$initPerSlot(
@@ -296,13 +246,6 @@ abstract class GuiMapMixin {
         return XaeroWorldMapViewport.guiScale(window);
     }
 
-    /*
-     * ============================================================
-     * ZOOM
-     * ============================================================
-     *
-     * Both methods directly read/write static destScale.
-     */
 
     @WrapMethod(method = "changeZoom")
     private void javaReforged$changeZoomPerSlot(
@@ -332,11 +275,6 @@ abstract class GuiMapMixin {
         }
     }
 
-    /*
-     * ============================================================
-     * ATTACHED CAMERA
-     * ============================================================
-     */
 
     @WrapMethod(method = "activateHopToCoords")
     private void javaReforged$activateHopPerSlot(
@@ -365,13 +303,6 @@ abstract class GuiMapMixin {
         }
     }
 
-    /*
-     * ============================================================
-     * HIDDEN UI / INPUT
-     * ============================================================
-     *
-     * These methods directly touch static hiddenUI.
-     */
 
     @WrapMethod(method = "mouseClicked")
     private boolean javaReforged$mouseClickedPerSlot(
@@ -446,24 +377,6 @@ abstract class GuiMapMixin {
         }
     }
 
-    /*
-     * ============================================================
-     * MAP RENDER EXTRACTION
-     * ============================================================
-     *
-     * This is the critical boundary.
-     *
-     * During J1:
-     *
-     *   immediateRenderFBO -> slot 0 FBO
-     *
-     * During J2:
-     *
-     *   immediateRenderFBO -> slot 1 FBO
-     *
-     * Therefore the BlitRenderState extracted for J1 keeps J1's
-     * texture and cannot later be overwritten by J2.
-     */
 
     @WrapMethod(method = "extractRenderState")
     private void javaReforged$extractPerSlot(
@@ -475,21 +388,13 @@ abstract class GuiMapMixin {
     ) {
         javaReforged$enterState();
 
-        /*
-         * Do NOT rebuild a viewport/scissor here.
-         *
-         * GuiViewportScope already installed the exact scissor that
-         * belongs to this extraction. Use the Runtime's current value.
-         */
+
         this.javaReforged$viewportScissor =
                 ((GuiGraphicsExtractorBridge)(Object)graphics)
                         .javaReforged$currentScissor();
 
         try {
-            /*
-             * Xaero caches the vanilla Window gui scale in this field.
-             * Refresh it from the viewport API for the active slot.
-             */
+
             this.screenScale =
                     XaeroWorldMapViewport.guiScale(
                             Minecraft.getInstance().getWindow()
@@ -507,12 +412,6 @@ abstract class GuiMapMixin {
         }
     }
 
-    /*
-     * Xaero asks Window for framebuffer dimensions while building and
-     * rendering its private FBO.
-     *
-     * These values must come from Java Reforged's active viewport.
-     */
 
     @Redirect(
             method = "extractRenderState",
@@ -542,15 +441,7 @@ abstract class GuiMapMixin {
         return XaeroWorldMapViewport.framebufferHeight(window);
     }
 
-    /*
-     * Xaero manually creates the final BlitRenderState with
-     * scissor = null.
-     *
-     * Replace ONLY that argument with the current scissor already
-     * supplied by Java Reforged.
-     *
-     * No coordinates are recalculated here.
-     */
+
     @ModifyArg(
             method = "extractRenderState",
             at = @At(
@@ -575,14 +466,6 @@ abstract class GuiMapMixin {
                 : xaeroScissor;
     }
 
-    /*
-     * ============================================================
-     * XAERO MESSAGE SCREENS
-     * ============================================================
-     *
-     * Same rule: Window dimensions are replaced with dimensions
-     * supplied by the active Java Reforged viewport.
-     */
 
     @Redirect(
             method =
@@ -662,9 +545,7 @@ abstract class GuiMapMixin {
         return XaeroWorldMapViewport.guiHeight(window);
     }
 
-    /*
-     * Backup of Xaero's actual static fields while one slot is active.
-     */
+
     @Unique
     private record XaeroStaticBackup(
             double destScale,

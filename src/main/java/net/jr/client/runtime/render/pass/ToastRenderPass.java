@@ -3,8 +3,8 @@ package net.jr.client.runtime.render.pass;
 import java.util.Objects;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.render.state.ToastStateScope;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.toasts.ToastManager;
@@ -17,8 +17,8 @@ public final class ToastRenderPass {
         Objects.requireNonNull(manager, "manager");
         ToastStateScope.bootstrapPrimary();
 
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
-            LocalClientExecution.runForClient(client.slotId(), () -> {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+            InstanceExecution.runForClient(client.slotId(), () -> {
                 try (ToastStateScope.PassScope ignoredToasts = ToastStateScope.enterLocalPass()) {
                     manager.update();
                 }
@@ -35,12 +35,12 @@ public final class ToastRenderPass {
         Objects.requireNonNull(graphics, "graphics");
         ToastStateScope.bootstrapPrimary();
 
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             int slotId = client.slotId();
             if (!ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
                 continue;
             }
-            LocalClientExecution.runForClient(slotId, () -> {
+            InstanceExecution.runForClient(slotId, () -> {
                 try (
                     GuiViewportScope ignoredViewport = GuiViewportScope.enter(
                         graphics,

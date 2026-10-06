@@ -6,6 +6,7 @@ import net.jr.client.runtime.render.pass.JoinPromptRenderPass;
 import net.jr.client.ui.hud.PlayerNameHudOverlay;
 import net.jr.client.ui.overlay.ScreenOverlays;
 import net.jr.experimental_features.minigame.MinigameHudOverlay;
+import net.jr.experimental_features.minigame.PlayerInforBar;
 import net.jr.experimental_features.minigame.battle.client.BattleChestRefillOverlay;
 
 /** Registers JavaReforged's built-in GUI features once during client setup. */
@@ -21,6 +22,7 @@ public final class BuiltInGuiRenderObjects {
         }
         registered = true;
         GuiRenderObjects.registerHud(new MinigameHudOverlay());
+        GuiRenderObjects.registerBottomHud(new PlayerInforBar());
         GuiRenderObjects.registerHud(new PlayerNameHudOverlay());
         GuiRenderObjects.registerHud(ScreenOverlays::renderGamepadDisconnectedNotice);
         GuiRenderObjects.registerGlobal(GuiRenderPhase.GLOBAL, JoinPromptRenderPass::render);

@@ -76,7 +76,7 @@ public class EditBoxElement extends JavaBaseWidget implements GamepadTextInput {
     }
 
     public boolean canConsumeInput() {
-        return this.isActive() && this.visible && this.isFocused() && this.editable;
+        return this.isActive() && this.visible && this.isFocused() && this.isHovered() && this.editable;
     }
 
     public void insertText(String text) {

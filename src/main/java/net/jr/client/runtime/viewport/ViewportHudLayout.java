@@ -1,8 +1,12 @@
 package net.jr.client.runtime.viewport;
 
+import net.jr.api.client.split.SplitScreen;
+import net.jr.api.client.ui.Viewport;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import org.bytedeco.opencv.opencv_dnn.SplitLayer;
 
 public final class ViewportHudLayout {
+    private static final float BOTTOM_SCALE_BIG = 1.5F;
     private static final float BOTTOM_SCALE = 1.0F;
     private static final float BOTTOM_PIVOT_Y_OFFSET = 1.0F;
     private static final ThreadLocal<Float> ACTIVE_BOTTOM_INSET =
@@ -11,18 +15,36 @@ public final class ViewportHudLayout {
     private ViewportHudLayout() {
     }
 
+    private static float hudScale() {
+        return Viewport.current().layout() == ViewportLayout.TWO_VERTICAL
+                ? BOTTOM_SCALE
+                : BOTTOM_SCALE_BIG;
+    }
+
     public static void pushBottomTransform(GuiGraphicsExtractor graphics) {
         float pivotX = graphics.guiWidth() * 0.5F;
         float pivotY = graphics.guiHeight() + BOTTOM_PIVOT_Y_OFFSET;
         float offset = -activeBottomInset();
         graphics.pose().pushMatrix();
         graphics.pose().translate(pivotX, pivotY + offset);
-        graphics.pose().scale(BOTTOM_SCALE);
+        graphics.pose().scale(hudScale());
         graphics.pose().translate(-pivotX, -pivotY);
     }
 
     public static void popBottomTransform(GuiGraphicsExtractor graphics) {
         graphics.pose().popMatrix();
+    }
+
+    public static void pushBottomScaleTransform(
+            GuiGraphicsExtractor graphics,
+            float bottomY
+    ) {
+        float pivotX = graphics.guiWidth() * 0.5F;
+        float pivotY = bottomY + BOTTOM_PIVOT_Y_OFFSET;
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(pivotX, pivotY);
+        graphics.pose().scale(hudScale());
+        graphics.pose().translate(-pivotX, -pivotY);
     }
 
     public static int hotbarSelectionHeight() {

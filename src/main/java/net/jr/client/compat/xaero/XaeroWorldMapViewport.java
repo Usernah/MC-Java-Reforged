@@ -1,9 +1,9 @@
 package net.jr.client.compat.xaero;
 
 import com.mojang.blaze3d.platform.Window;
+import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
-import net.jr.client.runtime.input.LocalScreenInput;
+import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.minecraft.client.Minecraft;
@@ -52,6 +52,8 @@ public final class XaeroWorldMapViewport {
     }
 
     public static Double mousePixelXOrNull(Minecraft minecraft) {
+
+
         ViewportArea viewport = XaeroViewport.currentOrNull();
         Integer slotId = SlotScope.idOrNull();
 
@@ -59,18 +61,16 @@ public final class XaeroWorldMapViewport {
             return null;
         }
 
-        int logicalX = LocalGamepadInputHandler.resolveScreenMouseX(
+        int logicalX = GamepadInputHandler.resolveScreenMouseX(
                 slotId,
-                (int)Math.round(LocalScreenInput.localGuiX(minecraft.mouseHandler))
+                (int)Math.round(Viewport.current().windowMouseToLocalPixelX(minecraft.mouseHandler.xpos()))
         );
 
         if (logicalX == Integer.MIN_VALUE) {
             return (double)Integer.MIN_VALUE;
         }
 
-        return logicalX
-                * viewport.glWidth()
-                / (double)LocalScreenInput.guiWidth();
+        return (double) logicalX;
     }
 
     public static Double mousePixelYOrNull(Minecraft minecraft) {
@@ -81,17 +81,15 @@ public final class XaeroWorldMapViewport {
             return null;
         }
 
-        int logicalY = LocalGamepadInputHandler.resolveScreenMouseY(
+        int logicalY = GamepadInputHandler.resolveScreenMouseY(
                 slotId,
-                (int)Math.round(LocalScreenInput.localGuiY(minecraft.mouseHandler))
+                (int)Math.round(Viewport.current().windowMouseToLocalPixelY(minecraft.mouseHandler.ypos()))
         );
 
         if (logicalY == Integer.MIN_VALUE) {
             return (double)Integer.MIN_VALUE;
         }
 
-        return logicalY
-                * viewport.glHeight()
-                / (double)LocalScreenInput.guiHeight();
+        return (double) logicalY;
     }
 }

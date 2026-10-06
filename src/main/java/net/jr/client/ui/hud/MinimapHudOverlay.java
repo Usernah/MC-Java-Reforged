@@ -1,20 +1,16 @@
 package net.jr.client.ui.hud;
 
+import net.jr.api.client.local.Client;
 import net.jr.api.client.render.Draw;
-import net.jr.api.client.split.SplitScreen;
 import net.jr.client.components.elements.TextElement;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.minimap.MinimapEngine;
 import net.jr.client.runtime.state.MinimapState;
-import net.jr.registry.ModFonts;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-
-import javax.swing.*;
 
 public final class MinimapHudOverlay {
     private static final Identifier BASE_SPRITE =
@@ -40,7 +36,7 @@ public final class MinimapHudOverlay {
     }
 
     public static void extract(GuiGraphicsExtractor graphics) {
-        LocalClient client = LocalClientScope.currentClientOrNull();
+        ClientInstance client = Client.currentOrNull();
         if (client == null) {
             return;
         }

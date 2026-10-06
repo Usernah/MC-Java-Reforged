@@ -13,10 +13,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
-import net.minecraft.world.CompoundContainer;
-import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -26,83 +25,47 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /** Server-owned chest placement. Vanilla loot tables generate the stacks; Battle chooses the options. */
 public final class BattleChestLoot {
     private static final String ROOT = "loot_table/battle/normal/";
     private static final int REFILL_CHEST_COUNT = 4;
-    private static final Set<BlockPos> OPENED_CHESTS = new HashSet<>();
+    private static final double PLAYER_NEARBY_RADIUS_SQUARED = 16.0D * 16.0D;
+    private static final int DEFAULT_REFILL_WEIGHT = 4;
+    private static final int NEARBY_PLAYER_REFILL_WEIGHT = 1;
 
     private BattleChestLoot() {
     }
 
-    public static void reset() {
-        OPENED_CHESTS.clear();
-    }
-
-    public static void markOpened(PlayerContainerEvent.Open event, ServerLevel level) {
-        if (!(event.getContainer() instanceof ChestMenu menu)) {
-            return;
-        }
-        Container opened = menu.getContainer();
-        for (PointGroup group : List.of(PointGroup.CHEST_CENTRAL, PointGroup.CHEST_SECONDARY, PointGroup.CHEST_SPECIAL)) {
-            for (PointPos point : MapPoints.INSTANCE.getPoints(group)) {
-                BlockPos pos = blockPos(point);
-                if (!level.hasChunkAt(pos)) {
-                    continue;
-                }
-                BlockEntity target = level.getBlockEntity(pos);
-                if (target instanceof Container chest && (chest == opened
-                    || opened instanceof CompoundContainer compound && compound.contains(chest))) {
-                    OPENED_CHESTS.add(pos.immutable());
-                    return;
-                }
-            }
-        }
-    }
-
     public static void fillInitial(MinecraftServer server, ServerLevel level) {
-        OPENED_CHESTS.clear();
         fillGroup(server, level, PointGroup.CHEST_CENTRAL, "start", true);
         fillGroup(server, level, PointGroup.CHEST_SECONDARY, "outer", true);
         // Maps without high-value chest points simply have nothing to fill.
         fillGroup(server, level, PointGroup.CHEST_SPECIAL, "high_value", true);
     }
 
-    public static int refillOpened(MinecraftServer server, ServerLevel level) {
-        if (OPENED_CHESTS.isEmpty()) {
-            return 0;
+    public static List<BlockPos> refillRandom(MinecraftServer server, ServerLevel level) {
+        List<ChestCandidate> candidates = refillCandidates(level);
+        if (candidates.isEmpty()) {
+            return Collections.emptyList();
         }
-        List<BlockPos> candidates = new ArrayList<>(OPENED_CHESTS);
-        Collections.shuffle(candidates, new java.util.Random(level.getRandom().nextLong()));
-        int refilled = 0;
-        for (BlockPos pos : candidates) {
-            if (refilled >= REFILL_CHEST_COUNT) {
-                break;
-            }
+
+        List<BlockPos> refilled = new ArrayList<>();
+        int selectionCount = Math.min(REFILL_CHEST_COUNT, candidates.size());
+        for (int selection = 0; selection < selectionCount; selection++) {
+            ChestCandidate candidate = removeWeightedCandidate(candidates, level, level.getRandom());
+            BlockPos pos = candidate.pos();
             Container container = chestAt(level, pos);
-            if (container == null) {
-                OPENED_CHESTS.remove(pos);
-                continue;
-            }
-            PointGroup group = chestGroup(pos);
-            if (group == null) {
-                OPENED_CHESTS.remove(pos);
-                continue;
-            }
             try {
                 LootParams params = lootParams(level, pos);
                 List<ItemStack> stacks;
-                if (group == PointGroup.CHEST_CENTRAL) {
+                if (candidate.group() == PointGroup.CHEST_CENTRAL) {
                     LootTable update = decodeTable(server, readJson(server, "update_items.json"),
                         Identifier.fromNamespaceAndPath(Java_reforged.MODID, "battle/normal/update_items"));
                     stacks = new ArrayList<>();
@@ -110,17 +73,61 @@ public final class BattleChestLoot {
                         stacks.addAll(update.getRandomItems(params));
                     }
                 } else {
-                    String directory = group == PointGroup.CHEST_SPECIAL ? "high_value" : "outer";
+                    String directory = candidate.group() == PointGroup.CHEST_SPECIAL ? "high_value" : "outer";
                     stacks = rollGroup(loadGroup(server, directory), params, level.getRandom());
                 }
                 if (placeStacks(container, stacks, level.getRandom())) {
-                    refilled++;
+                    refilled.add(pos);
                 }
             } catch (RuntimeException | IOException exception) {
                 Java_reforged.LOGGER.error("Unable to refill Battle chest at {}", pos, exception);
             }
         }
         return refilled;
+    }
+
+    private static List<ChestCandidate> refillCandidates(ServerLevel level) {
+        List<ChestCandidate> candidates = new ArrayList<>();
+        for (PointGroup group : List.of(PointGroup.CHEST_CENTRAL, PointGroup.CHEST_SECONDARY, PointGroup.CHEST_SPECIAL)) {
+            for (PointPos point : MapPoints.INSTANCE.getPoints(group)) {
+                BlockPos pos = blockPos(point);
+                if (chestAt(level, pos) != null) {
+                    candidates.add(new ChestCandidate(pos.immutable(), group));
+                }
+            }
+        }
+        return candidates;
+    }
+
+    private static ChestCandidate removeWeightedCandidate(
+        List<ChestCandidate> candidates,
+        ServerLevel level,
+        RandomSource random
+    ) {
+        int totalWeight = 0;
+        for (ChestCandidate candidate : candidates) {
+            totalWeight += refillWeight(candidate.pos(), level);
+        }
+
+        int roll = random.nextInt(totalWeight);
+        for (int index = 0; index < candidates.size(); index++) {
+            ChestCandidate candidate = candidates.get(index);
+            roll -= refillWeight(candidate.pos(), level);
+            if (roll < 0) {
+                return candidates.remove(index);
+            }
+        }
+        return candidates.removeLast();
+    }
+
+    private static int refillWeight(BlockPos pos, ServerLevel level) {
+        Vec3 center = Vec3.atCenterOf(pos);
+        boolean playerNearby = level.players().stream()
+            .filter(ServerPlayer::isAlive)
+            .filter(player -> !player.isSpectator())
+            .filter(player -> BattleRuntime.isParticipant(player.getUUID()))
+            .anyMatch(player -> player.distanceToSqr(center) <= PLAYER_NEARBY_RADIUS_SQUARED);
+        return playerNearby ? NEARBY_PLAYER_REFILL_WEIGHT : DEFAULT_REFILL_WEIGHT;
     }
 
     private static void fillGroup(MinecraftServer server, ServerLevel level, PointGroup pointGroup, String directory, boolean clear) {
@@ -183,17 +190,6 @@ public final class BattleChestLoot {
             score += extra.kpScore();
         }
         return stacks;
-    }
-
-    private static PointGroup chestGroup(BlockPos pos) {
-        for (PointGroup group : List.of(PointGroup.CHEST_CENTRAL, PointGroup.CHEST_SECONDARY, PointGroup.CHEST_SPECIAL)) {
-            for (PointPos point : MapPoints.INSTANCE.getPoints(group)) {
-                if (pos.equals(blockPos(point))) {
-                    return group;
-                }
-            }
-        }
-        return null;
     }
 
     private static List<BattleEntry> readEntries(MinecraftServer server, String path) throws IOException {
@@ -289,6 +285,9 @@ public final class BattleChestLoot {
     }
 
     private record BattleEntry(LootTable table, int weight, int kpScore) {
+    }
+
+    private record ChestCandidate(BlockPos pos, PointGroup group) {
     }
 
     private record GroupLoot(List<BattleEntry> kits, List<BattleEntry> extras, int targetScore, boolean allowOverflow) {

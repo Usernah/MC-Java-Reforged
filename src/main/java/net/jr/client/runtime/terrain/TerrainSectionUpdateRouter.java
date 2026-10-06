@@ -1,12 +1,13 @@
 package net.jr.client.runtime.terrain;
 
 import javax.annotation.Nullable;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.context.LocalClientScope;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.SectionUpdateTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 
@@ -21,8 +22,8 @@ public final class TerrainSectionUpdateRouter {
         int sectionZ,
         boolean playerChanged
     ) {
-        LocalClient activeClient = LocalClientScope.currentClientOrNull();
-        LocalClientSlot owner = activeClient != null
+        ClientInstance activeClient = Client.currentOrNull();
+        Slots owner = activeClient != null
             ? activeClient.slot()
             : ClientRuntime.INSTANCE.slots().primary();
         ClientLevel ownerLevel = owner.renderState().level();
@@ -31,8 +32,8 @@ public final class TerrainSectionUpdateRouter {
         }
 
         boolean routed = false;
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
-            LocalClientSlot slot = client.slot();
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+            Slots slot = client.slot();
             ClientLevel slotLevel = slot.renderState().level();
             if (slotLevel != null && slotLevel.dimension().equals(ownerLevel.dimension())) {
                 routed = true;
@@ -50,12 +51,12 @@ public final class TerrainSectionUpdateRouter {
         if (activeSlot == null) {
             return true;
         }
-        for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+        for (Slots slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
             if (
                 slot.id() > activeSlot
                     && slot.renderState().level() == level
                     && ClientRuntime.INSTANCE.clients().clientOrNull(slot.id()) != null
-                    && LocalClientReadinessPolicy.worldReady(slot.id())
+                    && ReadinessPolicy.worldReady(slot.id())
             ) {
                 return false;
             }
@@ -64,7 +65,7 @@ public final class TerrainSectionUpdateRouter {
     }
 
     private static void setDirty(
-        LocalClientSlot slot,
+        Slots slot,
         int sectionX,
         int sectionY,
         int sectionZ,

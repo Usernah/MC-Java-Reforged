@@ -118,7 +118,6 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             Asset.MC("textures/gui/sprites/container/crafting_menu/icons/search.png");
 
     private final Asset background;
-    private final int slotId;
     private final int craftingColumns;
     private final int craftingRows;
     private final CraftingScreenLayout layout;
@@ -154,7 +153,6 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             CraftingScreenLayout layout
     ) {
         super(menu, inventory, title, imageWidth, imageHeight);
-        this.slotId = slotId;
         this.background = background;
         this.craftingColumns = craftingColumns;
         this.craftingRows = craftingRows;
@@ -1101,7 +1099,6 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         this.setFocused(this.recipeGrid);
         var rectangle = this.recipeGrid.getFocused().getRectangle();
         Cursor.moveTo(
-            this.slotId,
             rectangle.left() + rectangle.width() / 2.0D,
             rectangle.top() + rectangle.height() / 2.0D
         );
@@ -1137,8 +1134,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         if (this.recipeGrid.getFocused() != null) {
             return true;
         }
-        double cursorX = Cursor.x(this.slotId);
-        double cursorY = Cursor.y(this.slotId);
+        double cursorX = Cursor.x();
+        double cursorY = Cursor.y();
         return cursorX >= this.recipeGrid.getX()
             && cursorY >= this.recipeGrid.getY()
             && cursorX < this.recipeGrid.getX() + this.recipeGrid.getWidth()

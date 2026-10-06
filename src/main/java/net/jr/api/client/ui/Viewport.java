@@ -1,68 +1,42 @@
 package net.jr.api.client.ui;
 
+import javax.annotation.Nullable;
+
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.viewport.ViewportArea;
-import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.client.runtime.viewport.WindowMetrics;
 
 public final class Viewport {
-    private Viewport() {}
-
-    public static int width() {
-        return width(LocalClientScope.currentClient().slotId());
+    private Viewport() {
     }
 
-    public static int height() {
-        return height(LocalClientScope.currentClient().slotId());
+    @Nullable
+    public static ViewportArea currentOrNull() {
+        Integer slotId = SlotScope.idOrNull();
+
+        return slotId != null
+                ? ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId)
+                : null;
     }
 
-    public static int width(int slotId) {
-        ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slotId);
-        return ViewportGuiScale.logicalWidth(viewport);
+    public static ViewportArea current() {
+        return get(SlotScope.requireId());
     }
 
-    public static int height(int slotId) {
-        ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slotId);
-        return ViewportGuiScale.logicalHeight(viewport);
+    @Nullable
+    public static ViewportArea getOrNull(int slotId) {
+        return ClientRuntime.INSTANCE
+                .viewports()
+                .viewportOrNull(slotId);
     }
 
-    public static int windowWidth() {
-        return ClientRuntime.INSTANCE.viewports().windowMetrics().guiWidth();
+    public static ViewportArea get(int slotId) {
+        return ClientRuntime.INSTANCE.viewports().viewport(slotId);
     }
 
-    public static int windowHeight() {
-        return ClientRuntime.INSTANCE.viewports().windowMetrics().guiHeight();
-    }
+    public static WindowMetrics window() {
+        return ClientRuntime.INSTANCE.viewports().windowMetrics();
 
-    public static int WindowWidth() {
-        return ClientRuntime.INSTANCE.viewports().windowMetrics().framebufferWidth();
-    }
-
-    public static int WindowHeight() {
-        return ClientRuntime.INSTANCE.viewports().windowMetrics().framebufferHeight();
-    }
-
-    public static int pixelWidth() {
-        return pixelWidth(LocalClientScope.currentClient().slotId());
-    }
-
-    public static int pixelHeight() {
-        return pixelHeight(LocalClientScope.currentClient().slotId());
-    }
-
-    public static int pixelWidth(int slotId) {
-        return ClientRuntime.INSTANCE.viewports().viewport(slotId).width();
-    }
-
-    public static int pixelHeight(int slotId) {
-        return ClientRuntime.INSTANCE.viewports().viewport(slotId).height();
-    }
-
-    public static int windowPixelWidth() {
-        return ClientRuntime.INSTANCE.viewports().windowMetrics().framebufferWidth();
-    }
-
-    public static int windowPixelHeight() {
-        return ClientRuntime.INSTANCE.viewports().windowMetrics().framebufferHeight();
     }
 }

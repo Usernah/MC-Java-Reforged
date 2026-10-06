@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
+import net.jr.client.runtime.client.ClientInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 
@@ -29,7 +29,7 @@ import net.minecraft.world.level.Level;
  * animation and temporal render values are scoped.
  */
 public final class CreateRuntimeState {
-    private static final Map<LocalClient, State> STATES = new WeakHashMap<>();
+    private static final Map<ClientInstance, State> STATES = new WeakHashMap<>();
     private static final ThreadLocal<State> ACTIVE_STATE = new ThreadLocal<>();
 
     private static final String[] STATIC_STATE_CLASSES = {
@@ -110,7 +110,7 @@ public final class CreateRuntimeState {
         ready = true;
     }
 
-    public static Scope activate(LocalClient client) {
+    public static Scope activate(ClientInstance client) {
         // Create owns mutable render collections that are also observed by map
         // worker threads.  Those threads still need JR's Minecraft/session
         // routing, but they must never exchange Create's render state: doing so
@@ -140,7 +140,7 @@ public final class CreateRuntimeState {
         }
     }
 
-    public static void clear(LocalClient client) {
+    public static void clear(ClientInstance client) {
         synchronized (STATES) {
             STATES.remove(client);
         }
@@ -290,14 +290,14 @@ public final class CreateRuntimeState {
         }
     }
 
-    private static State state(LocalClient client, Schema stateSchema) {
+    private static State state(ClientInstance client, Schema stateSchema) {
         synchronized (STATES) {
             return STATES.computeIfAbsent(client, ignored -> new State(stateSchema, stateSchema.baselineCopy()));
         }
     }
 
     private static State primaryState(Schema stateSchema) {
-        LocalClient primary = ClientRuntime.INSTANCE.clients().clientOrNull(0);
+        ClientInstance primary = ClientRuntime.INSTANCE.clients().clientOrNull(0);
         if (primary == null) {
             throw new IllegalStateException("Create state scope requires the primary local client");
         }

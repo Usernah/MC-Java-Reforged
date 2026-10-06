@@ -1,6 +1,6 @@
 package net.jr.mixin.minigame;
 
-import net.jr.client.runtime.context.LocalClientResolver;
+import net.jr.api.client.local.Client;
 import net.jr.experimental_features.minigame.battle.BattlePhase;
 import net.jr.experimental_features.minigame.client.BattleClientState;
 import net.minecraft.client.gui.ActiveTextCollector;
@@ -57,7 +57,7 @@ public class DeathScreenMixin extends Screen {
             return;
         }
 
-        LocalPlayer player = LocalClientResolver.requireActive().player();
+        LocalPlayer player = Client.current().player();
         if (player != null) {
             this.javaReforged$respawnRequested = true;
             player.respawn();
@@ -70,6 +70,9 @@ public class DeathScreenMixin extends Screen {
                     target = "Lnet/minecraft/client/gui/ActiveTextCollector;accept(Lnet/minecraft/client/gui/TextAlignment;IILnet/minecraft/network/chat/Component;)V"))
     private void redirectDeathScore(ActiveTextCollector output, TextAlignment alignment, int x, int y, Component text) {
         if (text == this.deathScore && BattleClientState.isBattle()) {
+            return;
+        }
+        if (text == this.title) {
             return;
         }
 

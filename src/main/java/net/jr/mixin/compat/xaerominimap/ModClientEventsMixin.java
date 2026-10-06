@@ -2,10 +2,10 @@ package net.jr.mixin.compat.xaerominimap;
 
 import net.jr.client.compat.xaero.XaeroMinimapRuntimeState;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientExecution;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
@@ -46,13 +46,13 @@ abstract class ModClientEventsMixin {
         }
 
         ClientRuntime runtime = ClientRuntime.INSTANCE;
-        for (LocalClientSlot slot : runtime.viewports().drawableSlots()) {
-            LocalClient client = runtime.clients().clientOrNull(slot.id());
-            if (client == null || !LocalClientReadinessPolicy.gameplayReady(client)) {
+        for (Slots slot : runtime.viewports().drawableSlots()) {
+            ClientInstance client = runtime.clients().clientOrNull(slot.id());
+            if (client == null || !ReadinessPolicy.gameplayReady(client)) {
                 continue;
             }
 
-            LocalClientExecution.runForClient(slot.id(), () -> {
+            InstanceExecution.runForClient(slot.id(), () -> {
                 ViewportArea viewport = runtime.viewports().viewport(slot.id());
                 try (GuiViewportScope ignored = GuiViewportScope.enter(graphics, viewport)) {
                     this.javaReforged$renderCurrent(graphics, deltaTracker);

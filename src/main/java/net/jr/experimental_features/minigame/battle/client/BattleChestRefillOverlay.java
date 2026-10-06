@@ -5,7 +5,7 @@ import net.jr.api.client.render.gui.IGlobalRenderObject;
 import net.jr.api.client.resource.Asset;
 import net.jr.client.components.elements.ImageElement;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
+import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.experimental_features.minigame.client.BattleClientState;
 
 /** One window-wide animation, regardless of how many local viewports are active. */
@@ -25,7 +25,7 @@ public final class BattleChestRefillOverlay implements IGlobalRenderObject {
             return;
         }
         long localPlayers = ClientRuntime.INSTANCE.clients().all().stream()
-            .filter(LocalClientReadinessPolicy::worldReady)
+            .filter(ReadinessPolicy::worldReady)
             .count();
         if (localPlayers == 0) {
             return;

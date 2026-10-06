@@ -35,7 +35,7 @@ abstract class HudRenderHelperMixin {
         )
     )
     private static int javaReforged$viewportWidth(Window window) {
-        return Viewport.width();
+        return Viewport.current().logicalGuiWidth();
     }
 
     @Redirect(
@@ -46,7 +46,7 @@ abstract class HudRenderHelperMixin {
         )
     )
     private static int javaReforged$viewportHeight(Window window) {
-        return Viewport.height();
+        return Viewport.current().logicalGuiHeight();
     }
 
     @ModifyArg(

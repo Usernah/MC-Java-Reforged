@@ -3,20 +3,18 @@ package net.jr.mixin.runtime;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientExecution;
-import net.jr.client.runtime.context.PrimaryTickScope;
-import net.jr.client.runtime.context.SlotResolver;
-import net.jr.client.runtime.input.LocalScreenInputHandler;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.context.*;
+import net.jr.client.runtime.input.ScreenInputHandler;
 import net.jr.client.runtime.network.ClientPacketHandler;
 import net.jr.client.runtime.network.PacketExecutionRouter;
 import net.jr.client.runtime.player.BedrockBridgeUseHandler;
 import net.jr.client.runtime.render.pass.HudRenderPass;
 import net.jr.client.runtime.render.pass.WorldExtractionPass;
 import net.jr.client.runtime.render.experimental.ExperimentalRenderController;
-import net.jr.client.runtime.session.LocalClientDisconnectHandler;
-import net.jr.client.runtime.ui.LocalScreenManager;
-import net.jr.client.runtime.ui.LocalScreenTransitionHandler;
+import net.jr.client.runtime.session.DisconnectHandler;
+import net.jr.client.runtime.ui.SlotScreenManager;
+import net.jr.client.runtime.ui.SlotScreenTransitionHandler;
 import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
@@ -119,8 +117,8 @@ public abstract class MinecraftMixin {
             return;
         }
 
-        try (LocalClientExecution.Scope ignored =
-                     LocalClientExecution.enterForClient(minecraft, ownerSlotId)) {
+        try (InstanceExecution.Scope ignored =
+                     InstanceExecution.enterForClient(minecraft, ownerSlotId)) {
             original.call(minecraft);
         }
     }
@@ -142,14 +140,14 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "handleKeybinds", at = @At("HEAD"), cancellable = true)
     private void javaReforged$skipKeybindsUntilSlotGameplayReady(CallbackInfo ci) {
-        if (!LocalClientReadinessPolicy.currentGameplayReady()) {
+        if (!ReadinessPolicy.currentGameplayReady()) {
             ci.cancel();
         }
     }
 
     @Redirect(method = "handleKeybinds", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;isMouseGrabbed()Z"))
     private boolean javaReforged$usePerClientGameplayCapture(MouseHandler mouseHandler) {
-        return LocalScreenInputHandler.isGameplayCaptured((Minecraft) (Object) this, mouseHandler);
+        return ScreenInputHandler.isGameplayCaptured((Minecraft) (Object) this, mouseHandler);
     }
 
     @Inject(method = "wrapRunnable", at = @At("HEAD"), cancellable = true)
@@ -164,7 +162,7 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
     private void javaReforged$makePauseScreenLocal(boolean pauseOnly, CallbackInfo ci) {
-        LocalScreenManager.openLocalPause((Minecraft)(Object)this, pauseOnly);
+        SlotScreenManager.openLocalPause((Minecraft)(Object)this, pauseOnly);
         ci.cancel();
     }
 
@@ -194,7 +192,7 @@ public abstract class MinecraftMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;setScreen(Lnet/minecraft/client/gui/screens/Screen;)V")
     )
     private void javaReforged$bootstrapPrimaryScreen(Gui gui, Screen screen) {
-        LocalScreenManager.bootstrapPrimary((Minecraft) (Object) this, screen);
+        SlotScreenManager.bootstrapPrimary((Minecraft) (Object) this, screen);
     }
 
     @WrapOperation(
@@ -210,7 +208,7 @@ public abstract class MinecraftMixin {
         // Keep it for the initial world load, but not for a local respawn or transition.
         boolean localWorldVisible = ClientRuntime.INSTANCE.viewports().presentedCount() > 1
             || ClientRuntime.INSTANCE.clients().all().stream()
-                .anyMatch(LocalClientReadinessPolicy::worldReady);
+                .anyMatch(ReadinessPolicy::worldReady);
         if (!localWorldVisible) {
             original.call(minecraft, advanceGameTime);
         }
@@ -220,12 +218,12 @@ public abstract class MinecraftMixin {
     private void javaReforged$closeCompletedTestJoiningScreen(boolean renderLevel, CallbackInfo ci) {
         Minecraft minecraft = (Minecraft) (Object) this;
         PreJoinWorldLoad.tick(minecraft);
-        LocalScreenTransitionHandler.closeCompletedPrimaryJoiningScreen(minecraft);
+        SlotScreenTransitionHandler.closeCompletedPrimaryJoiningScreen(minecraft);
     }
 
     @Inject(method = "tick", at = @At("RETURN"))
     private void javaReforged$tickSecondaryScreens(CallbackInfo ci) {
-        LocalScreenManager.tickSecondary();
+        SlotScreenManager.tickSecondary();
     }
 
     @Redirect(method = "resizeGui", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;resize(II)V"))
@@ -247,8 +245,12 @@ public abstract class MinecraftMixin {
             boolean stopSound,
             CallbackInfo ci
     ) {
+        Integer slotId = SlotScope.idOrNull();
+        if (slotId != null && slotId != 0) {
+            return;
+        }
         PreJoinWorldLoad.onMinecraftDisconnect();
-        LocalClientDisconnectHandler.returnToPrimaryOnly(
+        DisconnectHandler.returnToPrimaryOnly(
                 (Minecraft)(Object)this
         );
     }

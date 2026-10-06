@@ -1,14 +1,16 @@
 package net.jr.client.runtime.render.pass;
 
+import net.jr.api.client.local.Client;
+import net.jr.api.client.render.gui.BottomHudRenderContext;
 import net.jr.api.client.render.gui.GuiRenderObjects;
 import net.jr.api.client.render.gui.HudRenderContext;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.render.state.HudStateScope;
-import net.jr.client.runtime.ui.LocalChatRouter;
-import net.jr.client.runtime.ui.SecondaryWorldLoadingScreen;
+import net.jr.client.runtime.ui.ChatRouter;
+import net.jr.screens.SecondaryWorldLoadingScreen;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
 import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.Minecraft;
@@ -18,6 +20,7 @@ import net.minecraft.client.gui.Hud;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.debug.DebugOptionsScreen;
+import net.minecraft.client.player.LocalPlayer;
 
 public final class HudRenderPass {
     private HudRenderPass() {
@@ -25,40 +28,46 @@ public final class HudRenderPass {
 
     public static void tick(Gui gui) {
         Hud hud = gui.hud;
-        LocalClientExecution.runPrimary(() -> {
+        InstanceExecution.runPrimary(() -> {
             try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
                 gui.tick();
             }
         });
 
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
-            if (client.slotId() == 0 || !LocalClientReadinessPolicy.worldBound(client)) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+            if (client.isPrimary() || !ReadinessPolicy.worldBound(client)) {
                 continue;
             }
-            LocalClientExecution.runForClient(client.slotId(), () -> {
+            InstanceExecution.runForClient(client.slotId(), () -> {
                 try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
                     gui.chatListener().tick();
                     hud.tick(Minecraft.getInstance().isPaused());
+                    LocalPlayer player = client.player();
+
+                    if (client.screen() == null
+                            && player != null
+                            && player.isDeadOrDying()) {
+                        gui.setScreen(null);
+                    }
                 }
             });
         }
     }
 
     public static void tickChat(ChatComponent chat) {
-        LocalChatRouter.tick(chat, Minecraft.getInstance().gui.hud.getGuiTicks());
+        ChatRouter.tick(chat, Minecraft.getInstance().gui.hud.getGuiTicks());
     }
 
     public static void extractCurrent(
             Hud hud,
             HudRenderContext context
     ) {
-        LocalClient client = context.client();
-        if (!LocalClientReadinessPolicy.gameplayReady(client)) {
+        if (!ReadinessPolicy.currentGameplayReady()) {
             return;
         }
         GuiGraphicsExtractor graphics = context.graphics();
         var deltaTracker = context.deltaTracker();
-        Screen screen = client.screen();
+        Screen screen = Client.current().screen();
         if (screen != null) {
             try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
                 ((HudAccessor) hud).javaReforged$extractCameraEffects(
@@ -89,6 +98,21 @@ public final class HudRenderPass {
                             ViewportHudLayout.pushBottomInset(bottomInset)
             ) {
                 GuiRenderObjects.renderHud(context);
+                int availableHeight = Math.max(
+                        0,
+                        Math.round(context.viewport().guiHeight() - bottomInset)
+                );
+                BottomHudRenderContext bottomContext =
+                        BottomHudRenderContext.from(context, availableHeight);
+                ViewportHudLayout.pushBottomScaleTransform(
+                        graphics,
+                        availableHeight
+                );
+                try {
+                    GuiRenderObjects.renderBottomHud(bottomContext);
+                } finally {
+                    ViewportHudLayout.popBottomTransform(graphics);
+                }
             }
         }
     }
@@ -98,7 +122,7 @@ public final class HudRenderPass {
             return;
         }
 
-        if (!(context.client().screen() instanceof DebugOptionsScreen)) {
+        if (!(Client.current().screen() instanceof DebugOptionsScreen)) {
             hud.extractDebugOverlay(context.graphics());
             GuiRenderObjects.renderHudTail(context);
         }

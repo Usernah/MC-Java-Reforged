@@ -2,7 +2,8 @@ package net.jr.client.runtime.render.state;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import net.jr.client.runtime.context.LocalClientScope;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.state.HudState;
 import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.gui.Hud;
@@ -19,7 +20,7 @@ public final class HudStateScope implements AutoCloseable {
         HudAccessor accessor = (HudAccessor)hud;
         HudState previousEngineState = new HudState();
         previousEngineState.capture(accessor);
-        HudState clientState = LocalClientScope.currentClient().render().hud();
+        HudState clientState = Client.current().render().hud();
         clientState.install(accessor);
         BINDINGS.get().push(new Binding(hud, clientState, previousEngineState));
     }

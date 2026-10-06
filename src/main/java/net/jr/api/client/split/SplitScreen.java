@@ -1,6 +1,6 @@
 package net.jr.api.client.split;
 
-import net.jr.api.client.local.LocalClients;
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
 
 public final class SplitScreen {
@@ -10,7 +10,7 @@ public final class SplitScreen {
     }
 
     public static boolean isActive() {
-        return LocalClients.count() >= 2;
+        return Client.count() >= 2;
     }
 
     public static boolean requiresMultipleControllersForJoin() {
@@ -23,7 +23,7 @@ public final class SplitScreen {
 
     public static int requiredControllerCountForJoin() {
         return requireMultipleControllersForJoin
-                ? LocalClients.count() + 1
+                ? Client.count() + 1
                 : 1;
     }
 

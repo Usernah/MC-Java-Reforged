@@ -4,7 +4,9 @@ package net.jr.experimental_features.minigame.battle.client;
 import net.jr.Java_reforged;
 import net.jr.experimental_features.minigame.client.BattleClientState;
 import net.jr.mixin.accessors.ClientInputAccessor;
+import net.minecraft.client.player.ClientInput;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec2;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
@@ -24,7 +26,20 @@ public final class BattleMovementLimiter {
             return;
         }
 
-        ((ClientInputAccessor) event.getInput())
-                .javaReforged$setMoveVector(Vec2.ZERO);
+        ClientInput clientInput = event.getInput();
+
+        Input moveBlock = new Input(
+                false,
+                false,
+                false,
+                false,
+                false,
+                clientInput.keyPresses.shift(),
+                false
+        );
+
+        ((ClientInputAccessor) event.getInput()).javaReforged$setMoveVector(Vec2.ZERO);
+        ((ClientInputAccessor) event.getInput()).javaReforged$setKeyPresses(moveBlock);
+
     }
 }

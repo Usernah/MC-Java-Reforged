@@ -1,8 +1,8 @@
 package net.jr.client.sound.music;
 
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.api.client.local.Client;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.client.sound.bridge.MusicManagerBridge;
 import net.jr.client.sound.bridge.SoundEngineBridge;
 import net.jr.client.sound.config.SoundTransitionConfig;
@@ -29,8 +29,8 @@ public final class WorldMusicTransitionHandler {
     }
 
     public static void levelSet(Minecraft minecraft, MusicManager musicManager, WorldMusicTransitionState state) {
-        LocalClient client = LocalClientScope.currentClientOrNull();
-        if (client == null || client.slotId() == 0) finish(minecraft, musicManager, state);
+        ClientInstance client = Client.currentOrNull();
+        if (client == null || client.isPrimary()) finish(minecraft, musicManager, state);
     }
 
     public static void disconnectStarted(
@@ -65,13 +65,13 @@ public final class WorldMusicTransitionHandler {
 
     public static void tick(Minecraft minecraft, MusicManager musicManager, WorldMusicTransitionState state) {
         if (MusicTransitionManager.shouldProtectWorldLoadAudio()
-                && LocalClientReadinessPolicy.worldBound(0)) {
+                && ReadinessPolicy.worldBound(0)) {
             finish(minecraft, musicManager, state);
         }
     }
 
     public static boolean allowForcedLevelStop(WorldMusicTransitionState state) {
-        LocalClient client = LocalClientScope.currentClientOrNull();
+        ClientInstance client = Client.currentOrNull();
         if (client != null && client.slotId() != 0) return false;
         return !MusicTransitionManager.shouldProtectWorldLoadAudio()
                 && !MusicTransitionManager.shouldProtectForcedSoundStop()

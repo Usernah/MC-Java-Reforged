@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -31,7 +30,7 @@ import java.util.OptionalDouble;
 import javax.annotation.Nullable;
 import net.jr.client.render.pipeline.ModRenderPipelines;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.mixin.accessors.LevelRendererAccessor;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
@@ -67,9 +66,9 @@ public final class TerrainMultiDraw {
         | GpuBuffer.USAGE_INDIRECT_PARAMETERS;
     private static final int BUFFER_USAGE_CPU_UNIFORM = GpuBuffer.USAGE_MAP_WRITE | GpuBuffer.USAGE_UNIFORM;
 
-    private static final SlotBuffers[] SLOT_BUFFERS = new SlotBuffers[LocalClientSlotRegistry.MAX_SLOTS];
-    private static final SlotCache[] SLOT_CACHES = new SlotCache[LocalClientSlotRegistry.MAX_SLOTS];
-    private static final long[] SLOT_INVALIDATION_GENERATIONS = new long[LocalClientSlotRegistry.MAX_SLOTS];
+    private static final SlotBuffers[] SLOT_BUFFERS = new SlotBuffers[ClientSlots.MAX_SLOTS];
+    private static final SlotCache[] SLOT_CACHES = new SlotCache[ClientSlots.MAX_SLOTS];
+    private static final long[] SLOT_INVALIDATION_GENERATIONS = new long[ClientSlots.MAX_SLOTS];
     private static final Map<ChunkSectionsToRender, Prepared> PREPARED = new IdentityHashMap<>();
 
     private static int frameLogicalDraws;

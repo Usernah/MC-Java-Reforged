@@ -8,14 +8,14 @@ import net.jr.api.client.render.gui.GuiRenderObjects;
 import net.jr.api.client.render.gui.GuiRenderPhase;
 import net.jr.api.client.render.gui.HudRenderContext;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.render.pass.HudRenderPass;
 import net.jr.client.runtime.render.pass.ScreenOverlayRenderPass;
 import net.jr.client.runtime.render.pass.ScreenRenderPass;
 import net.jr.client.runtime.render.pass.ToastRenderPass;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.minecraft.client.DeltaTracker;
@@ -177,7 +177,7 @@ public final class GuiRenderPipeline {
             };
 
             if (frame.client() != null) {
-                LocalClientExecution.runForClient(
+                InstanceExecution.runForClient(
                         context.slot().id(),
                         extraction
                 );
@@ -194,9 +194,9 @@ public final class GuiRenderPipeline {
     private static List<ViewFrame> collectViews(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         List<ViewFrame> views = new ArrayList<>();
-        for (LocalClientSlot slot : runtime.viewports().drawableSlots()) {
+        for (Slots slot : runtime.viewports().drawableSlots()) {
             ViewportArea viewport = runtime.viewports().viewport(slot.id());
-            LocalClient client = runtime.clients().clientOrNull(slot.id());
+            ClientInstance client = runtime.clients().clientOrNull(slot.id());
             GuiRenderContext context = new LocalFrameContext(slot, viewport, graphics, deltaTracker);
             HudRenderContext hudContext = client == null ? null
                 : new HudFrameContext(slot, viewport, graphics, deltaTracker, client);
@@ -210,17 +210,17 @@ public final class GuiRenderPipeline {
         void extract(ViewFrame frame);
     }
 
-    private record ViewFrame(GuiRenderContext context, LocalClient client, HudRenderContext hudContext) {
+    private record ViewFrame(GuiRenderContext context, ClientInstance client, HudRenderContext hudContext) {
     }
 
     private record LocalFrameContext(
-        LocalClientSlot slot, ViewportArea viewport, GuiGraphicsExtractor graphics, DeltaTracker deltaTracker
+            Slots slot, ViewportArea viewport, GuiGraphicsExtractor graphics, DeltaTracker deltaTracker
     ) implements GuiRenderContext {
     }
 
     private record HudFrameContext(
-        LocalClientSlot slot, ViewportArea viewport, GuiGraphicsExtractor graphics,
-        DeltaTracker deltaTracker, LocalClient client
+            Slots slot, ViewportArea viewport, GuiGraphicsExtractor graphics,
+            DeltaTracker deltaTracker, ClientInstance client
     ) implements HudRenderContext {
     }
 

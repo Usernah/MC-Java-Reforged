@@ -2,7 +2,7 @@ package net.jr.client.ui.navigation;
 
 import net.jr.Java_reforged;
 import net.jr.client.sound.action.InputActionSounds;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.neoforged.api.distmarker.Dist;
@@ -36,10 +36,14 @@ public final class UiNavigationEvents {
             && screen instanceof AbstractContainerScreen<?>) {
             InputActionSounds.FocusSnapshot focusBefore = KEY_FOCUS.get();
             KEY_FOCUS.remove();
-            boolean handled = UiInputModeController.applyContainerSlotFocusFallback(
-                screen,
-                event.getKeyCode()
+            boolean handled = UiInputModeController.applyUnifiedContainerFocusNavigation(
+                screen, event.getKeyCode()
             );
+            if (!handled && screen instanceof CustomSlotLayout) {
+                handled = UiInputModeController.applyContainerSlotFocusFallback(
+                    screen, event.getKeyCode()
+                );
+            }
             event.setCanceled(true);
             if (handled) {
                 if (focusBefore != null) {

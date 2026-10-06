@@ -1,6 +1,6 @@
 package net.jr.client.runtime.context;
 
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.mixin.accessors.GuiAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -30,7 +30,7 @@ public final class MinecraftClientStateScope implements AutoCloseable {
         this.previousScreen = ((GuiAccessor)minecraft.gui).javaReforged$getRawScreen();
     }
 
-    public static MinecraftClientStateScope bind(Minecraft minecraft, LocalClientSlot slot) {
+    public static MinecraftClientStateScope bind(Minecraft minecraft, Slots slot) {
         MinecraftClientStateScope scope = new MinecraftClientStateScope(minecraft);
         LocalPlayer player = livePlayerOrNull(slot.gameplayState().player());
         minecraft.level = slot.renderState().level();

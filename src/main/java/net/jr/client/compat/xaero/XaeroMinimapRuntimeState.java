@@ -3,9 +3,10 @@ package net.jr.client.compat.xaero;
 import java.io.IOException;
 import java.util.Map;
 import java.util.WeakHashMap;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.client.ClientInstance;
 import net.jr.mixin.compat.xaerominimap.MinimapAccessor;
 import net.jr.mixin.compat.xaerominimap.MinimapElementWorldRendererHandlerAccessor;
 import net.jr.mixin.compat.xaerominimap.MinimapRendererAccessor;
@@ -20,7 +21,7 @@ import xaero.hud.minimap.element.render.MinimapElementRenderer;
 import xaero.hud.minimap.element.render.world.MinimapElementWorldRendererHandler;
 
 public final class XaeroMinimapRuntimeState {
-    private static final Map<LocalClient, State> STATES = new WeakHashMap<>();
+    private static final Map<ClientInstance, State> STATES = new WeakHashMap<>();
     private static final ThreadLocal<State> ACTIVE_STATE = new ThreadLocal<>();
 
     private XaeroMinimapRuntimeState() {
@@ -54,7 +55,7 @@ public final class XaeroMinimapRuntimeState {
     }
 
     private static State currentState(Minimap minimap) {
-        LocalClient client = LocalClientScope.currentClientOrNull();
+        ClientInstance client = Client.currentOrNull();
         if (client == null) {
             client = ClientRuntime.INSTANCE.clients().client(0);
         }
@@ -65,7 +66,7 @@ public final class XaeroMinimapRuntimeState {
         return state(ClientRuntime.INSTANCE.clients().client(0), minimap);
     }
 
-    private static State state(LocalClient client, Minimap minimap) {
+    private static State state(ClientInstance client, Minimap minimap) {
         synchronized (STATES) {
             return STATES.computeIfAbsent(client, ignored -> new State(client.slotId(), minimap));
         }

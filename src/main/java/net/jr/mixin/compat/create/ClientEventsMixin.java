@@ -3,8 +3,8 @@ package net.jr.mixin.compat.create;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.compat.create.CreateRuntimeState;
 import net.minecraft.world.level.Level;
@@ -74,15 +74,15 @@ abstract class ClientEventsMixin {
 
     private static void runEveryClient(Runnable action) {
         boolean ran = false;
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             if (client.player() == null || client.level() == null) {
                 continue;
             }
-            LocalClientExecution.runForClient(client.slotId(), action);
+            InstanceExecution.runForClient(client.slotId(), action);
             ran = true;
         }
         if (!ran) {
-            LocalClientExecution.runPrimary(action);
+            InstanceExecution.runPrimary(action);
         }
     }
 }

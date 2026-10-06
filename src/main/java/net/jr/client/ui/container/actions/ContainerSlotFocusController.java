@@ -1,6 +1,6 @@
 package net.jr.client.ui.container.actions;
 
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
+import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.ui.container.slots.SlotGrid;
 import net.jr.client.ui.container.slots.SlotPos;
 import net.jr.client.ui.container.slots.VanillaSlotLayer;
@@ -8,7 +8,9 @@ import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.runtime.state.UiNavigationState;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;
 
@@ -167,6 +169,50 @@ public final class ContainerSlotFocusController {
         state().containerSlotFocus().remove(screen);
     }
 
+    public static List<SlotFocusTarget> focusTargets(AbstractContainerScreen<?> screen) {
+        if (screen instanceof CustomSlotLayout layout) {
+            if (!layout.allowsSlotFocusNavigation()) {
+                return List.of();
+            }
+            return screen.getMenu().slots.stream()
+                .filter(slot -> slot.isActive() && layout.slotGrid().has(slot.index))
+                .map(slot -> {
+                    SlotPos position = layout.slotGrid().get(slot.index);
+                    return new SlotFocusTarget(slot, new ScreenRectangle(
+                        position.x(), position.y(), position.width(), position.height()
+                    ));
+                })
+                .toList();
+        }
+
+        AbstractContainerScreenAccessor access = accessor(screen);
+        int left = access.javaReforged$getLeftPos();
+        int top = access.javaReforged$getTopPos();
+        return activeSlots(screen).stream()
+            .map(slot -> new SlotFocusTarget(
+                slot,
+                new ScreenRectangle(left + slot.x, top + slot.y, 16, 16)
+            ))
+            .toList();
+    }
+
+    public static boolean focusSlot(AbstractContainerScreen<?> screen, Slot slot) {
+        if (screen instanceof CustomSlotLayout layout) {
+            if (!layout.allowsSlotFocusNavigation() || !layout.slotGrid().has(slot.index)) {
+                return false;
+            }
+            screen.clearFocus();
+            layout.slotLayer().setFocusedSlot(slot);
+            syncCursorToGridSlot(layout.slotGrid(), slot);
+            return true;
+        }
+        if (!activeSlots(screen).contains(slot)) {
+            return false;
+        }
+        setFocus(screen, slot);
+        return true;
+    }
+
     private static Slot focused(AbstractContainerScreen<?> screen) {
         Integer index = state().containerSlotFocus().get(screen);
         if (index == null || index < 0 || index >= screen.getMenu().slots.size()) return null;
@@ -190,10 +236,10 @@ public final class ContainerSlotFocusController {
 
     private static void setFocus(AbstractContainerScreen<?> screen, Slot slot) {
         // A vanilla container slot and a screen widget must not both own controller focus.
-        screen.setFocused(null);
+        screen.clearFocus();
         state().containerSlotFocus().put(screen, slot.index);
         FocusedSlotCenter center = getFocusedSlotCenter(screen);
-        if (center != null) LocalGamepadInputHandler.moveVirtualCursorToFocusedSlot(center.guiX, center.guiY);
+        if (center != null) syncCursorToFocusedSlot(center.guiX, center.guiY);
     }
 
     private static AbstractContainerScreenAccessor accessor(AbstractContainerScreen<?> screen) {
@@ -206,12 +252,21 @@ public final class ContainerSlotFocusController {
     }
 
     private static void syncCursorToGridSlot(SlotGrid grid, Slot slot) {
-        LocalGamepadInputHandler.moveVirtualCursorToFocusedSlot(
+        syncCursorToFocusedSlot(
             SlotNavigationResolver.centerX(grid, slot),
             SlotNavigationResolver.centerY(grid, slot)
         );
     }
 
+    private static void syncCursorToFocusedSlot(double guiX, double guiY) {
+        if (UiInputModeController.isFocusNavigationActive()
+            || GamepadInputHandler.isControllerCursorActive()) {
+            GamepadInputHandler.moveVirtualCursorToFocusedSlot(guiX, guiY);
+        }
+    }
+
     public record FocusedSlotCenter(double guiX, double guiY) {}
+
+    public record SlotFocusTarget(Slot slot, ScreenRectangle rectangle) {}
 
 }

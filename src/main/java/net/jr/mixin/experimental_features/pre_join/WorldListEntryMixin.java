@@ -1,6 +1,6 @@
 package net.jr.mixin.experimental_features.pre_join;
 
-import net.jr.client.runtime.input.LocalInputActionHandler;
+import net.jr.client.runtime.input.InputActionHandler;
 import net.jr.experimental_features.pre_join.PreJoinWorldEntry;
 import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,6 +26,6 @@ public abstract class WorldListEntryMixin {
         ordinal = 0
     )
     private boolean javaReforged$controllerActivationIsDirect(boolean doubleClick) {
-        return doubleClick || LocalInputActionHandler.isDispatchingControllerPointerClick();
+        return doubleClick || InputActionHandler.isDispatchingControllerPointerClick();
     }
 }

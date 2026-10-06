@@ -6,7 +6,7 @@ import javax.annotation.Nullable;
 import net.jr.api.client.input.IGamepad;
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
+import net.jr.client.runtime.client.ReadinessPolicy;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -52,7 +52,7 @@ public final class PreJoinWorldLoad {
             return;
         }
 
-        if (!loadingObserved || !LocalClientReadinessPolicy.gameplayReady(0)) {
+        if (!loadingObserved || !ReadinessPolicy.gameplayReady(0)) {
             return;
         }
 
@@ -103,7 +103,7 @@ public final class PreJoinWorldLoad {
                 int slotId = entry.getKey();
                 if (runtime.clients().hasClient(slotId)
                     || runtime.clients().sessionOrNull(slotId) != null) {
-                    if (!LocalClientReadinessPolicy.gameplayReady(slotId)) {
+                    if (!ReadinessPolicy.gameplayReady(slotId)) {
                         return false;
                     }
                     continue;

@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.util.JsonFileStore;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
@@ -358,7 +358,7 @@ public final class GamepadBindingRegistry {
     }
 
     private static GamepadBindingEvaluator[] createEvaluators() {
-        GamepadBindingEvaluator[] evaluators = new GamepadBindingEvaluator[LocalClientSlotRegistry.MAX_SLOTS];
+        GamepadBindingEvaluator[] evaluators = new GamepadBindingEvaluator[ClientSlots.MAX_SLOTS];
         for (int slotId = 0; slotId < evaluators.length; slotId++) {
             evaluators[slotId] = new GamepadBindingEvaluator();
         }
@@ -413,7 +413,7 @@ public final class GamepadBindingRegistry {
     }
 
     private static PlayerBindings[] createPlayerBindings() {
-        PlayerBindings[] bindings = new PlayerBindings[LocalClientSlotRegistry.MAX_SLOTS];
+        PlayerBindings[] bindings = new PlayerBindings[ClientSlots.MAX_SLOTS];
         for (int slotId = 0; slotId < bindings.length; slotId++) {
             bindings[slotId] = new PlayerBindings();
         }

@@ -1,9 +1,11 @@
 package net.jr.client.ui.navigation;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
+
+import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.cursor.MouseCoordinates;
@@ -17,6 +19,7 @@ import net.minecraft.client.gui.navigation.ScreenAxis;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.Nullable;
 
 final class ScreenFocusController {
@@ -66,6 +69,13 @@ final class ScreenFocusController {
     static void initializeFocusFromPointer(Screen screen, Minecraft minecraft) {
         double mouseGuiX = resolveFocusSeedGuiX(minecraft);
         double mouseGuiY = resolveFocusSeedGuiY(minecraft);
+
+        if (screen instanceof AbstractContainerScreen<?> containerScreen
+            && !(screen instanceof CustomSlotLayout)
+            && initializeUnifiedContainerFocus(containerScreen, mouseGuiX, mouseGuiY)) {
+            return;
+        }
+
         if (screen instanceof AbstractContainerScreen<?> containerScreen
             && ContainerSlotFocusController.initializeFocusFromPointer(
                 containerScreen,
@@ -75,6 +85,41 @@ final class ScreenFocusController {
             return;
         }
         initializeListenerFocusFromPointer(screen, mouseGuiX, mouseGuiY);
+    }
+
+    static boolean moveUnifiedContainerFocus(Screen screen, int keyCode) {
+        if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) {
+            return false;
+        }
+
+        Direction direction = Direction.fromKey(keyCode);
+        if (direction == null) {
+            return false;
+        }
+
+        // Custom layouts may own transitions between logical regions (recipes, catalog,
+        // inventory, etc.). Preserve those transitions while a slot owns focus, then use
+        // the unified target list when the slot navigator reaches a real boundary.
+        if (screen instanceof CustomSlotLayout
+            && ContainerSlotFocusController.hasFocusedSlot(containerScreen)
+            && ContainerSlotFocusController.moveFocus(containerScreen, keyCode)) {
+            return true;
+        }
+
+        List<FocusTarget> targets = resolveContainerFocusTargets(containerScreen);
+        if (targets.isEmpty()) {
+            return false;
+        }
+
+        FocusTarget origin = resolveFocusedTarget(containerScreen, targets);
+        FocusTarget target = origin == null
+            ? initialTarget(targets, direction)
+            : nextTarget(targets, origin, direction);
+        if (target == null) {
+            return false;
+        }
+
+        return applyContainerFocusTarget(containerScreen, target);
     }
 
     @Nullable
@@ -94,14 +139,14 @@ final class ScreenFocusController {
     }
 
     private static double resolveFocusSeedGuiX(Minecraft minecraft) {
-        return LocalGamepadInputHandler.isJoystickCursorActive()
-            ? LocalGamepadInputHandler.cursorX()
+        return GamepadInputHandler.isJoystickCursorActive()
+            ? GamepadInputHandler.cursorX()
             : MouseCoordinates.rawMouseToGlobalGuiX(minecraft, minecraft.mouseHandler.xpos());
     }
 
     private static double resolveFocusSeedGuiY(Minecraft minecraft) {
-        return LocalGamepadInputHandler.isJoystickCursorActive()
-            ? LocalGamepadInputHandler.cursorY()
+        return GamepadInputHandler.isJoystickCursorActive()
+            ? GamepadInputHandler.cursorY()
             : MouseCoordinates.rawMouseToGlobalGuiY(minecraft, minecraft.mouseHandler.ypos());
     }
 
@@ -122,6 +167,124 @@ final class ScreenFocusController {
         if (target != null) {
             applyFocusPath(screen, buildInitialFocusPath(screen, target));
         }
+    }
+
+    private static boolean initializeUnifiedContainerFocus(
+        AbstractContainerScreen<?> screen,
+        double mouseGuiX,
+        double mouseGuiY
+    ) {
+        List<FocusTarget> targets = resolveContainerFocusTargets(screen);
+        FocusTarget nearest = targets.stream()
+            .min(Comparator.comparingDouble(target -> squaredDistance(
+                centerX(target.rectangle()), centerY(target.rectangle()), mouseGuiX, mouseGuiY
+            )))
+            .orElse(null);
+        return nearest != null && applyContainerFocusTarget(screen, nearest);
+    }
+
+    private static List<FocusTarget> resolveContainerFocusTargets(
+        AbstractContainerScreen<?> screen
+    ) {
+        List<FocusTarget> targets = new ArrayList<>();
+        for (GuiEventListener listener : resolveTopLevelFocusableListeners(screen)) {
+            ComponentPath childPath = resolveInitialFocusPath(listener);
+            GuiEventListener focusedLeaf = extractFocusedLeaf(childPath);
+            if (childPath == null || !isFocusableLeaf(focusedLeaf)) {
+                continue;
+            }
+            ScreenRectangle rectangle = resolveListenerRectangle(focusedLeaf);
+            if (!isRectangleEmpty(rectangle)) {
+                targets.add(FocusTarget.widget(
+                    focusedLeaf,
+                    ComponentPath.path(screen, childPath),
+                    rectangle
+                ));
+            }
+        }
+        for (ContainerSlotFocusController.SlotFocusTarget slotTarget
+                : ContainerSlotFocusController.focusTargets(screen)) {
+            targets.add(FocusTarget.slot(slotTarget.slot(), slotTarget.rectangle()));
+        }
+        return targets;
+    }
+
+    @Nullable
+    private static FocusTarget resolveFocusedTarget(
+        AbstractContainerScreen<?> screen,
+        List<FocusTarget> targets
+    ) {
+        Integer focusedSlot = ContainerSlotFocusController.getFocusedSlotIndex(screen);
+        if (focusedSlot != null) {
+            return targets.stream()
+                .filter(target -> target.slot() != null && target.slot().index == focusedSlot)
+                .findFirst()
+                .orElse(null);
+        }
+        GuiEventListener focused = resolveFocusedListener(screen);
+        return focused == null ? null : targets.stream()
+            .filter(target -> target.listener() == focused)
+            .findFirst()
+            .orElse(null);
+    }
+
+    @Nullable
+    private static FocusTarget initialTarget(List<FocusTarget> targets, Direction direction) {
+        return targets.stream().min(Comparator
+            .comparingDouble((FocusTarget target) -> direction.initialPrimary(target.rectangle()))
+            .thenComparingDouble(target -> direction.initialSecondary(target.rectangle()))
+        ).orElse(null);
+    }
+
+    @Nullable
+    private static FocusTarget nextTarget(
+        List<FocusTarget> targets,
+        FocusTarget origin,
+        Direction direction
+    ) {
+        Comparator<FocusTarget> straightComparator = Comparator
+            .comparingDouble((FocusTarget target) -> direction.primaryDistance(
+                target.rectangle(), origin.rectangle()
+            ))
+            .thenComparingDouble(target -> direction.secondaryDistance(
+                target.rectangle(), origin.rectangle()
+            ));
+
+        FocusTarget straight = targets.stream()
+            .filter(target -> target != origin
+                && direction.accepts(target.rectangle(), origin.rectangle())
+                && direction.overlapsAxis(target.rectangle(), origin.rectangle()))
+            .min(straightComparator)
+            .orElse(null);
+        if (straight != null) {
+            return straight;
+        }
+
+        return targets.stream()
+            .filter(target -> target != origin
+                && direction.accepts(target.rectangle(), origin.rectangle())
+                && direction.isInsideCone(target.rectangle(), origin.rectangle()))
+            .min(Comparator
+                .comparingDouble((FocusTarget target) -> direction.distanceSquared(
+                    target.rectangle(), origin.rectangle()
+                ))
+                .thenComparingDouble(target -> direction.angularDeviation(
+                    target.rectangle(), origin.rectangle()
+                ))
+                .thenComparing(straightComparator))
+            .orElse(null);
+    }
+
+    private static boolean applyContainerFocusTarget(
+        AbstractContainerScreen<?> screen,
+        FocusTarget target
+    ) {
+        if (target.slot() != null) {
+            return ContainerSlotFocusController.focusSlot(screen, target.slot());
+        }
+        ContainerSlotFocusController.clearFocusedSlot(screen);
+        applyFocusPath(screen, target.path());
+        return true;
     }
 
     @Nullable
@@ -290,5 +453,118 @@ final class ScreenFocusController {
         double deltaX = x1 - x2;
         double deltaY = y1 - y2;
         return deltaX * deltaX + deltaY * deltaY;
+    }
+
+    private static double centerX(ScreenRectangle rectangle) {
+        return rectangle.getCenterInAxis(ScreenAxis.HORIZONTAL);
+    }
+
+    private static double centerY(ScreenRectangle rectangle) {
+        return rectangle.getCenterInAxis(ScreenAxis.VERTICAL);
+    }
+
+    private record FocusTarget(
+        @Nullable Slot slot,
+        @Nullable GuiEventListener listener,
+        @Nullable ComponentPath path,
+        ScreenRectangle rectangle
+    ) {
+        static FocusTarget slot(Slot slot, ScreenRectangle rectangle) {
+            return new FocusTarget(slot, null, null, rectangle);
+        }
+
+        static FocusTarget widget(
+            GuiEventListener listener,
+            ComponentPath path,
+            ScreenRectangle rectangle
+        ) {
+            return new FocusTarget(null, listener, path, rectangle);
+        }
+    }
+
+    private enum Direction {
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT;
+
+        @Nullable
+        static Direction fromKey(int keyCode) {
+            return switch (keyCode) {
+                case org.lwjgl.glfw.GLFW.GLFW_KEY_UP -> UP;
+                case org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN -> DOWN;
+                case org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT -> LEFT;
+                case org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT -> RIGHT;
+                default -> null;
+            };
+        }
+
+        double initialPrimary(ScreenRectangle rectangle) {
+            return switch (this) {
+                case UP -> -centerY(rectangle);
+                case DOWN -> centerY(rectangle);
+                case LEFT -> -centerX(rectangle);
+                case RIGHT -> centerX(rectangle);
+            };
+        }
+
+        double initialSecondary(ScreenRectangle rectangle) {
+            return isHorizontal() ? centerY(rectangle) : centerX(rectangle);
+        }
+
+        boolean accepts(ScreenRectangle candidate, ScreenRectangle origin) {
+            return switch (this) {
+                case UP -> centerY(candidate) < centerY(origin);
+                case DOWN -> centerY(candidate) > centerY(origin);
+                case LEFT -> centerX(candidate) < centerX(origin);
+                case RIGHT -> centerX(candidate) > centerX(origin);
+            };
+        }
+
+        boolean overlapsAxis(ScreenRectangle candidate, ScreenRectangle origin) {
+            if (isHorizontal()) {
+                return rangesOverlap(candidate.top(), candidate.top() + candidate.height(),
+                    origin.top(), origin.top() + origin.height());
+            }
+            return rangesOverlap(candidate.left(), candidate.left() + candidate.width(),
+                origin.left(), origin.left() + origin.width());
+        }
+
+        boolean isInsideCone(ScreenRectangle candidate, ScreenRectangle origin) {
+            return secondaryDistance(candidate, origin) <= primaryDistance(candidate, origin);
+        }
+
+        double primaryDistance(ScreenRectangle candidate, ScreenRectangle origin) {
+            return switch (this) {
+                case UP -> centerY(origin) - centerY(candidate);
+                case DOWN -> centerY(candidate) - centerY(origin);
+                case LEFT -> centerX(origin) - centerX(candidate);
+                case RIGHT -> centerX(candidate) - centerX(origin);
+            };
+        }
+
+        double secondaryDistance(ScreenRectangle candidate, ScreenRectangle origin) {
+            return isHorizontal()
+                ? Math.abs(centerY(candidate) - centerY(origin))
+                : Math.abs(centerX(candidate) - centerX(origin));
+        }
+
+        double distanceSquared(ScreenRectangle candidate, ScreenRectangle origin) {
+            double primary = primaryDistance(candidate, origin);
+            double secondary = secondaryDistance(candidate, origin);
+            return primary * primary + secondary * secondary;
+        }
+
+        double angularDeviation(ScreenRectangle candidate, ScreenRectangle origin) {
+            return secondaryDistance(candidate, origin) / primaryDistance(candidate, origin);
+        }
+
+        boolean isHorizontal() {
+            return this == LEFT || this == RIGHT;
+        }
+    }
+
+    private static boolean rangesOverlap(int aMin, int aMax, int bMin, int bMax) {
+        return aMax > bMin && bMax > aMin;
     }
 }

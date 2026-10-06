@@ -3,15 +3,18 @@ package net.jr.client.runtime.render.pass;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.util.List;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.render.world.WorldRenderBackend;
+import net.jr.client.runtime.render.world.WorldRenderBackends;
+import net.jr.client.runtime.render.world.WorldRenderContextAccess;
+import net.jr.client.runtime.render.world.WorldRenderView;
+import net.jr.client.runtime.render.world.WorldRenderViews;
 import net.jr.client.runtime.render.target.ViewportRenderTargets;
-import net.jr.client.runtime.terrain.TerrainCoordinator;
-import net.jr.client.runtime.terrain.TerrainWorkPhase;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
 import net.jr.mixin.accessors.GameRendererAccessor;
@@ -30,33 +33,38 @@ public final class WorldRenderPass {
 
     public static void renderLevelForVisibleSlots(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
-        ClientRuntime players = ClientRuntime.INSTANCE;
-        TerrainCoordinator.prepareFrame();
-        int terrainDriverSlotId = selectTerrainDriver(players);
-        for (LocalClientSlot slot : players.viewports().drawableSlots()) {
-            ViewportArea viewport = players.viewports().viewport(slot.id());
-            slot.renderState().setAspectRatio(viewport.aspectRatio());
-            if (!canRenderLevel(slot)) {
+        List<WorldRenderView> views = WorldRenderViews.collect(
+            deltaTracker,
+            ReadinessPolicy::gameplayReady
+        );
+        WorldRenderBackend backend = WorldRenderBackends.active();
+        backend.beginRenderFrame(views);
+        for (Slots slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+            ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slot.id());
+            WorldRenderView view = viewForSlot(views, slot.id());
+            if (view == null) {
                 drawWaitingViewport(gameRenderer, slot, viewport);
                 continue;
             }
-            renderSlot(minecraft, gameRenderer, deltaTracker, slot, viewport, slot.id() == terrainDriverSlotId);
+            renderView(minecraft, gameRenderer, backend, view);
         }
     }
 
-    private static void renderSlot(
+    private static void renderView(
         Minecraft minecraft,
         GameRenderer gameRenderer,
-        DeltaTracker deltaTracker,
-        LocalClientSlot slot,
-        ViewportArea viewport,
-        boolean updateTerrain
+        WorldRenderBackend backend,
+        WorldRenderView view
     ) {
+        Slots slot = view.slot();
+        ViewportArea viewport = view.viewport();
+        DeltaTracker deltaTracker = view.deltaTracker();
         try (
-            LocalClientExecution.Scope ignoredClient = LocalClientExecution.enterForClient(minecraft, slot.id());
-            TerrainWorkPhase.Scope ignoredTerrain = updateTerrain ? TerrainWorkPhase.update() : TerrainWorkPhase.drawOnly();
-            ViewportRenderScope.Scope ignoredViewport = ViewportRenderScope.enter(viewport);
-            WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bind(minecraft, slot)
+                InstanceExecution.Scope ignoredClient = InstanceExecution.enterForClient(minecraft, slot.id());
+                WorldRenderContextAccess.Scope ignoredContext = WorldRenderContextAccess.enter(view);
+                ViewportRenderScope.Scope ignoredViewport = ViewportRenderScope.enter(viewport);
+                WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bind(minecraft, slot);
+                WorldRenderBackend.Scope ignoredBackend = backend.enterRenderView(view)
         ) {
             GameRendererAccessor renderer = (GameRendererAccessor)(Object)gameRenderer;
             var gameState = gameRenderer.gameRenderState();
@@ -71,16 +79,6 @@ public final class WorldRenderPass {
             renderer.javaReforged$getGlobalSettingsUniform().update(
                 viewport.width(),
                 viewport.height(),
-                    optionsState.glintStrength,
-                    slot.renderState().level().getGameTime(),
-                    deltaTracker,
-                    optionsState.menuBackgroundBlurriness,
-                    slot.renderState().levelRenderState().cameraRenderState.pos,
-                optionsState.textureFiltering == TextureFilteringMethod.RGSS
-            );
-            renderer.javaReforged$getGlobalSettingsUniform().update(
-                viewport.width(),
-                viewport.height(),
                 optionsState.glintStrength,
                 slot.renderState().level().getGameTime(),
                 deltaTracker,
@@ -91,6 +89,8 @@ public final class WorldRenderPass {
             renderer.javaReforged$getLightmap().render(slot.renderState().lightmapRenderState());
             RenderTarget globalTarget = gameRenderer.mainRenderTarget();
             try (ViewportRenderTargets.Scope ignoredTargets = ViewportRenderTargets.enter(slot.id(), viewport, globalTarget)) {
+                minecraft.level = view.level();
+                minecraft.player = view.player();
                 gameRenderer.renderLevel(deltaTracker);
                 minecraft.levelRenderer.doEntityOutline();
                 Identifier postEffect = gameRenderer.currentPostEffect();
@@ -105,21 +105,16 @@ public final class WorldRenderPass {
         }
     }
 
-    private static boolean canRenderLevel(LocalClientSlot slot) {
-        LocalClient client = ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
-        return client != null && LocalClientReadinessPolicy.gameplayReady(client);
-    }
-
-    private static int selectTerrainDriver(ClientRuntime players) {
-        for (LocalClientSlot slot : players.viewports().drawableSlots()) {
-            if (canRenderLevel(slot) && slot.gameplayState().player().isAlive()) {
-                return slot.id();
+    private static WorldRenderView viewForSlot(List<WorldRenderView> views, int slotId) {
+        for (WorldRenderView view : views) {
+            if (view.slotId() == slotId) {
+                return view;
             }
         }
-        return -1;
+        return null;
     }
 
-    private static void drawWaitingViewport(GameRenderer gameRenderer, LocalClientSlot slot, ViewportArea viewport) {
+    private static void drawWaitingViewport(GameRenderer gameRenderer, Slots slot, ViewportArea viewport) {
         RenderTarget target = gameRenderer.mainRenderTarget();
         RenderPass.RenderArea area = ViewportRenderScope.areaFor(viewport, target.width, target.height);
         float tint = 0.12F + slot.id() * 0.08F;

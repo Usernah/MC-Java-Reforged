@@ -4,9 +4,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.nio.file.Path;
 import javax.annotation.Nullable;
+
+import net.jr.client.runtime.slot.ClientSlots;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.util.JsonFileStore;
-import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.runtime.state.OptionsState;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -14,12 +15,12 @@ import net.minecraft.client.Minecraft;
 public final class PlayerOptionsStorage {
     private static final String FILE_NAME = "player_options.json";
 
-    private final LocalClientSlotRegistry slots;
+    private final ClientSlots slots;
     private boolean loaded;
     @Nullable
     private Path filePath;
 
-    public PlayerOptionsStorage(LocalClientSlotRegistry slots) {
+    public PlayerOptionsStorage(ClientSlots slots) {
         this.slots = slots;
     }
 
@@ -31,7 +32,7 @@ public final class PlayerOptionsStorage {
         this.filePath = minecraft.gameDirectory.toPath().resolve(FILE_NAME);
         JsonObject root = JsonFileStore.read(this.filePath);
         if (root != null) {
-            for (LocalClientSlot slot : this.slots.all()) {
+            for (Slots slot : this.slots.all()) {
                 JsonElement element = root.get(playerKey(slot.id()));
                 if (element != null && element.isJsonObject()) {
                     this.read(slot.optionsState(), element.getAsJsonObject());
@@ -49,7 +50,7 @@ public final class PlayerOptionsStorage {
         }
 
         JsonObject root = new JsonObject();
-        for (LocalClientSlot slot : this.slots.all()) {
+        for (Slots slot : this.slots.all()) {
             root.add(playerKey(slot.id()), this.write(slot.optionsState()));
         }
         JsonFileStore.write(this.filePath, root);

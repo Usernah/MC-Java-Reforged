@@ -3,7 +3,6 @@ package net.jr.mixin.compat.xaerominimap;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.platform.Window;
-import net.jr.api.client.ui.Viewport;
 import net.jr.client.compat.xaero.XaeroMinimapRuntimeState;
 import net.jr.client.compat.xaero.XaeroViewport;
 import net.jr.client.runtime.viewport.ViewportArea;
@@ -24,7 +23,8 @@ abstract class HudRendererMixin {
         )
     )
     private int javaReforged$viewportWidth(Window window) {
-        return Viewport.width();
+        ViewportArea viewport = XaeroViewport.currentOrNull();
+        return viewport == null ? window.getGuiScaledWidth() : viewport.logicalGuiWidth();
     }
 
     @Redirect(
@@ -35,7 +35,8 @@ abstract class HudRendererMixin {
         )
     )
     private int javaReforged$viewportHeight(Window window) {
-        return Viewport.height();
+        ViewportArea viewport = XaeroViewport.currentOrNull();
+        return viewport == null ? window.getGuiScaledHeight() : viewport.logicalGuiHeight();
     }
 
     @Redirect(

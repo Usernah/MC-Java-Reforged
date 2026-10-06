@@ -17,8 +17,8 @@ final class SlotScreenInput implements IScreenInput {
     @Override
     public double localWindowX(MouseHandler mouse) {
         ViewportArea viewport = viewport();
-        if (LocalGamepadInputHandler.isVirtualCursorActive(this.slotId)) {
-            return LocalGamepadInputHandler.cursorX(this.slotId)
+        if (GamepadInputHandler.isVirtualCursorActive(this.slotId)) {
+            return GamepadInputHandler.cursorX(this.slotId)
                 * viewport.windowWidth() / guiWidth();
         }
         return mouse.xpos() - viewport.windowX();
@@ -27,8 +27,8 @@ final class SlotScreenInput implements IScreenInput {
     @Override
     public double localWindowY(MouseHandler mouse) {
         ViewportArea viewport = viewport();
-        if (LocalGamepadInputHandler.isVirtualCursorActive(this.slotId)) {
-            return LocalGamepadInputHandler.cursorY(this.slotId)
+        if (GamepadInputHandler.isVirtualCursorActive(this.slotId)) {
+            return GamepadInputHandler.cursorY(this.slotId)
                 * viewport.windowHeight() / guiHeight();
         }
         return mouse.ypos() - viewport.windowY();
@@ -36,12 +36,12 @@ final class SlotScreenInput implements IScreenInput {
 
     @Override
     public int guiWidth() {
-        return Viewport.width(this.slotId);
+        return Viewport.get(this.slotId).logicalGuiWidth();
     }
 
     @Override
     public int guiHeight() {
-        return Viewport.height(this.slotId);
+        return Viewport.get(this.slotId).logicalGuiHeight();
     }
 
     @Override
@@ -56,12 +56,12 @@ final class SlotScreenInput implements IScreenInput {
 
     @Override
     public int framebufferWidth() {
-        return Viewport.pixelWidth(this.slotId);
+        return Viewport.get(this.slotId).width();
     }
 
     @Override
     public int framebufferHeight() {
-        return Viewport.pixelHeight(this.slotId);
+        return Viewport.get(this.slotId).height();
     }
 
     private ViewportArea viewport() {

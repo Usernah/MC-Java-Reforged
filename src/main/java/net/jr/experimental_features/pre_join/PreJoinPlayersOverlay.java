@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.jr.api.client.input.IGamepad;
+import net.jr.api.client.input.IPreJoin;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.split.SplitScreen;
@@ -71,11 +72,18 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
         for (int slotId = 1; slotId < this.playerNames.length; slotId++) {
             this.playerNames[slotId] = text(Component.literal(primaryName + " (" + (slotId + 1) + ")"));
         }
-        PreJoinRoster.restoreInto(this.assignedDevices, gamepads());
+        this.restoreRetainedPlayers(preJoinCandidates());
     }
 
     public static boolean shouldOpen() {
-        return SplitScreen.hasRequiredControllerCountForJoin();
+        if (SplitScreen.hasRequiredControllerCountForJoin()) {
+            return true;
+        }
+
+        return preJoinCandidates().stream().anyMatch(candidate -> {
+            Integer slotId = candidate.assignedSlot();
+            return slotId != null && slotId > 0;
+        });
     }
 
     @Override
@@ -293,7 +301,6 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
                 players.put(slotId, gamepad);
             }
         }
-        PreJoinRoster.remember(players);
         context.close(ScreenOverlayCloseReason.COMPLETED);
         PreJoinWorldLoad.begin(this.sourceScreen, players, this.openWorld);
     }
@@ -357,8 +364,24 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
     }
 
     private static List<IGamepad> gamepads() {
-        return ClientRuntime.INSTANCE.input().join().preJoinCandidates().stream()
-            .map(candidate -> candidate.gamepad()).toList();
+        return preJoinCandidates().stream().map(IPreJoin::gamepad).toList();
+    }
+
+    private static List<IPreJoin> preJoinCandidates() {
+        return ClientRuntime.INSTANCE.input().join().preJoinCandidates();
+    }
+
+    private void restoreRetainedPlayers(List<IPreJoin> candidates) {
+        for (IPreJoin candidate : candidates) {
+            Integer slotId = candidate.assignedSlot();
+            if (slotId == null
+                || slotId <= 0
+                || slotId >= this.assignedDevices.length
+                || this.assignedDevices[slotId] != null) {
+                continue;
+            }
+            this.assignedDevices[slotId] = candidate.gamepad();
+        }
     }
 
     private static TextElement text(Component component) {

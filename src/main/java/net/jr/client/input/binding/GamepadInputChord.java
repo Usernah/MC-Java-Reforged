@@ -2,14 +2,14 @@ package net.jr.client.input.binding;
 
 import net.jr.api.client.input.GamepadDigitalInput;
 
-import java.util.LinkedHashSet;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 
 public record GamepadInputChord(List<GamepadDigitalInput> inputs) {
     public GamepadInputChord {
         Objects.requireNonNull(inputs, "inputs");
-        LinkedHashSet<GamepadDigitalInput> uniqueInputs = new LinkedHashSet<>();
+        EnumSet<GamepadDigitalInput> uniqueInputs = EnumSet.noneOf(GamepadDigitalInput.class);
         uniqueInputs.addAll(inputs);
         if (uniqueInputs.isEmpty()) {
             throw new IllegalArgumentException("inputs must not be empty");

@@ -10,16 +10,12 @@ import net.minecraft.network.chat.Component;
 
 
 public final class MinigameHudOverlay implements HudRenderObject {
-
-    private final PlayerInforBar playerInforBar = new PlayerInforBar();
-
     @Override
     public void render(HudRenderContext context) {
         if (!BattleClientState.isBattle()) {
             return;
         }
         renderheadingLabel(context);
-        this.playerInforBar.render(context);
     }
 
     private static void renderheadingLabel(HudRenderContext context) {

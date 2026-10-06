@@ -1,13 +1,19 @@
 package net.jr.client.runtime.render.pass;
 
 import java.util.List;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientExecution;
-import net.jr.client.runtime.terrain.TerrainCoordinator;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.render.world.WorldRenderBackend;
+import net.jr.client.runtime.render.world.WorldRenderBackends;
+import net.jr.client.runtime.render.world.WorldRenderContextAccess;
+import net.jr.client.runtime.render.world.WorldRenderView;
+import net.jr.client.runtime.render.world.WorldRenderViews;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.mixin.accessors.GameRendererAccessor;
 import net.jr.mixin.accessors.LightmapRenderStateExtractorAccessor;
 import net.jr.mixin.accessors.MinecraftAccessor;
@@ -24,23 +30,23 @@ public final class WorldExtractionPass {
 
     public static void updateCameras(DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
-        for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+        for (Slots slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
             if (!canExtract(slot)) {
                 continue;
             }
-            try (LocalClientExecution.Scope ignored = LocalClientExecution.enterForClient(minecraft, slot.id())) {
-                ClientRuntime.INSTANCE.clients().client(slot.id()).camera().update(deltaTracker);
+            try (InstanceExecution.Scope ignored = InstanceExecution.enterForClient(minecraft, slot.id())) {
+                Client.current().camera().update(deltaTracker);
             }
         }
     }
 
     public static void pickVisibleSlots(Minecraft minecraft, float partialTicks) {
         MinecraftAccessor actions = (MinecraftAccessor)(Object)minecraft;
-        for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+        for (Slots slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
             if (!canExtract(slot)) {
                 continue;
             }
-            try (LocalClientExecution.Scope ignored = LocalClientExecution.enterForClient(minecraft, slot.id())) {
+            try (InstanceExecution.Scope ignored = InstanceExecution.enterForClient(minecraft, slot.id())) {
                 actions.javaReforged$pick(partialTicks);
             }
         }
@@ -55,14 +61,21 @@ public final class WorldExtractionPass {
         Minecraft minecraft = Minecraft.getInstance();
         GameRendererAccessor renderer = (GameRendererAccessor)(Object)gameRenderer;
         LightmapRenderStateExtractor lightmapExtractor = renderer.javaReforged$getLightmapExtractor();
-        List<LocalClientSlot> extractionSlots = ClientRuntime.INSTANCE.viewports().drawableSlots().stream()
-            .filter(WorldExtractionPass::canExtract)
-            .toList();
-        TerrainCoordinator.beginExtractionFrame(extractionSlots);
-        for (LocalClientSlot slot : extractionSlots) {
+        List<WorldRenderView> views = WorldRenderViews.collect(
+            deltaTracker,
+            ReadinessPolicy::worldReady
+        );
+        WorldRenderBackend backend = WorldRenderBackends.active();
+        backend.beginExtractionFrame(views);
+        for (WorldRenderView view : views) {
+            Slots slot = view.slot();
             try (
-                    LocalClientExecution.Scope ignoredClient =
-                        LocalClientExecution.enterForClient(minecraft, slot.id());
+                    InstanceExecution.Scope ignoredClient =
+                        InstanceExecution.enterForClient(minecraft, slot.id());
+                    WorldRenderContextAccess.Scope ignoredContext =
+                        WorldRenderContextAccess.enter(view);
+                    WorldRenderBackend.Scope ignoredBackend =
+                        backend.enterExtractionView(view);
                     WorldEngineStateScope ignoredEngines =
                         WorldEngineStateScope.bind(minecraft, slot)
             ) {
@@ -75,11 +88,7 @@ public final class WorldExtractionPass {
                     optionsRenderState.fov =
                         slot.optionsState().fov().get();
 
-                    Camera camera =
-                        ClientRuntime.INSTANCE
-                            .clients()
-                            .client(slot.id())
-                            .camera();
+                    Camera camera = view.camera();
 
                     ((LightmapRenderStateExtractorAccessor)(Object)lightmapExtractor)
                         .javaReforged$setNeedsUpdate(true);
@@ -107,8 +116,8 @@ public final class WorldExtractionPass {
         }
     }
 
-    private static boolean canExtract(LocalClientSlot slot) {
-        LocalClient client = ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
-        return client != null && LocalClientReadinessPolicy.worldReady(client);
+    private static boolean canExtract(Slots slot) {
+        ClientInstance client = ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
+        return client != null && ReadinessPolicy.worldReady(client);
     }
 }

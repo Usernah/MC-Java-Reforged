@@ -1,17 +1,18 @@
 package net.jr.client.compat.xaero;
 
 import java.io.File;
-import net.jr.client.runtime.context.LocalClientScope;
+
+import net.jr.api.client.local.Client;
 
 public final class XaeroWorldMapPaths {
     private XaeroWorldMapPaths() {
     }
 
     public static File currentRoot(File root) {
-        if (LocalClientScope.currentClientOrNull() == null) {
+        if (Client.currentOrNull() == null) {
             return root;
         }
-        int slotId = LocalClientScope.currentClient().slotId();
+        int slotId = Client.slotId();
         if (slotId == 0) {
             return root;
         }

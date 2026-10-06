@@ -42,8 +42,14 @@ public class MapPoints {
                 centralChest.add(new PointPos(219, 64, -220));
 
         List<PointPos> secondaryChest = new ArrayList<>();
-                secondaryChest.add(new PointPos(2, 68, 10));
-                secondaryChest.add(new PointPos(24, 68, -12));
+                secondaryChest.add(new PointPos(187, 72, -226));
+                secondaryChest.add(new PointPos(205, 81, -238));
+        secondaryChest.add(new PointPos(232, 79, -245));
+        secondaryChest.add(new PointPos(250, 67, -243));
+        secondaryChest.add(new PointPos(244, 80, -195));
+        secondaryChest.add(new PointPos(235, 78, -187));
+        secondaryChest.add(new PointPos(217, 66, -183));
+        secondaryChest.add(new PointPos(191, 78, -193));
 
 
         this.pointsMap.put(PointGroup.SPAWN_CENTRAL,centralSpawns);

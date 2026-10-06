@@ -1,0 +1,15 @@
+package net.jr.client.runtime.context;
+
+public record SessionToken(int slotId, long sessionId, long generation) {
+    public SessionToken {
+        if (slotId < 0) {
+            throw new IllegalArgumentException("slotId cannot be negative");
+        }
+        if (sessionId <= 0L) {
+            throw new IllegalArgumentException("sessionId must be positive");
+        }
+        if (generation < 0L) {
+            throw new IllegalArgumentException("generation cannot be negative");
+        }
+    }
+}

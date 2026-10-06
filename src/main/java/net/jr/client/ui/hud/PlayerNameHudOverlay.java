@@ -1,9 +1,10 @@
 package net.jr.client.ui.hud;
 
+import net.jr.api.client.local.Client;
 import net.jr.api.client.render.gui.HudRenderContext;
 import net.jr.api.client.render.gui.HudRenderObject;
 import net.jr.api.client.split.SplitScreen;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.components.elements.TextElement;
 import net.jr.playerdata.PlayerProfileDataManager;
 import net.minecraft.client.player.LocalPlayer;
@@ -14,7 +15,7 @@ public final class PlayerNameHudOverlay implements HudRenderObject {
     private static final int RIGHT_PADDING = 10;
     private static final int TEXT_COLOR = 0xFFFFFFFF;
     private static final int OUTLINE_COLOR = 0xFF202020;
-    private final TextElement[] playerNames = new TextElement[LocalClientSlotRegistry.MAX_SLOTS];
+    private final TextElement[] playerNames = new TextElement[ClientSlots.MAX_SLOTS];
 
     public PlayerNameHudOverlay() {
     }
@@ -24,7 +25,7 @@ public final class PlayerNameHudOverlay implements HudRenderObject {
         if (!SplitScreen.isActive()) {
             return;
         }
-        LocalPlayer player = context.client().player();
+        LocalPlayer player = Client.current().player();
         if (player == null) {
             return;
         }

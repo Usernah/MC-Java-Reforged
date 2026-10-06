@@ -3,7 +3,7 @@ package net.jr.client.ui.hud;
 import net.minecraft.util.Mth;
 
 public final class HudTransparency {
-    private static final float HUD_TRANSPARENCY_PERCENT = 0;
+    private static final float HUD_TRANSPARENCY_PERCENT = 70;
 
     private HudTransparency() {
     }

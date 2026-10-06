@@ -1,6 +1,8 @@
 package net.jr.client.runtime.viewport;
 
-public final class ViewportArea {
+import net.jr.api.client.render.world.RenderViewport;
+
+public final class ViewportArea implements RenderViewport {
     private final ViewportLayout layout;
     private final int id;
     private final int x;
@@ -190,5 +192,21 @@ public final class ViewportArea {
 
     public float aspectRatio() {
         return this.aspectRatio;
+    }
+
+    public int logicalGuiWidth() {
+        return ViewportGuiScale.logicalWidth(this);
+    }
+
+    public int logicalGuiHeight() {
+        return ViewportGuiScale.logicalHeight(this);
+    }
+
+    public double windowDeltaToGuiX(double delta) {
+        return delta * this.logicalGuiWidth() / this.windowWidth();
+    }
+
+    public double windowDeltaToGuiY(double delta) {
+        return delta * this.logicalGuiHeight() / this.windowHeight();
     }
 }

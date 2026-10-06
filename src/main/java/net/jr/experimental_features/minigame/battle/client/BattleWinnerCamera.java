@@ -2,7 +2,7 @@ package net.jr.experimental_features.minigame.battle.client;
 
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
+import net.jr.client.runtime.client.ClientInstance;
 import net.jr.experimental_features.minigame.battle.BattlePhase;
 import net.jr.experimental_features.minigame.client.BattleClientState;
 import net.minecraft.client.CameraType;
@@ -26,7 +26,7 @@ public final class BattleWinnerCamera {
     public static void onClientTick(ClientTickEvent.Post event) {
         BattlePhase phase = BattleClientState.phase();
         boolean followingWinner = phase == BattlePhase.WINNER_ANOUNCEMENT || phase == BattlePhase.FINISH;
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             int slotId = client.slotId();
             boolean shouldFollow = followingWinner && client.player() != null
                 && !BattleClientState.isWinner(client.player().getUUID().toString());

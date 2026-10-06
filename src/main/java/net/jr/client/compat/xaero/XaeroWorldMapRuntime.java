@@ -4,8 +4,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotScope;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import org.jetbrains.annotations.Nullable;
@@ -160,7 +160,7 @@ public final class XaeroWorldMapRuntime {
         boolean[] ran = {false};
 
         for (SessionBinding binding : SESSIONS.values()) {
-            LocalClient client =
+            ClientInstance client =
                     ClientRuntime.INSTANCE.clients()
                             .clientOrNull(binding.slotId());
 
@@ -173,7 +173,7 @@ public final class XaeroWorldMapRuntime {
 
             ran[0] = true;
 
-            LocalClientExecution.runForClient(
+            InstanceExecution.runForClient(
                     binding.slotId(),
                     () -> session.getMapProcessor().run(runner)
             );
@@ -183,11 +183,11 @@ public final class XaeroWorldMapRuntime {
     }
 
     public static void runEveryClient(Runnable action) {
-        for (LocalClient client :
+        for (ClientInstance client :
                 ClientRuntime.INSTANCE.clients().all()) {
 
             if (client.player() != null) {
-                LocalClientExecution.runForClient(
+                InstanceExecution.runForClient(
                         client.slotId(),
                         action
                 );
@@ -199,11 +199,11 @@ public final class XaeroWorldMapRuntime {
             PlayerAction action,
             net.minecraft.world.entity.player.Player player
     ) {
-        for (LocalClient client :
+        for (ClientInstance client :
                 ClientRuntime.INSTANCE.clients().all()) {
 
             if (client.player() == player) {
-                LocalClientExecution.runForClient(
+                InstanceExecution.runForClient(
                         client.slotId(),
                         () -> action.run(player)
                 );

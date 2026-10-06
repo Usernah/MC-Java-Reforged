@@ -1,9 +1,9 @@
 package net.jr.client.runtime.render.tick;
 
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientExecution;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.world.entity.Entity;
@@ -13,16 +13,16 @@ public final class FovTicker {
     }
 
     public static void tickConnectedClients() {
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             if (client.level() == null || client.player() == null) {
                 continue;
             }
-            LocalClientExecution.runForClient(client.slotId(), FovTicker::tickCurrentClient);
+            InstanceExecution.runForClient(client.slotId(), FovTicker::tickCurrentClient);
         }
     }
 
     private static void tickCurrentClient() {
-        LocalClient client = LocalClientScope.currentClient();
+        ClientInstance client = Client.current();
         float targetModifier = 1.0F;
         Entity cameraEntity = client.cameraEntity();
         if (cameraEntity == null) {

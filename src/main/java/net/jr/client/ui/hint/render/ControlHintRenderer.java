@@ -3,7 +3,7 @@ package net.jr.client.ui.hint.render;
 import java.util.ArrayList;
 import java.util.List;
 import net.jr.api.client.render.Draw;
-import net.jr.api.client.local.LocalClients;
+import net.jr.api.client.local.Client;
 import net.jr.api.client.split.SplitScreen;
 import net.jr.client.ui.hud.HudTransparency;
 import net.jr.client.ui.hint.ControlHintContext;
@@ -157,7 +157,7 @@ public final class ControlHintRenderer {
 
             if (
                     SplitScreen.isActive()
-                            && LocalClients.count() > 1
+                            && Client.count() > 1
             ) {
                 labelText.font(ModFonts.MINECRAFT_MIN);
             }
@@ -327,7 +327,7 @@ public final class ControlHintRenderer {
 
         if (
                 SplitScreen.isActive()
-                        && LocalClients.count() > 1
+                        && Client.count() > 1
         ) {
             labelText.font(ModFonts.MINECRAFT_MIN);
         }

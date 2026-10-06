@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import net.jr.Java_reforged;
 import net.jr.api.client.input.GamepadAxis;
 import net.jr.api.client.input.GamepadDigitalInput;
@@ -37,6 +39,7 @@ public final class SdlGamepad {
     private static final long STARTUP_SCAN_DELAY_MS = 150L;
     private static final long INIT_RETRY_DELAY_MS = 2000L;
     private static final long SLOW_NATIVE_CALL_MS = 50L;
+    private static final long STALE_INPUT_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(150L);
     private static final int AXIS_COUNT = 6;
     private static final int BUTTON_COUNT = SDL_GamepadButton.SDL_GAMEPAD_BUTTON_COUNT;
     private static final int MAX_OPEN_DEVICES = 4;
@@ -44,9 +47,10 @@ public final class SdlGamepad {
     private static final long NO_PENDING_DEVICE_ID = -1L;
     private static final boolean LOG_SDL_INVENTORY = Boolean.getBoolean("split.sdlInventoryLog");
 
-    private static final Object SDL_LOCK = new Object();
+    private static final ReentrantLock SDL_LOCK = new ReentrantLock();
     private static final Map<Long, OpenDevice> openDevices = new LinkedHashMap<>();
     private static final Map<Long, SdlTouchpadState> touchpadStates = new LinkedHashMap<>();
+    private static final Set<Long> staleInputDevices = Collections.synchronizedSet(new HashSet<>());
     private static volatile Map<Long, SdlGamepadSnapshot> snapshots = Map.of();
     private static volatile boolean initialized = false;
     private static volatile String initializationFailureReason = "";
@@ -114,7 +118,8 @@ public final class SdlGamepad {
             return;
         }
 
-        synchronized (SDL_LOCK) {
+        SDL_LOCK.lock();
+        try {
             if (initialized) {
                 return;
             }
@@ -166,6 +171,8 @@ public final class SdlGamepad {
             startWorker();
 
             Java_reforged.LOGGER.info("SDL inicializado para gamepads. {}", debugStatus());
+        } finally {
+            SDL_LOCK.unlock();
         }
     }
 
@@ -192,16 +199,22 @@ public final class SdlGamepad {
      * physical controller with its previous instance when SDL provides them.
      */
     public static String serial(long deviceId) {
-        synchronized (SDL_LOCK) {
+        SDL_LOCK.lock();
+        try {
             OpenDevice device = openDevices.get(deviceId);
             return device == null ? "" : device.serial();
+        } finally {
+            SDL_LOCK.unlock();
         }
     }
 
     public static String path(long deviceId) {
-        synchronized (SDL_LOCK) {
+        SDL_LOCK.lock();
+        try {
             OpenDevice device = openDevices.get(deviceId);
             return device == null ? "" : device.path();
+        } finally {
+            SDL_LOCK.unlock();
         }
     }
 
@@ -235,7 +248,8 @@ public final class SdlGamepad {
         initIfNeeded();
 
         boolean scheduled = false;
-        synchronized (SDL_LOCK) {
+        SDL_LOCK.lock();
+        try {
             if (!initialized) {
                 Java_reforged.LOGGER.warn("Re-escaneo SDL ignorado porque SDL no esta inicializado. {}", debugStatus());
                 return;
@@ -245,6 +259,8 @@ public final class SdlGamepad {
             scheduleOpen(FULL_SCAN_DEVICE_ID, 0L);
             scheduled = true;
             Java_reforged.LOGGER.info("Re-escaneo SDL solicitado. {}", debugStatus());
+        } finally {
+            SDL_LOCK.unlock();
         }
 
         if (scheduled) {
@@ -258,7 +274,7 @@ public final class SdlGamepad {
     }
 
     public static float axis01(int axisConst, float deadzone) {
-        float value = firstSnapshot().axis(axisConst);
+        float value = firstInputSnapshot().axis(axisConst);
         if (Math.abs(value) < deadzone) {
             return 0f;
         }
@@ -270,35 +286,31 @@ public final class SdlGamepad {
     }
 
     public static float axis01(long deviceId, GamepadAxis axis, float deadzone) {
-        return axis01(snapshot(deviceId), toSdlAxis(axis), deadzone);
+        return axis01(inputSnapshot(deviceId), toSdlAxis(axis), deadzone);
     }
 
     public static float rawAxis(GamepadAxis axis) {
-        return firstSnapshot().axis(toSdlAxis(axis));
+        return firstInputSnapshot().axis(toSdlAxis(axis));
     }
 
     public static float rawAxis(long deviceId, GamepadAxis axis) {
-        return snapshot(deviceId).axis(toSdlAxis(axis));
+        return inputSnapshot(deviceId).axis(toSdlAxis(axis));
     }
 
     public static long snapshotAgeMs() {
-        long readNanos = firstSnapshot().readNanos();
-        if (readNanos <= 0L) {
-            return -1L;
-        }
-        return Math.max(0L, (System.nanoTime() - readNanos) / 1_000_000L);
+        return snapshotAgeMs(firstSnapshot());
     }
 
     public static boolean button(int buttonConst) {
-        return firstSnapshot().button(buttonConst);
+        return firstInputSnapshot().button(buttonConst);
     }
 
     public static boolean input(GamepadDigitalInput input, float triggerThreshold) {
-        return input(firstSnapshot(), input, triggerThreshold);
+        return input(firstInputSnapshot(), input, triggerThreshold);
     }
 
     public static boolean input(long deviceId, GamepadDigitalInput input, float triggerThreshold) {
-        return input(snapshot(deviceId), input, triggerThreshold);
+        return input(inputSnapshot(deviceId), input, triggerThreshold);
     }
 
     private static boolean input(SdlGamepadSnapshot currentSnapshot, GamepadDigitalInput input, float triggerThreshold) {
@@ -315,29 +327,34 @@ public final class SdlGamepad {
     }
 
     public static boolean rawInputActive(RawGamepadInput input) {
-        return input != null && snapshots.values().stream().anyMatch(value -> value.rawInput(input));
+        return input != null && snapshots.entrySet().stream()
+            .anyMatch(entry -> inputSnapshot(entry.getKey(), entry.getValue()).rawInput(input));
     }
 
     public static boolean rawInputActive(long deviceId, RawGamepadInput input) {
-        return input != null && snapshot(deviceId).rawInput(input);
+        return input != null && inputSnapshot(deviceId).rawInput(input);
     }
 
     public static boolean anyCalibrationInputActive() {
-        return snapshots.values().stream().anyMatch(SdlGamepadSnapshot::anyCalibrationInputActive);
+        return snapshots.entrySet().stream()
+            .anyMatch(entry -> inputSnapshot(entry.getKey(), entry.getValue()).anyCalibrationInputActive());
     }
 
     public static boolean calibrationInputActive(long deviceId) {
-        return snapshot(deviceId).anyCalibrationInputActive();
+        return inputSnapshot(deviceId).anyCalibrationInputActive();
     }
 
     public static void shutdown() {
         Thread threadToJoin = null;
-        synchronized (SDL_LOCK) {
+        SDL_LOCK.lock();
+        try {
             if (workerRunning) {
                 workerRunning = false;
                 threadToJoin = workerThread;
                 workerThread = null;
             }
+        } finally {
+            SDL_LOCK.unlock();
         }
 
         if (threadToJoin != null) {
@@ -349,7 +366,8 @@ public final class SdlGamepad {
             }
         }
 
-        synchronized (SDL_LOCK) {
+        SDL_LOCK.lock();
+        try {
             closeAllDevices();
             if (initialized) {
                 SdlInit.SDL_Quit();
@@ -367,6 +385,9 @@ public final class SdlGamepad {
             snapshots = Map.of();
             SdlRawInputTracker.clear();
             touchpadStates.clear();
+            staleInputDevices.clear();
+        } finally {
+            SDL_LOCK.unlock();
         }
     }
 
@@ -388,7 +409,8 @@ public final class SdlGamepad {
             boolean snapshotDirty = false;
             Map<Long, SdlGamepadSnapshot> nextSnapshots = new LinkedHashMap<>();
             try {
-                synchronized (SDL_LOCK) {
+                SDL_LOCK.lock();
+                try {
                     if (!initialized) {
                         break;
                     }
@@ -406,6 +428,8 @@ public final class SdlGamepad {
                         }
                         snapshotDirty = true;
                     }
+                } finally {
+                    SDL_LOCK.unlock();
                 }
             } catch (Throwable throwable) {
                 Java_reforged.LOGGER.warn("Error al actualizar SDL del mando.", throwable);
@@ -433,7 +457,13 @@ public final class SdlGamepad {
         }
 
         Map<Long, SdlGamepadSnapshot> nextSnapshots = null;
-        synchronized (SDL_LOCK) {
+        // Input sampling owns this lock while it is inside SDL. Rendering must
+        // never wait behind a slow native controller call just to check whether
+        // an inventory scan is due.
+        if (!SDL_LOCK.tryLock()) {
+            return;
+        }
+        try {
             if (!initialized) {
                 return;
             }
@@ -452,6 +482,8 @@ public final class SdlGamepad {
                 tryOpenPendingControllers();
                 nextSnapshots = readAllSnapshots();
             }
+        } finally {
+            SDL_LOCK.unlock();
         }
 
         if (nextSnapshots != null) {
@@ -774,9 +806,12 @@ public final class SdlGamepad {
     }
 
     private static void publishSnapshots(Map<Long, SdlGamepadSnapshot> nextSnapshots) {
-        synchronized (SDL_LOCK) {
+        SDL_LOCK.lock();
+        try {
             SdlRawInputTracker.publish(nextSnapshots);
             snapshots = Collections.unmodifiableMap(new LinkedHashMap<>(nextSnapshots));
+        } finally {
+            SDL_LOCK.unlock();
         }
     }
 
@@ -845,6 +880,7 @@ public final class SdlGamepad {
         Java_reforged.LOGGER.info("[SplitSDL] Closed gamepad instance={}", instanceId);
         SdlRawInputTracker.remove(instanceId);
         touchpadStates.remove(instanceId);
+        staleInputDevices.remove(instanceId);
         Map<Long, SdlGamepadSnapshot> remaining = new LinkedHashMap<>(snapshots);
         remaining.remove(instanceId);
         snapshots = Collections.unmodifiableMap(remaining);
@@ -936,8 +972,53 @@ public final class SdlGamepad {
         return snapshots.values().stream().findFirst().orElseGet(SdlGamepadSnapshot::disconnected);
     }
 
+    private static SdlGamepadSnapshot firstInputSnapshot() {
+        Map.Entry<Long, SdlGamepadSnapshot> entry = snapshots.entrySet().stream()
+            .findFirst()
+            .orElse(null);
+        return entry == null
+            ? SdlGamepadSnapshot.disconnected()
+            : inputSnapshot(entry.getKey(), entry.getValue());
+    }
+
     private static SdlGamepadSnapshot snapshot(long deviceId) {
         return snapshots.getOrDefault(deviceId, SdlGamepadSnapshot.disconnected());
+    }
+
+    private static SdlGamepadSnapshot inputSnapshot(long deviceId) {
+        return inputSnapshot(deviceId, snapshot(deviceId));
+    }
+
+    private static SdlGamepadSnapshot inputSnapshot(long deviceId, SdlGamepadSnapshot current) {
+        long readNanos = current.readNanos();
+        boolean stale = current.connected()
+            && readNanos > 0L
+            && System.nanoTime() - readNanos > STALE_INPUT_TIMEOUT_NANOS;
+        if (!stale) {
+            if (staleInputDevices.remove(deviceId)) {
+                Java_reforged.LOGGER.info(
+                    "[SplitSDL] Gamepad input recovered instance={}.", deviceId
+                );
+            }
+            return current;
+        }
+
+        if (staleInputDevices.add(deviceId)) {
+            Java_reforged.LOGGER.warn(
+                "[SplitSDL] Ignoring stale gamepad input instance={} age={}ms.",
+                deviceId,
+                snapshotAgeMs(current)
+            );
+        }
+        return SdlGamepadSnapshot.disconnected();
+    }
+
+    private static long snapshotAgeMs(SdlGamepadSnapshot current) {
+        long readNanos = current.readNanos();
+        if (readNanos <= 0L) {
+            return -1L;
+        }
+        return Math.max(0L, (System.nanoTime() - readNanos) / 1_000_000L);
     }
 
     private record OpenDevice(

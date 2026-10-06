@@ -1,9 +1,10 @@
 package net.jr.client.runtime.render.state;
 
 import javax.annotation.Nullable;
+import net.jr.bootstrap.OptionalModPresence;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.Slots;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.state.ClientRenderState;
 import net.jr.client.runtime.state.LevelExtractionState;
 import net.jr.mixin.accessors.GameRenderStateAccessor;
@@ -19,8 +20,9 @@ import net.minecraft.client.renderer.state.level.LevelRenderState;
 
 public final class WorldEngineStateScope implements AutoCloseable {
     private final Minecraft minecraft;
-    private final LocalClientSlot slot;
+    private final Slots slot;
     private final boolean bindCompleteState;
+    private final boolean bindNativeTerrain;
     private final LevelRendererAccessor renderer;
     @Nullable
     private final LevelExtractorAccessor extractor;
@@ -44,10 +46,11 @@ public final class WorldEngineStateScope implements AutoCloseable {
     private final ViewArea previousViewArea;
     private boolean closed;
 
-    private WorldEngineStateScope(Minecraft minecraft, LocalClientSlot slot, boolean bindCompleteState) {
+    private WorldEngineStateScope(Minecraft minecraft, Slots slot, boolean bindCompleteState) {
         this.minecraft = minecraft;
         this.slot = slot;
         this.bindCompleteState = bindCompleteState;
+        this.bindNativeTerrain = !OptionalModPresence.sodiumLoaded();
         this.renderer = (LevelRendererAccessor)minecraft.levelRenderer;
         if (bindCompleteState) {
             this.extractor = (LevelExtractorAccessor)minecraft.levelExtractor;
@@ -74,7 +77,7 @@ public final class WorldEngineStateScope implements AutoCloseable {
         this.installSlot();
     }
 
-    public static WorldEngineStateScope bind(Minecraft minecraft, LocalClientSlot slot) {
+    public static WorldEngineStateScope bind(Minecraft minecraft, Slots slot) {
         return new WorldEngineStateScope(minecraft, slot, true);
     }
 
@@ -86,7 +89,7 @@ public final class WorldEngineStateScope implements AutoCloseable {
         return bind(minecraft, ClientRuntime.INSTANCE.slots().slot(slotId));
     }
 
-    public static WorldEngineStateScope bindTerrainOnly(Minecraft minecraft, LocalClientSlot slot) {
+    public static WorldEngineStateScope bindTerrainOnly(Minecraft minecraft, Slots slot) {
         return new WorldEngineStateScope(minecraft, slot, false);
     }
 
@@ -94,10 +97,12 @@ public final class WorldEngineStateScope implements AutoCloseable {
         ClientRenderState state = this.slot.renderState();
         ClientLevel level = state.level();
         this.renderer.javaReforged$setLevelRenderState(state.levelRenderState());
-        this.renderer.javaReforged$setSectionOcclusionGraph(state.terrain().sectionOcclusionGraph());
-        this.renderer.javaReforged$setVisibleSections(state.terrain().visibleSections());
-        this.renderer.javaReforged$setNearbyVisibleSections(state.terrain().nearbyVisibleSections());
-        this.renderer.javaReforged$setViewArea(state.terrain().viewArea());
+        if (this.bindNativeTerrain) {
+            this.renderer.javaReforged$setSectionOcclusionGraph(state.terrain().sectionOcclusionGraph());
+            this.renderer.javaReforged$setVisibleSections(state.terrain().visibleSections());
+            this.renderer.javaReforged$setNearbyVisibleSections(state.terrain().nearbyVisibleSections());
+            this.renderer.javaReforged$setViewArea(state.terrain().viewArea());
+        }
         if (this.bindCompleteState) {
             this.gameState.javaReforged$setLevelRenderState(state.levelRenderState());
             this.gameState.javaReforged$setLightmapRenderState(state.lightmapRenderState());
@@ -119,17 +124,19 @@ public final class WorldEngineStateScope implements AutoCloseable {
             this.gameState.javaReforged$setLightmapRenderState(this.previousLightmapRenderState);
         }
         this.renderer.javaReforged$setLevelRenderState(this.previousLevelRenderState);
-        this.renderer.javaReforged$setSectionOcclusionGraph(this.previousGraph);
-        this.renderer.javaReforged$setVisibleSections(this.previousVisible);
-        this.renderer.javaReforged$setNearbyVisibleSections(this.previousNearby);
-        this.renderer.javaReforged$setViewArea(this.previousViewArea);
+        if (this.bindNativeTerrain) {
+            this.renderer.javaReforged$setSectionOcclusionGraph(this.previousGraph);
+            this.renderer.javaReforged$setVisibleSections(this.previousVisible);
+            this.renderer.javaReforged$setNearbyVisibleSections(this.previousNearby);
+            this.renderer.javaReforged$setViewArea(this.previousViewArea);
+        }
         if (this.bindCompleteState) {
             ((ParticleEngineAccessor)this.minecraft.particleEngine).javaReforged$setLevel(this.previousParticleLevel);
         }
     }
 
     private static int slotIdForLevel(ClientLevel level) {
-        for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
+        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
             if (ClientRuntime.INSTANCE.slots().slot(slotId).renderState().level() == level) {
                 return slotId;
             }

@@ -36,7 +36,9 @@ public final class TerrainLifecycleProcessor implements ClassProcessor {
 
     @Override
     public boolean handlesClass(SelectionContext context) {
-        return !context.empty() && TARGET_CLASSES.contains(context.type().getClassName());
+        return !OptionalModPresence.sodiumLoaded()
+            && !context.empty()
+            && TARGET_CLASSES.contains(context.type().getClassName());
     }
 
     @Override

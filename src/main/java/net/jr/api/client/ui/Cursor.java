@@ -1,36 +1,70 @@
 package net.jr.api.client.ui;
 
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.api.client.local.Client;
+import net.jr.client.runtime.input.GamepadInputHandler;
+import net.jr.client.runtime.slot.ClientSlots;
+import net.minecraft.client.Minecraft;
 
 public final class Cursor {
     private Cursor() {
+    }
+
+    public static void moveTo(double x, double y) {
+        GamepadInputHandler.moveCursorTo(x, y);
+    }
+
+    public static void center() {
+        GamepadInputHandler.centerCursor();
+    }
+
+    public static double x() {
+        return GamepadInputHandler.visualCursorX();
+    }
+
+    public static double y() {
+        return GamepadInputHandler.visualCursorY();
+    }
+
+    public static double localWindowX() {
+        Minecraft minecraft = Minecraft.getInstance();
+        var client = Client.currentOrNull();
+        return client != null
+                ? client.input().screen().localWindowX(minecraft.mouseHandler)
+                : minecraft.mouseHandler.xpos();
+    }
+
+    public static double localWindowY() {
+        Minecraft minecraft = Minecraft.getInstance();
+        var client = Client.currentOrNull();
+        return client != null
+                ? client.input().screen().localWindowY(minecraft.mouseHandler)
+                : minecraft.mouseHandler.ypos();
     }
 
     public static void moveTo(int slotId, double x, double y) {
         requireValidSlot(slotId);
         requireFiniteCoordinate(x, "x");
         requireFiniteCoordinate(y, "y");
-        LocalGamepadInputHandler.moveCursorTo(slotId, x, y);
+        GamepadInputHandler.moveCursorTo(slotId, x, y);
     }
 
     public static void center(int slotId) {
         requireValidSlot(slotId);
-        LocalGamepadInputHandler.centerCursor(slotId);
+        GamepadInputHandler.centerCursor(slotId);
     }
 
     public static double x(int slotId) {
         requireValidSlot(slotId);
-        return LocalGamepadInputHandler.visualCursorX(slotId);
+        return GamepadInputHandler.visualCursorX(slotId);
     }
 
     public static double y(int slotId) {
         requireValidSlot(slotId);
-        return LocalGamepadInputHandler.visualCursorY(slotId);
+        return GamepadInputHandler.visualCursorY(slotId);
     }
 
     private static void requireValidSlot(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
     }
 
     private static void requireFiniteCoordinate(double coordinate, String name) {

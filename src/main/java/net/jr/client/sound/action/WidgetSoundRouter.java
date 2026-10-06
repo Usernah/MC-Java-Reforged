@@ -1,7 +1,7 @@
 package net.jr.client.sound.action;
 
 import net.jr.client.input.InputApi;
-import net.jr.client.runtime.input.LocalInputActionHandler;
+import net.jr.client.runtime.input.InputActionHandler;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 
@@ -14,7 +14,7 @@ public final class WidgetSoundRouter {
             return;
         }
         if (!InputApi.isGamepadMode()) {
-            LocalInputActionHandler.suppressNextScreenTransitionSound();
+            InputActionHandler.suppressNextScreenTransitionSound();
             InputActionSounds.playClick();
         }
     }

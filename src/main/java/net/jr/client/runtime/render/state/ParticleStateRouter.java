@@ -6,8 +6,8 @@ import java.util.Queue;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.Slots;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.state.ParticleState;
 import net.jr.mixin.accessors.ParticleEngineAccessor;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -67,7 +67,7 @@ public final class ParticleStateRouter {
 
     public static void clearAll(ParticleEngine engine) {
         BOOTSTRAP_STATE.clear();
-        for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
+        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
             ClientRuntime.INSTANCE.slots().slot(slotId).renderState().particles().clear();
         }
         ParticleEngineAccessor accessor = (ParticleEngineAccessor)engine;
@@ -84,7 +84,7 @@ public final class ParticleStateRouter {
             : BOOTSTRAP_STATE;
     }
 
-    private static LocalClientSlot activeSlot() {
+    private static Slots activeSlot() {
         Integer slotId = SlotScope.idOrNull();
         return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0);
     }

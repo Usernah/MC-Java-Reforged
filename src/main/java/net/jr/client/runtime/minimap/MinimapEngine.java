@@ -1,8 +1,8 @@
 package net.jr.client.runtime.minimap;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.state.MinimapState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -18,24 +18,24 @@ public final class MinimapEngine {
             new MinimapSurfaceSampler();
 
     private final DynamicTexture[] textures =
-            new DynamicTexture[LocalClientSlotRegistry.MAX_SLOTS];
+            new DynamicTexture[ClientSlots.MAX_SLOTS];
 
     private final Identifier[] textureIds =
-            new Identifier[LocalClientSlotRegistry.MAX_SLOTS];
+            new Identifier[ClientSlots.MAX_SLOTS];
 
     private final int[] lastCenterX =
-            new int[LocalClientSlotRegistry.MAX_SLOTS];
+            new int[ClientSlots.MAX_SLOTS];
 
     private final int[] lastCenterZ =
-            new int[LocalClientSlotRegistry.MAX_SLOTS];
+            new int[ClientSlots.MAX_SLOTS];
 
     private final Object[] lastDimension =
-            new Object[LocalClientSlotRegistry.MAX_SLOTS];
+            new Object[ClientSlots.MAX_SLOTS];
 
     private final boolean[] initialized =
-            new boolean[LocalClientSlotRegistry.MAX_SLOTS];
+            new boolean[ClientSlots.MAX_SLOTS];
 
-    public void updateView(LocalClient client) {
+    public void updateView(ClientInstance client) {
         MinimapState state = client.minimap();
         LocalPlayer player = client.player();
 
@@ -61,7 +61,7 @@ public final class MinimapEngine {
     }
 
     private void updateTexture(
-            LocalClient client,
+            ClientInstance client,
             ClientLevel level
     ) {
         int slotId = client.slotId();
@@ -160,6 +160,7 @@ public final class MinimapEngine {
             return MapColor.Brightness.NORMAL;
         }
 
+
         double difference =
                 height - previousHeight;
 
@@ -205,7 +206,7 @@ public final class MinimapEngine {
         this.textures[slotId] = texture;
     }
 
-    public double offsetX(LocalClient client) {
+    public double offsetX(ClientInstance client) {
         int slotId = client.slotId();
 
         if (!this.initialized[slotId]) {
@@ -215,7 +216,7 @@ public final class MinimapEngine {
         return client.minimap().x() - this.lastCenterX[slotId];
     }
 
-    public double offsetZ(LocalClient client) {
+    public double offsetZ(ClientInstance client) {
         int slotId = client.slotId();
 
         if (!this.initialized[slotId]) {

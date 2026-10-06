@@ -8,11 +8,13 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
+
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.mixin.accessors.SoundEngineAccessor;
 import net.jr.mixin.accessors.SoundManagerAccessor;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.resources.sounds.TickableSoundInstance;
@@ -118,7 +120,7 @@ public final class SlotSoundRouter {
             }
         }
         stopped |= removeQueuedExact(soundEngine, slotId, sound);
-        if (!stopped && slotId == 0) {
+        if (!stopped && slotId == ClientSlots.PRIMARY_SLOT_ID) {
             soundEngine.stop(sound);
         }
     }
@@ -167,14 +169,10 @@ public final class SlotSoundRouter {
     @Nullable
     private static Integer currentSlotId() {
         Integer activeSlotId = SlotScope.idOrNull();
-        if (activeSlotId != null) {
-            return activeSlotId;
-        }
-        Integer scheduledSlotId = SlotScope.scheduledIdOrNull();
-        if (scheduledSlotId != null) {
-            return scheduledSlotId;
-        }
-        return ClientRuntime.INSTANCE.clients().hasClient(0) ? 0 : null;
+
+        return activeSlotId != null
+                ? activeSlotId
+                : SlotScope.scheduledIdOrNull();
     }
 
     @Nullable
@@ -304,7 +302,7 @@ public final class SlotSoundRouter {
     }
 
     @Nullable
-    private static Entity resolveCamera(LocalClientSlot slot) {
+    private static Entity resolveCamera(Slots slot) {
         Entity cameraEntity = slot.renderState().cameraEntity();
         if (cameraEntity != null && !cameraEntity.isRemoved()) {
             return cameraEntity;
@@ -314,7 +312,7 @@ public final class SlotSoundRouter {
     }
 
     private static Vec3 relativePosition(int slotId, SoundInstance sound) {
-        LocalClientSlot slot = ClientRuntime.INSTANCE.slots().slot(slotId);
+        Slots slot = ClientRuntime.INSTANCE.slots().slot(slotId);
         Entity camera = resolveCamera(slot);
         if (camera == null) {
             return Vec3.ZERO;

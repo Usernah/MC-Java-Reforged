@@ -1,23 +1,18 @@
 package net.jr.client.runtime.render.state;
 
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.api.client.local.Client;
 
 public final class HudStateRouter {
     private HudStateRouter() {
     }
 
-    public static float vignetteBrightness(float fallback) {
-        LocalClient client = LocalClientScope.currentClientOrNull();
-        return client != null ? client.render().hud().vignetteBrightness() : fallback;
+    public static float vignetteBrightness() {
+        return Client.current().render().hud().vignetteBrightness();
     }
 
     public static boolean setVignetteBrightness(float value) {
-        LocalClient client = LocalClientScope.currentClientOrNull();
-        if (client == null) {
-            return false;
-        }
-        client.render().hud().setVignetteBrightness(value);
+        Client.current().render().hud().setVignetteBrightness(value);
         return true;
     }
+
 }

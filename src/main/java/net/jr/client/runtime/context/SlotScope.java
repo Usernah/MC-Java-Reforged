@@ -2,7 +2,7 @@ package net.jr.client.runtime.context;
 
 import java.util.Objects;
 import java.util.function.Supplier;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
 
 public final class SlotScope {
     private static final ThreadLocal<Integer> ACTIVE_SLOT_ID = new ThreadLocal<>();
@@ -71,7 +71,7 @@ public final class SlotScope {
     }
 
     private static void requireValid(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
     }
 
     private static void requireCurrent(ThreadLocal<Integer> storage, int expected, String kind) {

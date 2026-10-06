@@ -3,7 +3,7 @@ package net.jr.experimental_features.gamepad_keyboard;
 import java.util.function.BooleanSupplier;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.input.InputApi;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
+import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -26,7 +26,7 @@ public final class GamepadTextInputFocus {
         screen.setFocused(input);
         input.setFocused(true);
         if (InputApi.isGamepadMode()) {
-            LocalGamepadInputHandler.syncVirtualCursorToFocus(screen);
+            GamepadInputHandler.syncVirtualCursorToFocus(screen);
         }
         return true;
     }

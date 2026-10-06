@@ -2,7 +2,7 @@ package net.jr.client.runtime.viewport;
 
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.renderer.state.WindowRenderState;
 
@@ -21,7 +21,7 @@ public final class GuiScissorBounds {
             return new PixelRectangle(left, top, right, bottom);
         }
 
-        for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+        for (Slots slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
             ViewportArea viewport =
                     ClientRuntime.INSTANCE.viewports().viewport(slot.id());
 

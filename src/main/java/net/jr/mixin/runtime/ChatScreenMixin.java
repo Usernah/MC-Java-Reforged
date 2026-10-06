@@ -1,6 +1,6 @@
 package net.jr.mixin.runtime;
 
-import net.jr.client.runtime.ui.LocalChatRouter;
+import net.jr.client.runtime.ui.ChatRouter;
 import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardScreen;
 import net.minecraft.client.Options;
 import net.minecraft.client.input.KeyEvent;
@@ -27,6 +27,6 @@ public abstract class ChatScreenMixin implements GamepadKeyboardScreen {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Options;getBackgroundColor(I)I")
     )
     private int javaReforged$drawConfiguredInputBackground(Options options, int color) {
-        return LocalChatRouter.backgroundColor(options.getBackgroundColor(color));
+        return ChatRouter.backgroundColor(options.getBackgroundColor(color));
     }
 }

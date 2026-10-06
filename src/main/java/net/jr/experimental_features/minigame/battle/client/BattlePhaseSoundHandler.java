@@ -3,8 +3,8 @@ package net.jr.experimental_features.minigame.battle.client;
 
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.experimental_features.minigame.battle.BattlePhase;
 import net.jr.experimental_features.minigame.client.BattleClientState;
 import net.jr.registry.ModSounds;
@@ -103,8 +103,8 @@ public final class BattlePhaseSoundHandler {
     }
 
     private static boolean hasAnyActivePlayer() {
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
-            if (LocalClientReadinessPolicy.worldReady(client)) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+            if (ReadinessPolicy.worldReady(client)) {
                 return true;
             }
         }

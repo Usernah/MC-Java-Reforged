@@ -32,8 +32,23 @@ repositories {
 configurations {
     bundleShadow
     sdlNative
+    sodiumDistribution
     api.extendsFrom bundleShadow
     runtimeOnly.extendsFrom bundleShadow
+}
+
+def sodiumCompileJar = layout.buildDirectory.file('sodium-api/sodium-neoforge.jar')
+
+def extractSodiumCompileJar = tasks.register('extractSodiumCompileJar', Copy) {
+    from({
+        configurations.sodiumDistribution.collect { archive -> zipTree(archive) }
+    })
+    include 'META-INF/jarjar/net.caffeinemc.sodium-neoforge-*-mod.jar'
+    eachFile { details ->
+        details.path = 'sodium-neoforge.jar'
+    }
+    includeEmptyDirs = false
+    into layout.buildDirectory.dir('sodium-api')
 }
 
 afterEvaluate {
@@ -85,7 +100,7 @@ neoForge {
     runs {
         client {
             client()
-            //programArguments.addAll '--width', '1600', '--height', '720'
+            //programArguments.addAll '--width', '2560', '--height', '1080'
             if (project.hasProperty('devUsername')) {
                 programArguments.addAll '--username', project.property('devUsername').toString()
             }
@@ -107,6 +122,18 @@ neoForge {
             taskBefore tasks.named(sourceSets.transformService.classesTaskName)
 
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // Uses the same game directory and settings as the regular client. A
+        // separate run keeps Steam's username out of IntelliJ's argument file.
+        steamClient {
+            client()
+            gameDirectory = project.file('run')
+            if (project.hasProperty('steamUsername')) {
+                programArguments.addAll '--username', project.property('steamUsername').toString()
+            }
+            taskBefore tasks.named(sourceSets.transformService.classesTaskName)
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -171,9 +198,13 @@ dependencies {
     transformServiceCompileOnly "net.neoforged.fancymodloader:loader:11.0.13"
     jarJar files(transformServiceJar)
 
-    // Optional Sodium compatibility baseline. This exposes Sodium to Java and
-    // IntelliJ without bundling it or declaring it as a required runtime mod.
-    compileOnly "maven.modrinth:AANobbMI:${sodium_modrinth_version_id}"
+    // Sodium's NeoForge distribution keeps its compile-time API in a nested
+    // jar. Extract it only into build/ so Sodium stays an optional runtime mod.
+    sodiumDistribution "maven.modrinth:AANobbMI:${sodium_modrinth_version_id}"
+    compileOnly files(sodiumCompileJar) {
+        builtBy extractSodiumCompileJar
+    }
+    runtimeOnly "maven.modrinth:AANobbMI:${sodium_modrinth_version_id}"
     compileOnly "maven.modrinth:nvQzSEkH:${jade_modrinth_version_id}"
     compileOnly "maven.modrinth:5sy6g3kz:${bettercombat_modrinth_version_id}"
     compileOnly "maven.modrinth:wGKYL7st:${combat_roll_modrinth_version_id}"

@@ -1,6 +1,6 @@
 package net.jr.mixin.runtime;
 
-import net.jr.client.runtime.session.LocalClientDisconnectHandler;
+import net.jr.client.runtime.session.DisconnectHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.network.chat.Component;
@@ -18,7 +18,7 @@ public abstract class PauseScreenMixin {
         )
     )
     private void javaReforged$disconnectOnlyCurrentLocalClient(Minecraft minecraft, Component message) {
-        if (!LocalClientDisconnectHandler.disconnectCurrentFromPauseMenu(minecraft)) {
+        if (!DisconnectHandler.disconnectCurrentSecondary(minecraft)) {
             minecraft.disconnectFromWorld(message);
         }
     }

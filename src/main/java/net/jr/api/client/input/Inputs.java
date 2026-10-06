@@ -14,8 +14,4 @@ public final class Inputs {
     public static IInputAssignment assignments() {
         return ClientRuntime.INSTANCE.input().assignments();
     }
-
-    public static ISlotInput slot(int slotId) {
-        return ClientRuntime.INSTANCE.slots().slot(slotId).input();
-    }
 }

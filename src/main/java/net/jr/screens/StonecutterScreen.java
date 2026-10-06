@@ -2,7 +2,7 @@ package net.jr.screens;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.jr.api.client.local.LocalClients;
+
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.Cursor;
@@ -26,7 +26,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.entity.player.Inventory;
@@ -59,7 +58,6 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
             })
     );
 
-    private final int slotId;
     private VanillaSlotLayer slotLayer;
     private SlotGrid slotGrid;
     private RecipeGrid recipeGrid;
@@ -68,7 +66,6 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
 
     public StonecutterScreen(StonecutterMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, 176, 166);
-        this.slotId = LocalClients.slotId((LocalPlayer)inventory.player);
         this.menu.registerUpdateListener(this::recipesChanged);
         this.inventoryLabelY = 72;
     }
@@ -197,8 +194,8 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
             return false;
         }
         RecipeOption recipe = this.recipeGrid.recipeAt(
-                Cursor.x(this.slotId),
-                Cursor.y(this.slotId),
+                Cursor.x(),
+                Cursor.y(),
                 this.focusRegion == FocusRegion.RECIPES && UiInputModeController.isFocusNavigationActive()
         );
         return recipe != null && this.craftStack(recipe);
@@ -394,7 +391,6 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
         this.slotLayer.setFocusedSlot(slot);
         var position = this.slotGrid.get(index);
         Cursor.moveTo(
-                this.slotId,
                 position.x() + position.width() / 2.0D,
                 position.y() + position.height() / 2.0D
         );
@@ -407,7 +403,6 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
         this.enterRecipeFocus();
         var rectangle = this.recipeGrid.getFocused().getRectangle();
         Cursor.moveTo(
-                this.slotId,
                 rectangle.left() + rectangle.width() / 2.0D,
                 rectangle.top() + rectangle.height() / 2.0D
         );

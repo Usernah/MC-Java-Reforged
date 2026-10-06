@@ -5,10 +5,9 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.jr.client.compat.jade.JadeRuntimeState;
 import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.LerpingBossEvent;
 import com.mojang.blaze3d.platform.Window;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut;
 import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
@@ -23,8 +22,8 @@ import snownee.jade.util.ClientProxy;
 abstract class ClientProxyMixin {
     @WrapMethod(method = "onClientTick")
     private static void javaReforged$tickEveryClient(Post event, Operation<Void> original) {
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
-            LocalClientExecution.runForClient(
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+            InstanceExecution.runForClient(
                 client.slotId(),
                 () -> JadeRuntimeState.run(() -> original.call(event))
             );
@@ -69,7 +68,7 @@ abstract class ClientProxyMixin {
         )
     )
     private static int javaReforged$viewportWidth(Window window) {
-        return Viewport.width();
+        return Viewport.current().logicalGuiWidth();
     }
 
     @WrapMethod(method = "onPlayerLeave")

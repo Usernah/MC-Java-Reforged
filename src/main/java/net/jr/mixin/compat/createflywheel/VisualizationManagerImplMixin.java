@@ -1,7 +1,7 @@
 package net.jr.mixin.compat.createflywheel;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
+import net.jr.client.runtime.client.ClientInstance;
 import net.minecraft.world.level.LevelAccessor;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
@@ -29,7 +29,7 @@ abstract class VisualizationManagerImplMixin {
         LevelAccessor level,
         CallbackInfoReturnable<Boolean> cir
     ) {
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             if (client.level() == level) {
                 cir.setReturnValue(true);
                 return;

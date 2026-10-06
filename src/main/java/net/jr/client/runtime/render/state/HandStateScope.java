@@ -2,7 +2,8 @@ package net.jr.client.runtime.render.state;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import net.jr.client.runtime.context.LocalClientScope;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.state.HandState;
 import net.jr.mixin.accessors.ItemInHandRendererAccessor;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -18,7 +19,7 @@ public final class HandStateScope implements AutoCloseable {
         ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor)renderer;
         HandState previousEngineState = new HandState();
         previousEngineState.capture(accessor);
-        HandState clientState = LocalClientScope.currentClient().render().hands();
+        HandState clientState = Client.current().render().hands();
         clientState.install(accessor);
         BINDINGS.get().push(new Binding(renderer, clientState, previousEngineState));
     }

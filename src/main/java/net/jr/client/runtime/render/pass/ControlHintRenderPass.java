@@ -5,20 +5,23 @@ import java.util.List;
 import net.jr.api.client.split.SplitScreen;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
+import net.jr.client.runtime.viewport.GuiScaleCalculator;
 import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.runtime.viewport.ViewportLayout;
 import net.jr.client.ui.hint.ControlHintContext;
 import net.jr.client.ui.hint.ControlHintPipeline;
 import net.jr.client.ui.hint.model.ResolvedControlHint;
 import net.jr.client.ui.hint.render.ControlHintRenderer;
 import net.jr.client.ui.layout.render.UILayoutRenderTarget;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import org.jetbrains.annotations.Nullable;
 
 public final class ControlHintRenderPass {
-    private static final FramebufferMetrics HD = new FramebufferMetrics(1280, 720);
-    private static final FramebufferMetrics FULL_HD = new FramebufferMetrics(1920, 1080);
+    private static final float FULL_HD_FRAMEBUFFER_SCALE = 0.25F;
+    private static final float HD_FRAMEBUFFER_SCALE = 0.5F;
     private static final int INTERNAL_RASTER_SCALE = 1;
     private static final int HINT_FRAMEBUFFER_HEIGHT = 100;
     private static final float PIXEL_BIAS = 0.35F;
@@ -26,7 +29,7 @@ public final class ControlHintRenderPass {
     private static final int HUD_TARGET = 0;
     private static final int MENU_TARGET = 1;
     private static final UILayoutRenderTarget[][] TARGETS =
-        new UILayoutRenderTarget[LocalClientSlotRegistry.MAX_SLOTS][2];
+        new UILayoutRenderTarget[ClientSlots.MAX_SLOTS][2];
 
     private ControlHintRenderPass() {
     }
@@ -83,13 +86,20 @@ public final class ControlHintRenderPass {
         }
         HintCompositionLayout layout = resolveLayout(graphics);
         if (layout == null) {
-            ControlHintRenderer.renderDirect(
-                result.context(),
-                graphics,
-                result.hints(),
-                graphics.guiWidth(),
-                graphics.guiHeight()
-            );
+            float framebufferScale = framebufferScale(null, null);
+            graphics.pose().pushMatrix();
+            graphics.pose().scale(framebufferScale, framebufferScale);
+            try {
+                ControlHintRenderer.renderDirect(
+                    result.context(),
+                    graphics,
+                    result.hints(),
+                    graphics.guiWidth() / framebufferScale,
+                    graphics.guiHeight() / framebufferScale
+                );
+            } finally {
+                graphics.pose().popMatrix();
+            }
             return;
         }
         renderComposed(result.context(), graphics, result.hints(), layout);
@@ -107,6 +117,7 @@ public final class ControlHintRenderPass {
         return resolveLayout(
             parentGraphics,
             ClientRuntime.INSTANCE.viewports().viewport(slotId),
+            slotId,
             HINT_FRAMEBUFFER_HEIGHT
         );
     }
@@ -131,7 +142,7 @@ public final class ControlHintRenderPass {
             layout.scale(),
             FilterMode.LINEAR,
             PIXEL_BIAS,
-            compositionGraphics -> ControlHintRenderer.renderIcons(
+            compositionGraphics -> ControlHintRenderer.renderDirect(
                 context,
                 compositionGraphics,
                 hints,
@@ -139,21 +150,6 @@ public final class ControlHintRenderPass {
                 layout.canvasHeight()
             )
         );
-
-        parentGraphics.pose().pushMatrix();
-        parentGraphics.pose().translate(0.0F, layout.destinationY());
-        parentGraphics.pose().scale(layout.scale(), layout.scale());
-        try {
-            ControlHintRenderer.renderText(
-                context,
-                parentGraphics,
-                hints,
-                layout.canvasWidth(),
-                layout.canvasHeight()
-            );
-        } finally {
-            parentGraphics.pose().popMatrix();
-        }
     }
 
     private static UILayoutRenderTarget target(int slotId, int kind) {
@@ -165,30 +161,13 @@ public final class ControlHintRenderPass {
         return target;
     }
 
-    private static LogicalViewport logicalViewport(ViewportArea viewport) {
-        FramebufferMetrics metrics = SplitScreen.isActive() ? HD : FULL_HD;
-        return switch (viewport.layout()) {
-            case SINGLE -> new LogicalViewport(metrics.width(), metrics.height());
-            case TWO_VERTICAL -> new LogicalViewport(metrics.width() / 2, metrics.height());
-            case TWO_HORIZONTAL -> new LogicalViewport(metrics.width(), metrics.height() / 2);
-            case FOUR_GRID -> new LogicalViewport(metrics.width() / 2, metrics.height() / 2);
-        };
-    }
-
     private static HintCompositionLayout resolveLayout(
         GuiGraphicsExtractor parentGraphics,
         ViewportArea viewport,
+        int slotId,
         int compositionHeight
     ) {
-        LogicalViewport reference = logicalViewport(viewport);
-        float scale = Math.min(
-            parentGraphics.guiWidth() / (float)reference.width(),
-            parentGraphics.guiHeight() / (float)reference.height()
-        );
-        if (!Float.isFinite(scale) || scale <= 0.0F) {
-            scale = 1.0F;
-        }
-
+        float scale = framebufferScale(viewport, slotId);
         float canvasWidth = parentGraphics.guiWidth() / scale;
         float canvasHeight = compositionHeight;
         int targetWidth = Math.max(1, (int)Math.ceil(canvasWidth));
@@ -204,10 +183,41 @@ public final class ControlHintRenderPass {
         );
     }
 
-    private record FramebufferMetrics(int width, int height) {
-    }
+    private static float framebufferScale(
+        @Nullable ViewportArea viewport,
+        @Nullable Integer slotId
+    ) {
+        float scale = SplitScreen.isActive()
+            ? HD_FRAMEBUFFER_SCALE
+            : FULL_HD_FRAMEBUFFER_SCALE;
+        if (
+                viewport == null
+                        || slotId == null
+                        || (
+                        viewport.layout() != ViewportLayout.FOUR_GRID
+                                && viewport.layout() != ViewportLayout.TWO_HORIZONTAL
+                )
+                        || !ClientRuntime.INSTANCE.viewports().hasWindowMetrics()
+        ) {
+            return scale;
+        }
 
-    private record LogicalViewport(int width, int height) {
+        var window = ClientRuntime.INSTANCE.viewports().windowMetrics();
+        int requestedScale = ClientRuntime.INSTANCE.slots()
+            .slot(slotId)
+            .optionsState()
+            .requestedGuiScale();
+        int verticalGuiScale = GuiScaleCalculator.resolve(
+            Math.max(1, window.framebufferWidth() / 2),
+            window.framebufferHeight(),
+            requestedScale,
+            Minecraft.getInstance().isEnforceUnicode()
+        );
+        double activeGuiScale = viewport.effectiveGuiScale();
+        if (!Double.isFinite(activeGuiScale) || activeGuiScale <= 0.0D) {
+            return scale;
+        }
+        return scale * (float)(verticalGuiScale / activeGuiScale);
     }
 
     public record PreparedHud(

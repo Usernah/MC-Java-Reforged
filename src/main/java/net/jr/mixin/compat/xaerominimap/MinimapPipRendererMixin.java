@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.jr.client.compat.xaero.XaeroMinimapPipState;
 import net.jr.client.compat.xaero.XaeroMinimapPipRenderers;
 import net.jr.client.compat.xaero.XaeroMinimapRuntimeState;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
@@ -69,7 +69,7 @@ abstract class MinimapPipRendererMixin {
             );
             return;
         }
-        LocalClientExecution.runForClient(
+        InstanceExecution.runForClient(
             slotId,
             () -> XaeroMinimapRuntimeState.run(
                 () -> XaeroMinimapPipRenderers.render(

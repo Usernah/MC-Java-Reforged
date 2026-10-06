@@ -3,9 +3,10 @@ package net.jr.client.compat.jade;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.function.Supplier;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.client.ClientInstance;
 import net.jr.mixin.compat.jade.ClientProxyAccessor;
 import net.jr.mixin.compat.jade.JadeClientAccessor;
 import net.jr.mixin.compat.jade.ObjectDataCenterAccessor;
@@ -20,7 +21,7 @@ import snownee.jade.overlay.RayTracing;
 import snownee.jade.overlay.WailaTickHandler;
 
 public final class JadeRuntimeState {
-    private static final Map<LocalClient, State> STATES = new WeakHashMap<>();
+    private static final Map<ClientInstance, State> STATES = new WeakHashMap<>();
     private static final ThreadLocal<State> ACTIVE_STATE = new ThreadLocal<>();
 
     private JadeRuntimeState() {
@@ -29,7 +30,7 @@ public final class JadeRuntimeState {
     public static WailaTickHandler tickHandler(WailaTickHandler primary) {
         State state = currentState();
         if (state.tickHandler == null) {
-            state.tickHandler = state.client.slotId() == 0 ? primary : new WailaTickHandler();
+            state.tickHandler = state.client.isPrimary() ? primary : new WailaTickHandler();
         }
         return state.tickHandler;
     }
@@ -37,7 +38,7 @@ public final class JadeRuntimeState {
     public static RayTracing rayTracing(RayTracing primary) {
         State state = currentState();
         if (state.rayTracing == null) {
-            state.rayTracing = state.client.slotId() == 0 ? primary : new RayTracing();
+            state.rayTracing = state.client.isPrimary() ? primary : new RayTracing();
         }
         return state.rayTracing;
     }
@@ -107,7 +108,7 @@ public final class JadeRuntimeState {
     }
 
     private static State currentState() {
-        LocalClient client = LocalClientScope.currentClientOrNull();
+        ClientInstance client = Client.currentOrNull();
         if (client == null) {
             client = ClientRuntime.INSTANCE.clients().client(0);
         }
@@ -117,7 +118,7 @@ public final class JadeRuntimeState {
     }
 
     private static State primaryState() {
-        LocalClient client = ClientRuntime.INSTANCE.clients().client(0);
+        ClientInstance client = ClientRuntime.INSTANCE.clients().client(0);
         synchronized (STATES) {
             return STATES.computeIfAbsent(client, State::new);
         }
@@ -166,7 +167,7 @@ public final class JadeRuntimeState {
     }
 
     private static final class State {
-        private final LocalClient client;
+        private final ClientInstance client;
         private final JadeOptionsState options;
         private final TooltipAnimation animation = new TooltipAnimation();
         private WailaTickHandler tickHandler;
@@ -187,7 +188,7 @@ public final class JadeRuntimeState {
         private boolean bossbarShown;
         private int bossbarHeight;
 
-        private State(LocalClient client) {
+        private State(ClientInstance client) {
             this.client = client;
             this.options = new JadeOptionsState(client.slotId());
         }

@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "net.jr.mixin.compat.sodium",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "SodiumChunkBuilderMixin",
+    "SodiumChunkBuilderWorkerMixin",
+    "SodiumRenderSectionManagerMixin",
+    "SodiumUniformBufferManagerMixin",
+    "SodiumWorldRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

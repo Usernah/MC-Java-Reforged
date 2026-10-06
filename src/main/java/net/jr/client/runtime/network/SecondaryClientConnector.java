@@ -32,8 +32,10 @@ public final class SecondaryClientConnector {
             throw new IllegalStateException("Secondary local clients require an integrated server in this path");
         }
         SocketAddress address = minecraft.getSingleplayerServer().getConnection().startMemoryChannel();
-        Connection connection = Connection.connectToLocalServer(address);
-        connections.bind(connection, slotId);
+        Connection connection = connections.connectOwned(
+            slotId,
+            () -> Connection.connectToLocalServer(address)
+        );
         ClientHandshakePacketListenerImpl listener = new ClientHandshakePacketListenerImpl(
             connection,
             minecraft,
@@ -64,12 +66,14 @@ public final class SecondaryClientConnector {
             .map(ResolvedServerAddress::asInetSocketAddress)
             .orElseThrow(() -> new IllegalStateException("Could not resolve local client server address " + serverData.ip));
 
-        Connection connection = Connection.connectToServer(
-            address,
-            EventLoopGroupHolder.remote(minecraft.options.useNativeTransport()),
-            minecraft.getDebugOverlay().getBandwidthLogger()
+        Connection connection = connections.connectOwned(
+            slotId,
+            () -> Connection.connectToServer(
+                address,
+                EventLoopGroupHolder.remote(minecraft.options.useNativeTransport()),
+                minecraft.getDebugOverlay().getBandwidthLogger()
+            )
         );
-        connections.bind(connection, slotId);
         minecraft.getDownloadedPackSource().configureForServerControl(
             connection,
             convertPackStatus(serverData.getResourcePackStatus())

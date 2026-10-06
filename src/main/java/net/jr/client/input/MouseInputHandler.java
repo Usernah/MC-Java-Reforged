@@ -1,8 +1,8 @@
 package net.jr.client.input;
 
 import net.jr.client.input.simulation.InputSimulation;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
-import net.jr.client.runtime.input.LocalInputActionHandler;
+import net.jr.client.runtime.input.GamepadInputHandler;
+import net.jr.client.runtime.input.InputActionHandler;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,7 +18,7 @@ public final class MouseInputHandler {
             InputApi.markGamepadInput();
             return true;
         }
-        LocalGamepadInputHandler.notifyPhysicalMouseMove(x, y);
+        GamepadInputHandler.notifyPhysicalMouseMove(x, y);
         return false;
     }
 
@@ -45,7 +45,7 @@ public final class MouseInputHandler {
         }
 
         Screen screen = minecraft.gui.screen();
-        if (LocalInputActionHandler.suppressConsumedScreenMouseButton(screen, button, action)) {
+        if (InputActionHandler.suppressConsumedScreenMouseButton(screen, button, action)) {
             if (screen != null) {
                 screen.afterMouseAction();
             }
@@ -56,14 +56,14 @@ public final class MouseInputHandler {
         }
 
         boolean handled = action == GLFW.GLFW_PRESS
-                ? LocalInputActionHandler.handleScreenMouseButton(screen, button)
+                ? InputActionHandler.handleScreenMouseButton(screen, button)
                 : action == GLFW.GLFW_RELEASE
-                        && LocalInputActionHandler.consumeHandledMouseRelease(screen, button);
+                        && InputActionHandler.consumeHandledMouseRelease(screen, button);
         if (!handled) {
             return false;
         }
         if (action == GLFW.GLFW_PRESS) {
-            LocalInputActionHandler.rememberSuppressedScreenMouseButton(button);
+            InputActionHandler.rememberSuppressedScreenMouseButton(button);
         }
         screen.afterMouseAction();
         return true;
@@ -90,7 +90,7 @@ public final class MouseInputHandler {
         }
 
         Screen screen = minecraft.gui.screen();
-        if (!LocalInputActionHandler.handleScreenMouseScroll(screen, yOffset)) {
+        if (!InputActionHandler.handleScreenMouseScroll(screen, yOffset)) {
             return false;
         }
         screen.afterMouseAction();

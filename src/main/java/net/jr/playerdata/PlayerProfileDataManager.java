@@ -1,7 +1,7 @@
 package net.jr.playerdata;
 
 import net.jr.Java_reforged;
-import net.jr.client.runtime.player.SecondaryPlayerProfileFactory;
+import net.jr.client.runtime.player.SecondaryProfile;
 import net.jr.util.LegacyPlayerColors;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -42,7 +42,7 @@ public final class PlayerProfileDataManager {
     public static Component getSplitDisplayName(Player player) {
         PlayerProfileData data = player.getExistingDataOrNull(PLAYER_PROFILE);
         int ordinal = data == null ? PlayerProfileData.NOT_A_SPLIT_PLAYER : data.splitOrdinal();
-        Component inferredName = SecondaryPlayerProfileFactory.visibleName(player.getGameProfile());
+        Component inferredName = SecondaryProfile.visibleName(player.getGameProfile());
         if (ordinal < 0) {
             return inferredName;
         }
@@ -93,7 +93,7 @@ public final class PlayerProfileDataManager {
     }
 
     private static void assignSessionColor(ServerPlayer player) {
-        int splitOrdinal = SecondaryPlayerProfileFactory.ordinal(player.getGameProfile());
+        int splitOrdinal = SecondaryProfile.ordinal(player.getGameProfile());
         player.setData(PLAYER_PROFILE, PlayerProfileData.DEFAULT
                 .withLegacyColorIndex(findAvailableColorIndex(player))
                 .withSplitOrdinal(splitOrdinal));

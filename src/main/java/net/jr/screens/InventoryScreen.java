@@ -11,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.EffectsInInventory;
 import net.minecraft.client.gui.screens.inventory.StonecutterScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -29,9 +30,11 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
 
     private VanillaSlotLayer slotLayer;
     private SlotGrid slotGrid;
+    private final EffectsInInventory effects;
 
     public InventoryScreen(InventoryMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, 176, 166);
+        this.effects = new EffectsInInventory(this);
     }
 
     @Override
@@ -124,17 +127,13 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
     }
 
     @Override
-    public void extractRenderState(
-            GuiGraphicsExtractor graphics,
-            int mouseX,
-            int mouseY,
-            float partialTick
-    ) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         for (GuiEventListener child : this.children()) {
             if (child instanceof Renderable renderable) {
                 renderable.extractRenderState(graphics, mouseX, mouseY, partialTick);
             }
         }
+        this.effects.extractRenderState(graphics,mouseX,mouseY);
         this.slotLayer.updateHovered(this.slotGrid, mouseX, mouseY);
         this.slotLayer.renderSlotMap(graphics, this.slotGrid);
         this.slotLayer.renderHoveredSlot(graphics, this.slotGrid);

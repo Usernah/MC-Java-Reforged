@@ -6,11 +6,11 @@ import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.Arrays;
 import java.util.function.Supplier;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
 
 public final class ViewportRingBufferFactory {
     private static final int VANILLA_BUFFER_COUNT = 3;
-    private static final int VIEWPORT_BUFFER_COUNT = VANILLA_BUFFER_COUNT * LocalClientSlotRegistry.MAX_SLOTS;
+    private static final int VIEWPORT_BUFFER_COUNT = VANILLA_BUFFER_COUNT * ClientSlots.MAX_SLOTS;
 
     private ViewportRingBufferFactory() {
     }

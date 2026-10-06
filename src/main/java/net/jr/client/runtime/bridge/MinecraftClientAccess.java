@@ -3,7 +3,7 @@ package net.jr.client.runtime.bridge;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
@@ -75,7 +75,7 @@ public final class MinecraftClientAccess {
         minecraft.setCameraEntity(entity);
     }
 
-    private static LocalClientSlot slot() {
+    private static Slots slot() {
         Integer slotId = SlotScope.idOrNull();
         return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0);
     }

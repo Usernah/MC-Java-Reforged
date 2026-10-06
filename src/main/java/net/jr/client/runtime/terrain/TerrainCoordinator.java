@@ -7,17 +7,17 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.slot.ClientSlots;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.mixin.accessors.LevelRendererAccessor;
-import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.render.experimental.TerrainMultiDraw;
-import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
 import net.jr.client.runtime.state.TerrainState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.SectionUpdateTracker;
@@ -57,7 +57,7 @@ public final class TerrainCoordinator {
             int viewDistance,
             SectionOcclusionGraph graph
     ) {
-        ClientLevel level = LocalClientScope.currentClient().level();
+        ClientLevel level = Client.current().level();
         if (level == null) {
             throw new IllegalStateException("Cannot create terrain ViewArea without an active ClientLevel");
         }
@@ -95,7 +95,7 @@ public final class TerrainCoordinator {
         }
     }
 
-    public static void beginExtractionFrame(List<LocalClientSlot> extractionSlots) {
+    public static void beginExtractionFrame(List<Slots> extractionSlots) {
         sharedGeometryRebuildRequestedThisExtraction = false;
         sharedGeometryInvalidatedThisExtraction = false;
         sharedCompileQueueClearedThisExtraction = false;
@@ -104,7 +104,7 @@ public final class TerrainCoordinator {
         SharedTerrainStore store = TerrainStateStore.nullableTerrainStore();
         Set<ClientLevel> clearedLevels = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
 
-        for (LocalClientSlot slot : extractionSlots) {
+        for (Slots slot : extractionSlots) {
             var extraction = slot.renderState().levelExtractionState();
             if (!extraction.consumeLocalLevelResetRequest()) {
                 continue;
@@ -115,7 +115,7 @@ public final class TerrainCoordinator {
         }
 
         boolean requiresSharedRebuild = false;
-        for (LocalClientSlot slot : extractionSlots) {
+        for (Slots slot : extractionSlots) {
             var extraction = slot.renderState().levelExtractionState();
             if (
                 slot.renderState().terrain().viewArea() != null
@@ -129,13 +129,13 @@ public final class TerrainCoordinator {
 
         if (requiresSharedRebuild) {
             sharedGeometryRebuildRequestedThisExtraction = true;
-            for (LocalClientSlot slot : extractionSlots) {
+            for (Slots slot : extractionSlots) {
                 prepareAllChangedState(slot, viewDistance, clearedLevels);
             }
             return;
         }
 
-        for (LocalClientSlot slot : extractionSlots) {
+        for (Slots slot : extractionSlots) {
             if (slot.renderState().terrain().viewArea() == null) {
                 prepareAllChangedState(slot, viewDistance, clearedLevels);
             }
@@ -143,7 +143,7 @@ public final class TerrainCoordinator {
     }
 
     private static void prepareLocalLevelState(
-        LocalClientSlot slot,
+        Slots slot,
         SharedTerrainStore store,
         int viewDistance,
         Set<ClientLevel> clearedLevels
@@ -185,8 +185,8 @@ public final class TerrainCoordinator {
         int viewDistance = minecraft.options.getEffectiveRenderDistance();
         Set<ClientLevel> clearedLevels = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
         boolean routed = false;
-        for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
-            LocalClientSlot slot = ClientRuntime.INSTANCE.slots().slot(slotId);
+        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
+            Slots slot = ClientRuntime.INSTANCE.slots().slot(slotId);
             ClientLevel level = slot.renderState().level();
             if (level == null) {
                 continue;
@@ -246,7 +246,7 @@ public final class TerrainCoordinator {
         var driverCamera = ClientRuntime.INSTANCE.slots().slot(driverSlotId)
             .renderState().levelRenderState().cameraRenderState.pos;
         try {
-            for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+            for (Slots slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
                 if (!canRender(slot)) {
                     continue;
                 }
@@ -258,8 +258,8 @@ public final class TerrainCoordinator {
                 }
 
                 try (
-                    LocalClientExecution.Scope ignoredClient = LocalClientExecution.enterForClient(minecraft, slot.id());
-                    WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bindTerrainOnly(minecraft, slot)
+                        InstanceExecution.Scope ignoredClient = InstanceExecution.enterForClient(minecraft, slot.id());
+                        WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bindTerrainOnly(minecraft, slot)
                 ) {
                     var cameraState = slot.renderState().levelRenderState().cameraRenderState;
                     slot.renderState().terrain().setCameraPosition(cameraState.pos);
@@ -274,7 +274,7 @@ public final class TerrainCoordinator {
 
     private static Map<TerrainKey, SectionUpdateRenderState> selectUniqueUpdates() {
         Map<TerrainKey, SectionUpdateRenderState> selected = new HashMap<>();
-        for (LocalClientSlot slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
+        for (Slots slot : ClientRuntime.INSTANCE.viewports().drawableSlots()) {
             ClientLevel level = slot.renderState().level();
             if (level == null) {
                 continue;
@@ -292,7 +292,7 @@ public final class TerrainCoordinator {
 
     public static void onSectionCompiled(SectionRenderDispatcher.RenderSection section) {
         TerrainMultiDraw.invalidateSection(section);
-        for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
+        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
             TerrainState terrain = ClientRuntime.INSTANCE.slots().slot(slotId).renderState().terrain();
             if (terrain.contains(section)) {
                 terrain.sectionOcclusionGraph().schedulePropagationFrom(section);
@@ -334,7 +334,7 @@ public final class TerrainCoordinator {
     }
 
     private static void releaseAllViews() {
-        for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
+        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
             TerrainMultiDraw.invalidateSlot(slotId);
             ClientRuntime.INSTANCE.slots().slot(slotId).renderState().terrain().releaseViewArea();
         }
@@ -346,7 +346,7 @@ public final class TerrainCoordinator {
     }
 
     private static void prepareAllChangedState(
-        LocalClientSlot slot,
+        Slots slot,
         int viewDistance,
         Set<ClientLevel> clearedLevels
     ) {
@@ -371,13 +371,13 @@ public final class TerrainCoordinator {
 
         return active != null
                 ? active
-                : LocalClientScope.currentClient().slotId();
+                : Client.slotId();
     }
 
-    private static boolean canRender(LocalClientSlot slot) {
-        LocalClient client = ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
+    private static boolean canRender(Slots slot) {
+        ClientInstance client = ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
         return client != null
             && ClientRuntime.INSTANCE.viewports().hasViewport(slot.id())
-            && LocalClientReadinessPolicy.gameplayReady(client);
+            && ReadinessPolicy.gameplayReady(client);
     }
 }

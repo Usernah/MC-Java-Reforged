@@ -4,8 +4,9 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.systems.ScissorState;
 import java.util.Map;
 import java.util.WeakHashMap;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientScope;
+
+import net.jr.api.client.local.Client;
+import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.minecraft.client.Minecraft;
 import org.joml.Matrix4f;
@@ -13,7 +14,7 @@ import org.joml.Matrix4fc;
 import xaero.common.core.XaeroMinimapCore;
 
 public final class XaeroMinimapWorldMatrices {
-    private static final Map<LocalClient, State> STATES = new WeakHashMap<>();
+    private static final Map<ClientInstance, State> STATES = new WeakHashMap<>();
 
     private XaeroMinimapWorldMatrices() {
     }
@@ -87,7 +88,7 @@ public final class XaeroMinimapWorldMatrices {
     }
 
     private static State currentState() {
-        LocalClient client = LocalClientScope.currentClientOrNull();
+        ClientInstance client = Client.currentOrNull();
         if (client == null) {
             return null;
         }

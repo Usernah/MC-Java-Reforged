@@ -1,6 +1,6 @@
 package net.jr.mixin.compat.createcatnip;
 
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,7 +23,7 @@ abstract class ScreenOpenerMixin {
             index = 0
     )
     private static Runnable javaReforged$captureScreenOwner(Runnable task) {
-        return LocalClientExecution.wrapScheduled(task);
+        return InstanceExecution.wrapScheduled(task);
     }
 
     @Redirect(

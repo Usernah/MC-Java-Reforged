@@ -2,10 +2,11 @@ package net.jr.client.compat.rpgseries;
 
 import java.util.Map;
 import java.util.WeakHashMap;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientExecution;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.mixin.compat.rpgseries.HudMessagesAccessor;
 import net.spell_engine.client.gui.HudMessages;
 import net.spell_engine.client.input.SpellHotbar;
@@ -13,7 +14,7 @@ import net.spell_engine.client.input.SpellHotbar;
 public final class SpellEngineRuntimeState {
     private static final SpellHotbar PRIMARY_HOTBAR = SpellHotbar.INSTANCE;
     private static final HudMessages PRIMARY_MESSAGES = HudMessages.INSTANCE;
-    private static final Map<LocalClient, State> STATES = new WeakHashMap<>();
+    private static final Map<ClientInstance, State> STATES = new WeakHashMap<>();
 
     private SpellEngineRuntimeState() {
     }
@@ -35,11 +36,11 @@ public final class SpellEngineRuntimeState {
     }
 
     public static void tickSecondaryMessages() {
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
-            if (client.slotId() == 0) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+            if (client.isPrimary()) {
                 continue;
             }
-            LocalClientExecution.runForClient(client.slotId(), () -> messages().tick());
+            InstanceExecution.runForClient(client.slotId(), () -> messages().tick());
         }
     }
 
@@ -52,14 +53,14 @@ public final class SpellEngineRuntimeState {
     }
 
     private static State currentState() {
-        LocalClient client = LocalClientScope.currentClientOrNull();
+        ClientInstance client = Client.currentOrNull();
         if (client == null) {
             client = ClientRuntime.INSTANCE.clients().client(0);
         }
         return state(client);
     }
 
-    private static State state(LocalClient client) {
+    private static State state(ClientInstance client) {
         synchronized (STATES) {
             return STATES.computeIfAbsent(client, State::new);
         }
@@ -90,10 +91,9 @@ public final class SpellEngineRuntimeState {
         private final SpellHotbar hotbar;
         private final HudMessages messages;
 
-        private State(LocalClient client) {
-            boolean primary = client.slotId() == 0;
-            this.hotbar = primary ? PRIMARY_HOTBAR : new SpellHotbar();
-            this.messages = primary ? PRIMARY_MESSAGES : new HudMessages();
+        private State(ClientInstance client) {
+            this.hotbar = client.isPrimary() ? PRIMARY_HOTBAR : new SpellHotbar();
+            this.messages = client.isPrimary() ? PRIMARY_MESSAGES : new HudMessages();
         }
     }
 }

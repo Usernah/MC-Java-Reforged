@@ -1,15 +1,17 @@
 package net.jr.client.ui.navigation;
 
+import net.jr.client.components.widgets.EditBoxElement;
 import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.runtime.input.GamepadInputHandler;
+import net.jr.client.runtime.input.InputActionHandler;
 import net.jr.client.runtime.state.UiNavigationState;
 import net.jr.client.input.InputApi;
-import net.jr.client.runtime.input.LocalCursorVisibility;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
-import net.jr.client.runtime.input.LocalInputActionHandler;
+import net.jr.client.runtime.input.CursorVisibility;
 import net.jr.client.ui.container.actions.ContainerSlotFocusController;
 import net.jr.mixin.accessors.MouseHandlerAccessor;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -39,7 +41,7 @@ public final class UiInputModeController {
                 if (!ScreenFocusController.hasNavigationFocus(screen)) {
                     ScreenFocusController.initializeFocusFromPointer(screen, minecraft);
                 } else {
-                    LocalGamepadInputHandler.syncVirtualCursorToFocus(screen);
+                    GamepadInputHandler.syncVirtualCursorToFocus(screen);
                 }
             }
         }
@@ -121,7 +123,7 @@ public final class UiInputModeController {
             activatePointerModeFromPhysicalMouse(minecraft);
             return;
         }
-        LocalGamepadInputHandler.activatePhysicalMouseCursor(minecraft);
+        GamepadInputHandler.activatePhysicalMouseCursor(minecraft);
 
         if (minecraft.gui.screen() != null && minecraft.gui.screen().isDragging()) {
             minecraft.setLastInputType(InputType.MOUSE);
@@ -145,10 +147,10 @@ public final class UiInputModeController {
             ScreenFocusController.initializeFocusFromPointer(screen, minecraft);
         }
         state().setFocusNavigationActive(true);
-        LocalGamepadInputHandler.syncVirtualCursorToFocus(screen);
-        LocalCursorVisibility.setHidden(true);
-        LocalCursorVisibility.setReplacementHidden(true);
-        LocalCursorVisibility.sync();
+        GamepadInputHandler.syncVirtualCursorToFocus(screen);
+        CursorVisibility.setHidden(true);
+        CursorVisibility.setReplacementHidden(true);
+        CursorVisibility.sync();
         observeCurrentRawMouse(minecraft);
     }
 
@@ -183,7 +185,7 @@ public final class UiInputModeController {
         state.setLastObservedRawMouseX(getRawMouseX(minecraft));
         state.setLastObservedRawMouseY(getRawMouseY(minecraft));
         state.setHasObservedRawMousePosition(true);
-        LocalGamepadInputHandler.activatePhysicalMouseCursor(minecraft);
+        GamepadInputHandler.activatePhysicalMouseCursor(minecraft);
         applyPointerInputTypeAndClearFocus(minecraft, false);
     }
 
@@ -281,8 +283,8 @@ public final class UiInputModeController {
             && ContainerSlotFocusController.moveFocus(containerScreen, keyCode);
     }
 
-    public static boolean shouldPrioritizeContainerSlotFocus(Screen screen) {
-        return screen instanceof AbstractContainerScreen<?>;
+    public static boolean applyUnifiedContainerFocusNavigation(Screen screen, int keyCode) {
+        return ScreenFocusController.moveUnifiedContainerFocus(screen, keyCode);
     }
 
     private static void applyPointerInputTypeAndClearFocus(
@@ -292,16 +294,21 @@ public final class UiInputModeController {
         minecraft.setLastInputType(InputType.MOUSE);
         Screen screen = minecraft.gui.screen();
 
-        if (screen == null
-            || (!screen.isDragging() && !LocalInputActionHandler.hasActivePointerGesture())) {
+        boolean preserveFocus = screen != null
+                && focusedElement(screen) instanceof EditBoxElement || focusedElement(screen) instanceof EditBox;
+
+        if (screen != null
+                && !preserveFocus
+                && !screen.isDragging()
+                && !InputActionHandler.hasActivePointerGesture()) {
             ScreenFocusController.clearFocusState(screen);
         }
         if (controllerPointer) {
-            LocalGamepadInputHandler.releaseFocusedSlotCursorToJoystick();
+            GamepadInputHandler.releaseFocusedSlotCursorToJoystick();
         } else {
-            LocalGamepadInputHandler.releaseFocusedSlotCursor();
+            GamepadInputHandler.releaseFocusedSlotCursor();
         }
-        LocalCursorVisibility.setReplacementHidden(false);
+        CursorVisibility.setReplacementHidden(false);
     }
 
     static void applyKeyboardNavigationInputType(int keyCode) {

@@ -3,21 +3,29 @@ package net.jr.experimental_features.minigame.battle;
 import net.jr.Java_reforged;
 import net.jr.experimental_features.minigame.MapPoints;
 import net.jr.experimental_features.minigame.PointGroup;
+import net.jr.experimental_features.minigame.client.BattleClientState;
 import net.jr.experimental_features.minigame.game.GameModeContext;
 import net.jr.experimental_features.minigame.game.GameModeState;
 import net.jr.experimental_features.minigame.network.BattleNetwork;
+import net.jr.playerdata.PlayerProfileDataManager;
 import net.jr.registry.ModSounds;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SpellParticleOption;
 import net.minecraft.network.protocol.game.ClientboundSetCameraPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gamerules.GameRuleMap;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
@@ -27,31 +35,25 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+
+import static net.minecraft.client.server.IntegratedServer.MAX_PLAYERS;
 
 @EventBusSubscriber(modid = Java_reforged.MODID)
 public final class BattleRuntime {
 
     private static final Map<UUID, BattlePlayerState> PLAYER_STATES = new HashMap<>();
     private static final Map<UUID, GameType> PENDING_GAME_MODE_RESTORE = new HashMap<>();
+    private static final Map<BlockPos, Long> REFILL_PARTICLES = new HashMap<>();
     private static final int MIN_PLAYERS_TO_START = 2;
-    private static final int STARTING_LIVES = 3;
-    private static final int REFILL_INTERVAL_TICKS = 600 ;//1_800
+    private static final int STARTING_LIVES = 1;
+    private static final int REFILL_INTERVAL_TICKS = 600;
     private static final String BATTLE_NAMETAG_TEAM = "javareforged_battle";
 
     @Nullable
@@ -65,7 +67,7 @@ public final class BattleRuntime {
     private BattleRuntime() {
     }
 
-    public static boolean startEngineMinigame(MinecraftServer server) {
+    public static boolean startEngineMinigame(MinecraftServer server, ServerLevel level) {
         if (GameModeContext.isBattle()) {
             return false;
         }
@@ -73,6 +75,7 @@ public final class BattleRuntime {
         resetSession();
         GameModeContext.setCurrentMode(GameModeState.BATTLE);
         startBattle(server);
+        configurationWorld(server, level);
         return true;
     }
 
@@ -99,11 +102,144 @@ public final class BattleRuntime {
             return;
         }
 
+        tickRefillParticles(server);
+
         switch (currentPhase) {
             case WAIT_FOR_PLAYERS -> tickWaitingForPlayers(server);
             case COUNTDOWN -> tickCountdown(server);
             case START, INMUNITY_COUNTDOWN, BATTLE, SHOWDOWN, WINNER_ANOUNCEMENT, FINISH -> tickTimedPhase(server);
         }
+    }
+
+    private static final int[] CELEBRATION_COLORS = {
+            0xffed00,
+            0xff5300,
+            0x00ff12,
+            0xff0100,
+            0x00ffe6,
+            0x0016ff,
+            0xa301ff,
+            0xff00ae
+    };
+
+    private static void celebrationParticles(MinecraftServer server) {
+        if (phaseTicksElapsed % 4 != 0) {
+            return;
+        }
+
+        for (ServerPlayer player : getBattleParticipants(server)) {
+            if (!(player.level() instanceof ServerLevel level)) {
+                continue;
+            }
+
+            if (!player.getUUID().equals(getWinnerId())) {
+                continue;
+            }
+
+            for (int color : CELEBRATION_COLORS) {
+                createColorParticle(
+                        level,
+                        color,
+                        0.6F,
+                        player.getX(),
+                        player.getY() + 0.5D,
+                        player.getZ()
+                );
+            }
+        }
+    }
+
+    private static void initialParticles(MinecraftServer server) {
+        if (phaseTicksElapsed % 2 != 0) {
+            return;
+        }
+
+        for (ServerPlayer player : getBattleParticipants(server)) {
+            if (!(player.level() instanceof ServerLevel level)) {
+                continue;
+            }
+            if (!(player.isAlive())) {
+                continue;
+            }
+            int color = PlayerProfileDataManager.getLegacyColor(player);
+
+                createColorParticle(
+                        level,
+                        color,
+                        0.6F,
+                        player.getX(),
+                        player.getY() + 0.5D,
+                        player.getZ()
+                );
+        }
+    }
+
+    private static void createColorParticle(
+            ServerLevel level,
+            int color,
+            float power,
+            double x,
+            double y,
+            double z
+    ) {
+        SpellParticleOption particle = SpellParticleOption.create(
+                ParticleTypes.EFFECT,
+                color,
+                power
+        );
+
+        level.sendParticles(
+                particle,
+                x,
+                y,
+                z,
+                2,
+                0.30D,
+                0.40D,
+                0.30D,
+                0.00000001D
+        );
+    }
+    private static void tickRefillParticles(MinecraftServer server) {
+        if (REFILL_PARTICLES.isEmpty()) {
+            return;
+        }
+
+        ServerLevel level = resolveBattleLevel(server);
+        if (level == null) {
+            REFILL_PARTICLES.clear();
+            return;
+        }
+
+        long gameTime = level.getGameTime();
+
+        REFILL_PARTICLES.entrySet().removeIf(entry -> {
+            if (gameTime >= entry.getValue()) {
+                return true;
+            }
+
+            if (gameTime % 4L == 0L) {
+                BlockPos pos = entry.getKey();
+
+                SpellParticleOption particle = SpellParticleOption.create(
+                        ParticleTypes.INSTANT_EFFECT,0xffdc44,0.1F
+                );
+
+                level.sendParticles(
+                        particle,
+                        pos.getX() + 0.5,
+                        pos.getY() + 0.5,
+                        pos.getZ() + 0.5,
+                        2,
+                        0.15,
+                        0.15,
+                        0.15,
+                        0.00000001
+                );
+            }
+
+            return false;
+        });
     }
 
     @SubscribeEvent
@@ -115,15 +251,6 @@ public final class BattleRuntime {
                 player.setGameMode(originalMode);
             }
             BattleNetwork.sendState(player, currentPhase, phaseTicksRemaining, phaseTicksElapsed);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onContainerOpened(PlayerContainerEvent.Open event) {
-        if (GameModeContext.isBattle() && event.getEntity() instanceof ServerPlayer player) {
-            if (player.level() == resolveBattleLevel(player.level().getServer())) {
-                BattleChestLoot.markOpened(event, player.level());
-            }
         }
     }
 
@@ -281,13 +408,42 @@ public final class BattleRuntime {
         phaseTicksRemaining = 0;
         phaseTicksElapsed = 0;
         PLAYER_STATES.clear();
-        BattleChestLoot.reset();
+        REFILL_PARTICLES.clear();
     }
 
     private static void startBattle(MinecraftServer server) {
         winnerId = null;
         enterPhase(server, BattlePhase.WAIT_FOR_PLAYERS);
         stageWaitingPlayers(server);
+    }
+
+    private static void configurationWorld(MinecraftServer server, ServerLevel level) {
+        GameRuleMap battleRulesMap = new GameRuleMap.Builder().build();
+
+        server.setDifficulty(Difficulty.NORMAL,true);
+        server.setDifficultyLocked(true);
+
+        battleRulesMap.set(GameRules.FIRE_SPREAD_RADIUS_AROUND_PLAYER, 0);
+        battleRulesMap.set(GameRules.ADVANCE_WEATHER, false);
+        battleRulesMap.set(GameRules.ADVANCE_TIME,false);
+        battleRulesMap.set(GameRules.SPAWN_MOBS, false);
+        battleRulesMap.set(GameRules.SPAWN_WARDENS, false);
+        battleRulesMap.set(GameRules.SPAWN_PATROLS, false);
+        battleRulesMap.set(GameRules.MOB_GRIEFING, false);
+        battleRulesMap.set(GameRules.BLOCK_DROPS, false);
+
+        level.dimensionType().defaultClock().ifPresent(clock ->
+                server.clockManager().setTotalTicks(clock, 6000L)
+        );
+
+        server.setWeatherParameters(
+                0,
+                0,
+                false,
+                false
+        );
+
+        server.getGameRules().setAll(battleRulesMap, server.getConnection().getServer());
     }
 
     private static void tickWaitingForPlayers(MinecraftServer server) {
@@ -301,6 +457,9 @@ public final class BattleRuntime {
     }
 
     private static void tickCountdown(MinecraftServer server) {
+        if (currentPhase == BattlePhase.COUNTDOWN) {
+            initialParticles(server);
+        }
         stageWaitingPlayers(server);
         if (countReadyPlayers(server) < MIN_PLAYERS_TO_START) {
             enterPhase(server, BattlePhase.WAIT_FOR_PLAYERS);
@@ -323,6 +482,10 @@ public final class BattleRuntime {
             return;
         }
 
+        if (currentPhase == BattlePhase.START || currentPhase == BattlePhase.INMUNITY_COUNTDOWN) {
+            initialParticles(server);
+        }
+
         if (currentPhase == BattlePhase.START || currentPhase == BattlePhase.INMUNITY_COUNTDOWN
             || currentPhase == BattlePhase.BATTLE || currentPhase == BattlePhase.SHOWDOWN) {
             if (tryResolveWinnerFromAlivePlayers(server)) {
@@ -339,16 +502,30 @@ public final class BattleRuntime {
         if (currentPhase == BattlePhase.BATTLE && phaseTicksElapsed > 0
             && phaseTicksElapsed % REFILL_INTERVAL_TICKS == 0) {
             ServerLevel level = resolveBattleLevel(server);
-            if (level != null && BattleChestLoot.refillOpened(server, level) > 0) {
-                BattleNetwork.broadcastChestRefill(server);
+            if (level != null) {
+                List<BlockPos> refilledChests =
+                        BattleChestLoot.refillRandom(server, level);
+
+                if (!refilledChests.isEmpty()) {
+                    long expiresAt = level.getGameTime() + 100L; // cinco segundos
+
+                    for (BlockPos pos : refilledChests) {
+                        REFILL_PARTICLES.put(pos.immutable(), expiresAt);
+                    }
+
+                    BattleNetwork.broadcastChestRefill(server);
+                }
             }
         }
         if (currentPhase == BattlePhase.WINNER_ANOUNCEMENT || currentPhase == BattlePhase.FINISH) {
             enforceWinnerCamera(server);
+            celebrationParticles(server);
         }
         if (phaseTicksRemaining <= 0) {
             advancePhase(server);
         }
+
+
     }
 
     private static void tickPhaseClock(MinecraftServer server) {
@@ -423,17 +600,22 @@ public final class BattleRuntime {
             return;
         }
 
+
+
         List<ServerPlayer> players = getReadyPlayers(server);
         List<Vec3> points = resolveCentralPoints();
         Set<Integer> usedSpawns = new HashSet<>();
 
         for (ServerPlayer player : players) {
+            player.getInventory().clearContent();
+
             BattlePlayerState state = PLAYER_STATES.get(player.getUUID());
             if (state != null && (state.spawnIndex < 0
                 || state.spawnIndex >= points.size()
                 || !usedSpawns.add(state.spawnIndex))) {
                 state.spawnIndex = -1;
                 state.positionedForRound = false;
+
             }
         }
 
@@ -519,7 +701,7 @@ public final class BattleRuntime {
     }
 
     private static void resetPlayerForRound(ServerPlayer player, Vec3 point) {
-        player.setGameMode(GameType.SURVIVAL);
+        player.setGameMode(GameType.ADVENTURE);
         player.teleportTo(point.x, point.y, point.z);
         player.setDeltaMovement(Vec3.ZERO);
         player.fallDistance = 0.0F;

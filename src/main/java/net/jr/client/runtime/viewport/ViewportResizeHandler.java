@@ -3,7 +3,7 @@ package net.jr.client.runtime.viewport;
 import com.mojang.blaze3d.platform.Window;
 import java.util.Objects;
 import net.jr.api.client.split.SplitOrientation;
-import net.jr.client.runtime.ui.LocalScreenManager;
+import net.jr.client.runtime.ui.SlotScreenManager;
 import net.minecraft.client.Minecraft;
 
 public final class ViewportResizeHandler {
@@ -57,7 +57,7 @@ public final class ViewportResizeHandler {
         }
 
         this.viewports.rebuild(metrics);
-        LocalScreenManager.resizeAll(minecraft);
+        SlotScreenManager.resizeAll(minecraft);
     }
 
     public void refreshViewportOptions(Minecraft minecraft) {
@@ -67,7 +67,7 @@ public final class ViewportResizeHandler {
             return;
         }
         this.viewports.rebuild(this.viewports.windowMetrics());
-        LocalScreenManager.resizeAll(minecraft);
+        SlotScreenManager.resizeAll(minecraft);
     }
 
     public void setTwoPlayerOrientation(Minecraft minecraft, SplitOrientation orientation) {
@@ -86,7 +86,7 @@ public final class ViewportResizeHandler {
         if (this.viewports.hasWindowMetrics()) {
             this.viewports.rebuild(this.viewports.windowMetrics());
         }
-        LocalScreenManager.resizeAll(minecraft, true);
+        SlotScreenManager.resizeAll(minecraft, true);
     }
 
     private static boolean valid(int value) {

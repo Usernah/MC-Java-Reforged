@@ -2,12 +2,12 @@ package net.jr.mixin.runtime;
 
 import javax.annotation.Nullable;
 import net.jr.client.runtime.bridge.GuiScreenAccess;
-import net.jr.client.runtime.input.LocalScreenInputHandler;
+import net.jr.client.runtime.input.ScreenInputHandler;
 import net.jr.client.runtime.render.GuiRenderPipeline;
 import net.jr.client.runtime.render.pass.ToastRenderPass;
-import net.jr.client.runtime.ui.LocalChatRouter;
-import net.jr.client.runtime.ui.LocalScreenManager;
-import net.jr.client.runtime.ui.LocalScreenTransitionHandler;
+import net.jr.client.runtime.ui.ChatRouter;
+import net.jr.client.runtime.ui.SlotScreenManager;
+import net.jr.client.runtime.ui.SlotScreenTransitionHandler;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
@@ -39,7 +39,7 @@ public abstract class GuiMixin {
             at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/Gui;chatListener:Lnet/minecraft/client/multiplayer/chat/ChatListener;")
     )
     private ChatListener javaReforged$resolveChatListener(Gui gui) {
-        return LocalChatRouter.listener(this.chatListener);
+        return ChatRouter.listener(this.chatListener);
     }
 
     @Redirect(
@@ -83,7 +83,7 @@ public abstract class GuiMixin {
 
     @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
     private void javaReforged$handleScreenTransition(@Nullable Screen screen, CallbackInfo callback) {
-        if (LocalScreenTransitionHandler.shouldCancelSetScreen(screen)) {
+        if (SlotScreenTransitionHandler.shouldCancelSetScreen(screen)) {
             callback.cancel();
         }
     }
@@ -93,7 +93,7 @@ public abstract class GuiMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;init(II)V")
     )
     private void javaReforged$initializeScreen(Screen screen, int width, int height) {
-        LocalScreenManager.initialize(screen, Minecraft.getInstance(), width, height);
+        SlotScreenManager.initialize(screen, Minecraft.getInstance(), width, height);
     }
 
     @Redirect(
@@ -102,7 +102,7 @@ public abstract class GuiMixin {
             require = 0
     )
     private void javaReforged$releaseMouse(MouseHandler mouseHandler) {
-        LocalScreenInputHandler.releaseMouse(mouseHandler);
+        ScreenInputHandler.releaseMouse(mouseHandler);
     }
 
     @Redirect(
@@ -111,6 +111,6 @@ public abstract class GuiMixin {
             require = 0
     )
     private void javaReforged$grabMouse(MouseHandler mouseHandler) {
-        LocalScreenInputHandler.grabMouse(mouseHandler);
+        ScreenInputHandler.grabMouse(mouseHandler);
     }
 }

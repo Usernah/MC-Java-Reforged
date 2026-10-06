@@ -14,7 +14,7 @@ import net.jr.client.input.gamepad.GamepadInput;
 import net.jr.client.input.gamepad.RawGamepadInput;
 import net.jr.client.input.gamepad.RawGamepadInputPress;
 import net.jr.api.client.input.InputMode;
-import net.jr.client.runtime.input.LocalInputContext;
+import net.jr.client.runtime.input.InputContext;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.input.SdlCalibrationBridge;
 import net.minecraft.client.KeyMapping;
@@ -27,7 +27,7 @@ public final class InputApi {
     }
 
     public static InputMode mode() {
-        return LocalInputContext.mode();
+        return InputContext.mode();
     }
 
     public static boolean isGamepadMode() {
@@ -38,7 +38,7 @@ public final class InputApi {
         if (GamepadInput.isSimulationActive()) {
             return;
         }
-        LocalInputContext.markKeyboardMouseInput();
+        InputContext.markKeyboardMouseInput();
     }
 
     public static void markGamepadInput() {
@@ -46,7 +46,7 @@ public final class InputApi {
         if (minecraft != null) {
             minecraft.getFramerateLimitTracker().onInputReceived();
         }
-        LocalInputContext.markGamepadInput();
+        InputContext.markGamepadInput();
     }
 
     public static void markMouseMove(double rawX, double rawY) {
@@ -54,11 +54,11 @@ public final class InputApi {
     }
 
     public static long lastKeyboardMouseInputNanos() {
-        return LocalInputContext.lastKeyboardMouseInputNanos();
+        return InputContext.lastKeyboardMouseInputNanos();
     }
 
     public static long lastGamepadInputNanos() {
-        return LocalInputContext.lastGamepadInputNanos();
+        return InputContext.lastGamepadInputNanos();
     }
 
     public static boolean isGamepadConnected() {
@@ -66,19 +66,19 @@ public final class InputApi {
     }
 
     public static int keyboardMouseSlotId() {
-        return LocalInputContext.keyboardMouseSlotId();
+        return InputContext.keyboardMouseSlotId();
     }
 
     public static boolean canPhysicalMouseDriveSlot(int slotId) {
-        return LocalInputContext.canPhysicalMouseDriveSlot(slotId);
+        return InputContext.canPhysicalMouseDriveSlot(slotId);
     }
 
     public static boolean canPhysicalKeyboardDriveSlot(int slotId) {
-        return LocalInputContext.canPhysicalKeyboardDriveSlot(slotId);
+        return InputContext.canPhysicalKeyboardDriveSlot(slotId);
     }
 
     public static boolean hasGamepadForSlot(int slotId) {
-        return LocalInputContext.hasGamepadForSlot(slotId);
+        return InputContext.hasGamepadForSlot(slotId);
     }
 
     public static boolean splitTouchpadButtons() {
@@ -218,39 +218,39 @@ public final class InputApi {
     }
 
     public static void resetSlotInputState(int slotId) {
-        LocalInputContext.resetSlot(slotId);
+        InputContext.resetSlot(slotId);
     }
 
     public static boolean isDown(KeyMapping keyMapping) {
-        return LocalInputContext.isDown(keyMapping);
+        return InputContext.isDown(keyMapping);
     }
 
     public static void setDown(KeyMapping keyMapping, boolean down) {
-        LocalInputContext.setDown(keyMapping, down);
+        InputContext.setDown(keyMapping, down);
     }
 
     public static void click(KeyMapping keyMapping) {
-        LocalInputContext.click(keyMapping);
+        InputContext.click(keyMapping);
     }
 
     public static boolean consumeClick(KeyMapping keyMapping) {
-        return LocalInputContext.consumeClick(keyMapping);
+        return InputContext.consumeClick(keyMapping);
     }
 
     public static void release(KeyMapping keyMapping) {
-        LocalInputContext.release(keyMapping);
+        InputContext.release(keyMapping);
     }
 
     public static int clickCount(KeyMapping keyMapping) {
-        return LocalInputContext.clickCount(keyMapping);
+        return InputContext.clickCount(keyMapping);
     }
 
     public static void setClickCount(KeyMapping keyMapping, int clickCount) {
-        LocalInputContext.setClickCount(keyMapping, clickCount);
+        InputContext.setClickCount(keyMapping, clickCount);
     }
 
     public static int currentSlotId() {
-        return LocalInputContext.currentSlotId();
+        return InputContext.currentSlotId();
     }
 
     private static ISlotInput slotInput() {

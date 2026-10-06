@@ -1,7 +1,7 @@
 package net.jr.client.input;
 
 import net.jr.client.input.simulation.InputSimulation;
-import net.jr.client.runtime.input.LocalInputActionHandler;
+import net.jr.client.runtime.input.InputActionHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -29,7 +29,7 @@ public final class KeyboardInputHandler {
         if (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT) {
             InputApi.markKeyboardMouseInput();
         }
-        if (LocalInputActionHandler.suppressConsumedScreenKey(key, scanCode, action)) {
+        if (InputActionHandler.suppressConsumedScreenKey(key, scanCode, action)) {
             return true;
         }
         if (action != GLFW.GLFW_PRESS && action != GLFW.GLFW_REPEAT) {
@@ -40,11 +40,11 @@ public final class KeyboardInputHandler {
         if (screen == null || minecraft.gui.overlay() != null) {
             return false;
         }
-        if (!LocalInputActionHandler.handleScreenKey(screen, key, scanCode, action)) {
+        if (!InputActionHandler.handleScreenKey(screen, key, scanCode, action)) {
             return false;
         }
 
-        LocalInputActionHandler.rememberSuppressedScreenKey(key, scanCode);
+        InputActionHandler.rememberSuppressedScreenKey(key, scanCode);
         screen.afterKeyboardAction();
         return true;
     }

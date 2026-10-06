@@ -1,7 +1,7 @@
 package net.jr.client.input;
 
 import net.jr.client.input.binding.ModKeyBindings;
-import net.jr.api.client.local.LocalClients;
+import net.jr.api.client.local.Client;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.screens.crafting.Crafting2x2Screen;
@@ -44,7 +44,7 @@ public final class GameplayActionHandler {
                     player.inventoryMenu,
                     player.getInventory(),
                     Component.translatable("container.crafting"),
-                    LocalClients.slotId(player)
+                    Client.slotId(player)
                 ));
             }
         }

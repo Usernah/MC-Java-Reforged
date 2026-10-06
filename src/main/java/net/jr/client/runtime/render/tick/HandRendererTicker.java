@@ -1,9 +1,9 @@
 package net.jr.client.runtime.render.tick;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.client.ReadinessPolicy;
+import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 
 public final class HandRendererTicker {
@@ -11,11 +11,11 @@ public final class HandRendererTicker {
     }
 
     public static void tickClients(ItemInHandRenderer renderer) {
-        for (LocalClient client : ClientRuntime.INSTANCE.clients().all()) {
-            if (!LocalClientReadinessPolicy.worldBound(client)) {
+        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+            if (!ReadinessPolicy.worldBound(client)) {
                 continue;
             }
-            LocalClientExecution.runForClient(client.slotId(), renderer::tick);
+            InstanceExecution.runForClient(client.slotId(), renderer::tick);
         }
     }
 }

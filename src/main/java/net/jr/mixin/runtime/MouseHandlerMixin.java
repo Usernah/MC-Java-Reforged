@@ -4,8 +4,10 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import java.nio.file.Path;
 import java.util.List;
-import net.jr.client.runtime.input.LocalInputActionHandler;
-import net.jr.client.runtime.input.LocalScreenInput;
+
+import com.mojang.blaze3d.platform.Window;
+import net.jr.api.client.ui.Viewport;
+import net.jr.client.runtime.input.InputActionHandler;
 import net.jr.client.runtime.context.SlotExecution;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.input.MouseButtonInfo;
@@ -47,7 +49,7 @@ public abstract class MouseHandlerMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledXPos(Lcom/mojang/blaze3d/platform/Window;)D")
     )
     private double javaReforged$readLocalMouseX(MouseHandler mouseHandler, com.mojang.blaze3d.platform.Window window) {
-        return LocalScreenInput.localGuiX(mouseHandler);
+        return Viewport.current().windowMouseToLocalGuiX(mouseHandler.xpos());
     }
 
     @Redirect(
@@ -55,7 +57,23 @@ public abstract class MouseHandlerMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledYPos(Lcom/mojang/blaze3d/platform/Window;)D")
     )
     private double javaReforged$readLocalMouseY(MouseHandler mouseHandler, com.mojang.blaze3d.platform.Window window) {
-        return LocalScreenInput.localGuiY(mouseHandler);
+        return Viewport.current().windowMouseToLocalGuiY(mouseHandler.ypos());
+    }
+
+    @Redirect(
+            method = "handleAccumulatedMovement",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledXPos(Lcom/mojang/blaze3d/platform/Window;D)D")
+    )
+    private double javaReforged$readAccumulatedLocalMouseX(Window window, double x) {
+        return Viewport.current().windowDeltaToGuiX(x);
+    }
+
+    @Redirect(
+            method = "handleAccumulatedMovement",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledYPos(Lcom/mojang/blaze3d/platform/Window;D)D")
+    )
+    private double javaReforged$readAccumulatedLocalMouseY(Window window, double y) {
+        return Viewport.current().windowDeltaToGuiY(y);
     }
 
     @Redirect(
@@ -70,7 +88,7 @@ public abstract class MouseHandlerMixin {
         MouseButtonEvent event,
         boolean doubleClick
     ) {
-        LocalInputActionHandler.playPhysicalMouseContainerActionFeedback(screen, event);
+        InputActionHandler.playPhysicalMouseContainerActionFeedback(screen, event);
         return screen.mouseClicked(event, doubleClick);
     }
 }

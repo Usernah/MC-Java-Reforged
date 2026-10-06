@@ -4,14 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
 import net.jr.api.client.split.SplitOrientation;
-import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
+import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.Minecraft;
 
 public final class ViewportManager {
-    private final LocalClientSlotRegistry slots;
-    private final boolean[] presented = new boolean[LocalClientSlotRegistry.MAX_SLOTS];
-    private final int[] viewportIds = new int[LocalClientSlotRegistry.MAX_SLOTS];
+    private final ClientSlots slots;
+    private final boolean[] presented = new boolean[ClientSlots.MAX_SLOTS];
+    private final int[] viewportIds = new int[ClientSlots.MAX_SLOTS];
     private ViewportLayout layout = ViewportLayout.SINGLE;
     private SplitOrientation twoPlayerOrientation = SplitOrientation.VERTICAL;
     @Nullable
@@ -19,19 +19,19 @@ public final class ViewportManager {
     @Nullable
     private WindowMetrics windowMetrics;
 
-    public ViewportManager(LocalClientSlotRegistry slots) {
+    public ViewportManager(ClientSlots slots) {
         this.slots = slots;
         this.presented[0] = true;
         this.reassignViewportIds();
     }
 
     public boolean isPresented(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         return this.presented[slotId];
     }
 
     public void present(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         if (this.presented[slotId]) {
             return;
         }
@@ -40,7 +40,7 @@ public final class ViewportManager {
     }
 
     public void hide(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         if (slotId == 0) {
             throw new IllegalArgumentException("Primary slot cannot be hidden");
         }
@@ -79,11 +79,11 @@ public final class ViewportManager {
         return List.copyOf(result);
     }
 
-    public List<LocalClientSlot> presentedSlots() {
+    public List<Slots> presentedSlots() {
         return this.presentedSlotIds().stream().map(this.slots::slot).toList();
     }
 
-    public List<LocalClientSlot> drawableSlots() {
+    public List<Slots> drawableSlots() {
         if (this.viewportTable == null) {
             return List.of();
         }
@@ -91,7 +91,7 @@ public final class ViewportManager {
     }
 
     public int viewportId(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         if (!this.presented[slotId]) {
             throw new IllegalStateException("Slot " + slotId + " is not presented");
         }
@@ -99,7 +99,7 @@ public final class ViewportManager {
     }
 
     public boolean hasViewport(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         return this.presented[slotId]
             && this.viewportTable != null
             && this.layout.hasViewport(this.viewportIds[slotId]);
@@ -226,7 +226,7 @@ public final class ViewportManager {
     }
 
     private ViewportTable createViewportTable(ViewportLayout layout, WindowMetrics metrics) {
-        int[] requestedScales = new int[LocalClientSlotRegistry.MAX_SLOTS];
+        int[] requestedScales = new int[ClientSlots.MAX_SLOTS];
         for (int slotId = 0; slotId < this.presented.length; slotId++) {
             if (!this.presented[slotId]) {
                 continue;

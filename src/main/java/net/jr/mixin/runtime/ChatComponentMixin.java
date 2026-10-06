@@ -1,7 +1,7 @@
 package net.jr.mixin.runtime;
 
 import net.jr.client.runtime.bridge.ChatComponentRuntimeBridge;
-import net.jr.client.runtime.ui.LocalChatRouter;
+import net.jr.client.runtime.ui.ChatRouter;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
@@ -35,7 +35,7 @@ public abstract class ChatComponentMixin implements ChatComponentRuntimeBridge {
 
     @Inject(method = "getWidth()I", at = @At("HEAD"), cancellable = true)
     private void javaReforged$useViewportWidth(CallbackInfoReturnable<Integer> callback) {
-        Integer viewportWidth = LocalChatRouter.viewportChatWidthOrNull();
+        Integer viewportWidth = ChatRouter.viewportChatWidthOrNull();
         if (viewportWidth != null) {
             callback.setReturnValue(viewportWidth);
         }
@@ -46,7 +46,7 @@ public abstract class ChatComponentMixin implements ChatComponentRuntimeBridge {
         at = @At("HEAD")
     )
     private void javaReforged$rewrapAfterViewportResize(GuiGraphicsExtractor graphics, Font font, int ticks, int mouseX, int mouseY, ChatComponent.DisplayMode displayMode, boolean changeCursorOnInsertions, CallbackInfo callback) {
-        Integer viewportWidth = LocalChatRouter.viewportChatWidthOrNull();
+        Integer viewportWidth = ChatRouter.viewportChatWidthOrNull();
         if (viewportWidth != null && viewportWidth != this.javaReforged$lastViewportWidth) {
             this.javaReforged$lastViewportWidth = viewportWidth;
             ((ChatComponent)(Object)this).rescaleChat();
@@ -62,7 +62,7 @@ public abstract class ChatComponentMixin implements ChatComponentRuntimeBridge {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Hud;getGuiTicks()I")
     )
     private int javaReforged$useLocalChatTimestamp(Hud hud) {
-        return LocalChatRouter.ticks(hud.getGuiTicks());
+        return ChatRouter.ticks(hud.getGuiTicks());
     }
 
     @ModifyVariable(
@@ -72,7 +72,7 @@ public abstract class ChatComponentMixin implements ChatComponentRuntimeBridge {
         ordinal = 1
     )
     private int javaReforged$useLocalChatRenderTime(int ticks) {
-        return LocalChatRouter.ticks(ticks);
+        return ChatRouter.ticks(ticks);
     }
 
     @Redirect(
@@ -85,6 +85,6 @@ public abstract class ChatComponentMixin implements ChatComponentRuntimeBridge {
 
     @Redirect(method = "lambda$extractRenderState$1", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/ARGB;black(F)I"))
     private static int javaReforged$drawConfiguredMessageBackground(float alpha) {
-        return LocalChatRouter.backgroundColor(ARGB.black(alpha));
+        return ChatRouter.backgroundColor(ARGB.black(alpha));
     }
 }

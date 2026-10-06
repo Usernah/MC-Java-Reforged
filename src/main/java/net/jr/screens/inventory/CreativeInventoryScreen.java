@@ -1,7 +1,6 @@
 package net.jr.screens.inventory;
 
 import net.jr.api.client.render.Draw;
-import net.jr.api.client.local.LocalClients;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.Cursor;
 import net.jr.client.components.navigation.UiAction;
@@ -16,7 +15,7 @@ import net.jr.client.components.widgets.item.CreativeItemSlotElement;
 import net.jr.client.ui.navigation.UiInputBinding;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.api.client.input.GamepadDigitalInput;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
+import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.slots.CustomSlotLayout;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
@@ -124,7 +123,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private final Map<TabElement, CreativeTab> creativeTabByWidget = new IdentityHashMap<>();
     private final List<List<CreativeTab>> tabPages = new ArrayList<>();
     private final LocalPlayer player;
-    private final int slotId;
 
     private VanillaSlotLayer slotLayer;
     private SlotGrid slotGrid;
@@ -143,7 +141,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     public CreativeInventoryScreen(LocalPlayer player, Component title) {
         super(player.inventoryMenu, player.getInventory(), title, 249, 164);
         this.player = player;
-        this.slotId = LocalClients.slotId(player);
 
         player.containerMenu = player.inventoryMenu;
     }
@@ -672,8 +669,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         return this.itemGrid == null
                 ? null
                 : this.itemGrid.previewedSlot(
-                        LocalGamepadInputHandler.cursorX(),
-                        LocalGamepadInputHandler.cursorY(),
+                        GamepadInputHandler.cursorX(),
+                        GamepadInputHandler.cursorY(),
                         false
                 );
     }
@@ -694,8 +691,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 ? null
                 : this.slotLayer.getSlotAt(
                         this.slotGrid,
-                        LocalGamepadInputHandler.cursorX(),
-                        LocalGamepadInputHandler.cursorY()
+                        GamepadInputHandler.cursorX(),
+                        GamepadInputHandler.cursorY()
                 );
     }
 
@@ -737,7 +734,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         this.slotLayer.setFocusedSlot(slot);
         var position = this.slotGrid.get(slot.index);
         Cursor.moveTo(
-                this.slotId,
                 position.x() + position.width() / 2.0D,
                 position.y() + position.height() / 2.0D
         );
@@ -761,7 +757,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         }
         var rectangle = this.itemGrid.getFocused().getRectangle();
         Cursor.moveTo(
-                this.slotId,
                 rectangle.left() + rectangle.width() / 2.0D,
                 rectangle.top() + rectangle.height() / 2.0D
         );
@@ -1161,7 +1156,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         this.setFocused(this.itemGrid);
         var rectangle = this.itemGrid.getFocused().getRectangle();
         Cursor.moveTo(
-            this.slotId,
             rectangle.left() + rectangle.width() / 2.0D,
             rectangle.top() + rectangle.height() / 2.0D
         );
@@ -1175,8 +1169,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         if (this.itemGrid.getFocused() != null) {
             return true;
         }
-        double cursorX = Cursor.x(this.slotId);
-        double cursorY = Cursor.y(this.slotId);
+        double cursorX = Cursor.x();
+        double cursorY = Cursor.y();
         return cursorX >= this.itemGrid.getX()
             && cursorY >= this.itemGrid.getY()
             && cursorX < this.itemGrid.getX() + this.itemGrid.getWidth()

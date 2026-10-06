@@ -2,46 +2,46 @@ package net.jr.client.runtime.context;
 
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.Slots;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.minecraft.client.gui.screens.Screen;
 
 public final class SlotResolver {
     private SlotResolver() {
     }
 
-    public static LocalClientSlot requireSlot(LocalClientSlot slot) {
+    public static Slots requireSlot(Slots slot) {
         if (slot == null) {
             throw new IllegalArgumentException("slot cannot be null");
         }
         return ClientRuntime.INSTANCE.slots().slot(slot.id());
     }
 
-    public static LocalClientSlot requireSlot(int slotId) {
+    public static Slots requireSlot(int slotId) {
         return ClientRuntime.INSTANCE.slots().slot(slotId);
     }
 
-    public static LocalClientSlot requirePrimary() {
+    public static Slots requirePrimary() {
         return ClientRuntime.INSTANCE.slots().primary();
     }
 
-    public static LocalClientSlot requireActive() {
+    public static Slots requireActive() {
         return ClientRuntime.INSTANCE.slots().slot(SlotScope.requireId());
     }
 
-    public static LocalClientSlot requireActiveOrPrimary() {
+    public static Slots requireActiveOrPrimary() {
         Integer slotId = SlotScope.idOrNull();
         return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0);
     }
 
-    public static LocalClientSlot requireScreen(Screen screen) {
+    public static Slots requireScreen(Screen screen) {
         if (screen == null) {
             throw new IllegalArgumentException("screen cannot be null");
         }
 
-        LocalClientSlot match = null;
-        for (int slotId = 0; slotId < LocalClientSlotRegistry.MAX_SLOTS; slotId++) {
-            LocalClientSlot candidate = ClientRuntime.INSTANCE.slots().slot(slotId);
+        Slots match = null;
+        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
+            Slots candidate = ClientRuntime.INSTANCE.slots().slot(slotId);
             if (candidate.screenState().screen() != screen) {
                 continue;
             }
@@ -57,7 +57,7 @@ public final class SlotResolver {
         return match;
     }
 
-    public static LocalClientSlot requireKeyboardMouseOwner() {
+    public static Slots requireKeyboardMouseOwner() {
         return ClientRuntime.INSTANCE.slots().slot(InputApi.keyboardMouseSlotId());
     }
 }

@@ -11,12 +11,12 @@ import java.util.Set;
 public enum ControllerGlyphTheme {
     XBOX(
         "controller/xbox",
-        standardGlyphs(ControllerGlyph.BUTTON_GUIDE, ControllerGlyph.MISC_1),
+        standardGlyphs(ControllerGlyph.BUTTON_GUIDE),
         faceButtonPressGlyphs()
     ),
     XBOX_OLD(
         "controller/xbox_o",
-        standardGlyphs(ControllerGlyph.BUTTON_GUIDE, ControllerGlyph.MISC_1),
+        standardGlyphs(ControllerGlyph.BUTTON_GUIDE),
         faceButtonPressGlyphs()
     ),
     STEAM(

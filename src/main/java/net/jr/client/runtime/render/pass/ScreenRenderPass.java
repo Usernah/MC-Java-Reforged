@@ -2,12 +2,12 @@ package net.jr.client.runtime.render.pass;
 
 import java.util.Stack;
 import net.jr.client.input.InputApi;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
+import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
-import net.jr.client.runtime.input.LocalScreenInput;
-import net.jr.client.runtime.slot.LocalClientSlot;
-import net.jr.client.runtime.ui.SecondaryWorldLoadingScreen;
+import net.jr.client.runtime.slot.Slots;
+import net.jr.client.runtime.ui.ScreenEventRunner;
+import net.jr.screens.SecondaryWorldLoadingScreen;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.jr.client.ui.navigation.UiInputModeController;
@@ -34,7 +34,7 @@ public final class ScreenRenderPass {
         }
 
         UiInputModeController.updateCurrentClientFrame(minecraft);
-        LocalClientSlot slot = runtime.slots().slot(slotId);
+        Slots slot = runtime.slots().slot(slotId);
         ViewportArea viewport = runtime.viewports().viewport(slotId);
         Screen screen = slot.screenState().screen();
 
@@ -54,20 +54,20 @@ public final class ScreenRenderPass {
         Screen renderScreen = screen;
         int mouseX = logicalMouseX(minecraft, slotId, viewport);
         int mouseY = logicalMouseY(minecraft, slotId, viewport);
-        LocalScreenInput.runEvent(
-            () -> ClientHooks.extractScreen(
+        ScreenEventRunner.run(
                 renderScreen,
-                new Stack<>(),
-                graphics,
-                mouseX,
-                mouseY,
-                partialTick
-            ),
-            "Extracting slot screen render state",
-            renderScreen.getClass().getCanonicalName()
+                "Extracting slot screen render state",
+                () -> ClientHooks.extractScreen(
+                        renderScreen,
+                        new Stack<>(),
+                        graphics,
+                        mouseX,
+                        mouseY,
+                        partialTick
+                )
         );
 
-        LocalGamepadInputHandler.trackFocusedCursorDuringScroll(renderScreen);
+        GamepadInputHandler.trackFocusedCursorDuringScroll(renderScreen);
         ControlHintRenderPass.renderScreen(renderScreen, graphics);
         return renderScreen;
     }
@@ -77,16 +77,16 @@ public final class ScreenRenderPass {
         int slotId,
         ViewportArea viewport
     ) {
-        if (LocalGamepadInputHandler.isControllerCursorActive(slotId)) {
-            return LocalGamepadInputHandler.resolveScreenMouseX(
+        if (GamepadInputHandler.isControllerCursorActive(slotId)) {
+            return GamepadInputHandler.resolveScreenMouseX(
                 slotId,
-                (int)Math.round(LocalGamepadInputHandler.cursorX(slotId))
+                (int)Math.round(GamepadInputHandler.cursorX(slotId))
             );
         }
         if (!InputApi.canPhysicalMouseDriveSlot(slotId)) {
             return Integer.MIN_VALUE;
         }
-        int localGuiX = LocalGamepadInputHandler.resolveScreenMouseX(
+        int localGuiX = GamepadInputHandler.resolveScreenMouseX(
             slotId,
             (int)viewport.windowMouseToLocalGuiX(minecraft.mouseHandler.xpos())
         );
@@ -98,16 +98,16 @@ public final class ScreenRenderPass {
         int slotId,
         ViewportArea viewport
     ) {
-        if (LocalGamepadInputHandler.isControllerCursorActive(slotId)) {
-            return LocalGamepadInputHandler.resolveScreenMouseY(
+        if (GamepadInputHandler.isControllerCursorActive(slotId)) {
+            return GamepadInputHandler.resolveScreenMouseY(
                 slotId,
-                (int)Math.round(LocalGamepadInputHandler.cursorY(slotId))
+                (int)Math.round(GamepadInputHandler.cursorY(slotId))
             );
         }
         if (!InputApi.canPhysicalMouseDriveSlot(slotId)) {
             return Integer.MIN_VALUE;
         }
-        int localGuiY = LocalGamepadInputHandler.resolveScreenMouseY(
+        int localGuiY = GamepadInputHandler.resolveScreenMouseY(
             slotId,
             (int)viewport.windowMouseToLocalGuiY(minecraft.mouseHandler.ypos())
         );

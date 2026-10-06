@@ -11,7 +11,7 @@ import net.jr.api.client.split.JoinPromptAnnouncement;
 import net.jr.api.client.split.SplitScreen;
 import net.jr.client.announcement.AnnouncementPublisher;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.LocalClientReadinessPolicy;
+import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Util;
@@ -93,7 +93,7 @@ public final class JoinPromptAnnouncer {
 
     private static boolean canOfferJoin() {
         return !PreJoinWorldLoad.isActive()
-            && LocalClientReadinessPolicy.gameplayReady(0)
+            && ReadinessPolicy.gameplayReady(0)
             && SplitScreen.hasRequiredControllerCountForJoin()
             && ClientRuntime.INSTANCE.input().join().shouldShowJoinPrompt();
     }

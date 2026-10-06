@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /** Registration and ordered dispatch for GUI render objects. */
 public final class GuiRenderObjects {
     private static final List<HudRenderObject> HUD = new CopyOnWriteArrayList<>();
+    private static final List<BottomHudRenderObject> BOTTOM_HUD = new CopyOnWriteArrayList<>();
     private static final List<HudRenderObject> HUD_TAIL = new CopyOnWriteArrayList<>();
     private static final EnumMap<GuiRenderPhase, List<IGuiRenderObject<GuiRenderContext>>> LOCAL =
         new EnumMap<>(GuiRenderPhase.class);
@@ -26,6 +27,11 @@ public final class GuiRenderObjects {
 
     public static void registerHud(HudRenderObject object) {
         HUD.add(Objects.requireNonNull(object, "object"));
+    }
+
+    /** Registers an HUD object anchored above reserved bottom content such as hints. */
+    public static void registerBottomHud(BottomHudRenderObject object) {
+        BOTTOM_HUD.add(Objects.requireNonNull(object, "object"));
     }
 
     /** Registers an HUD object after vanilla debug extraction, before deferred subtitles. */
@@ -53,6 +59,12 @@ public final class GuiRenderObjects {
 
     public static void renderHud(HudRenderContext context) {
         for (HudRenderObject object : HUD) {
+            object.render(context);
+        }
+    }
+
+    public static void renderBottomHud(BottomHudRenderContext context) {
+        for (BottomHudRenderObject object : BOTTOM_HUD) {
             object.render(context);
         }
     }

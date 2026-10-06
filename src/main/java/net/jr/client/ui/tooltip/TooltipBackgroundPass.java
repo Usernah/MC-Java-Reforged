@@ -13,6 +13,18 @@ public final class TooltipBackgroundPass {
     private TooltipBackgroundPass() {
     }
 
+    public static boolean extractWithPadding(
+            GuiGraphicsExtractor graphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            int padding,
+            @Nullable Identifier style
+    ) {
+
+        return extract(graphics, x - padding, y - padding, width + (padding * 2), height + (padding * 2), style);
+    }
     public static boolean extract(
             GuiGraphicsExtractor graphics,
             int x,
@@ -24,7 +36,7 @@ public final class TooltipBackgroundPass {
         if (style != null || BACKGROUND.find(Minecraft.getInstance().getResourceManager()).isEmpty()) {
             return false;
         }
-        ImageElement background = new ImageElement(BACKGROUND, x - 3, y - 3, width + 6, height + 6, graphics);
+        ImageElement background = new ImageElement(BACKGROUND, x , y, width, height, graphics);
         background.setUseMeta(true);
         background.draw();
         return true;

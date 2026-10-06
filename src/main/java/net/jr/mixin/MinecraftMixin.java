@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.jr.client.sound.music.WorldMusicTransitionHandler;
 import net.jr.client.sound.music.WorldMusicTransitionState;
 import net.jr.client.runtime.audio.SlotSoundRouter;
+import net.jr.client.runtime.session.DisconnectHandler;
 import net.jr.screens.inventory.CreativeInventoryHandler;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -37,8 +38,17 @@ public abstract class MinecraftMixin {
         WorldMusicTransitionHandler.levelSet((Minecraft) (Object) this, this.musicManager, this.javaReforged$musicTransitionState);
     }
 
-    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;ZZ)V", at = @At("HEAD"))
+    @Inject(
+        method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;ZZ)V",
+        at = @At("HEAD"),
+        cancellable = true
+    )
     private void javaReforged$beginDisconnect(Screen next, boolean keepPacks, boolean stopSound, CallbackInfo ci) {
+        Minecraft minecraft = (Minecraft)(Object)this;
+        if (DisconnectHandler.disconnectCurrentSecondary(minecraft)) {
+            ci.cancel();
+            return;
+        }
         WorldMusicTransitionHandler.disconnectStarted((Minecraft) (Object) this, this.musicManager,
                 this.soundManager, this.javaReforged$musicTransitionState);
     }

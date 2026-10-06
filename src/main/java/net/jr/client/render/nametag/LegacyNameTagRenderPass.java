@@ -1,8 +1,8 @@
 package net.jr.client.render.nametag;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.api.client.split.SplitScreen;
+import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.ui.presentation.UiPresentation;
 import net.jr.mixin.accessors.FontAccessor;
@@ -90,7 +90,7 @@ public final class LegacyNameTagRenderPass {
     }
 
     private static int readableDistance() {
-        return UiPresentation.isPortable() || ClientRuntime.INSTANCE.clients().count() > 2
+        return UiPresentation.isPortable() || SplitScreen.isActive()
                 ? READABLE_COMPACT : READABLE_FULLSCREEN;
     }
 
@@ -103,13 +103,13 @@ public final class LegacyNameTagRenderPass {
     }
 
     private static float borderThickness(float distance, CameraRenderState camera) {
-        Integer slotId = SlotScope.idOrNull();
-        ViewportArea viewport = slotId != null ? ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId) : null;
+        ViewportArea viewport = Viewport.currentOrNull();
         int height = viewport != null ? viewport.glHeight() : Minecraft.getInstance().getWindow().getHeight();
         float projectionY = camera.projectionMatrix != null ? Math.abs(camera.projectionMatrix.m11()) : 0.0F;
         if (distance <= 0.0F || height <= 0 || projectionY <= 0.0F || !Float.isFinite(projectionY)) return 1.0F;
         return 2.0F * distance / (projectionY * height * TAG_SCALE);
     }
+
 
     private static void submitSolidTag(SubmitNodeCollector collector, PoseStack pose, Font font, float x,
                                        float y, Component text, int rgb, Font.DisplayMode mode, int light) {

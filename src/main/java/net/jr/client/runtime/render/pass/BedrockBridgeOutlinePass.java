@@ -1,6 +1,6 @@
 package net.jr.client.runtime.render.pass;
 
-import net.jr.client.runtime.client.LocalClient;
+import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.player.BedrockBridgePlacement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -24,7 +24,7 @@ public final class BedrockBridgeOutlinePass {
             Minecraft minecraft,
             ClientLevel level,
             LevelRenderState renderState,
-            LocalClient client
+            ClientInstance client
     ) {
         LocalPlayer player = client.player();
         if (player == null) {

@@ -1,7 +1,7 @@
 package net.jr.mixin.compat.xaerominimap;
 
+import net.jr.api.client.local.Client;
 import net.jr.client.compat.xaero.XaeroMinimapPipState;
-import net.jr.client.runtime.context.LocalClientScope;
 import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
@@ -53,7 +53,7 @@ abstract class MinimapPipRenderStateMixin implements XaeroMinimapPipState {
     private void javaReforged$captureViewport(CallbackInfoReturnable<MinimapPipRenderState> callback) {
         MinimapPipRenderState state = (MinimapPipRenderState)(Object)this;
         ViewportArea viewport = ViewportRenderScope.activeViewportOrNull();
-        if (viewport == null || LocalClientScope.currentClientOrNull() == null) {
+        if (viewport == null || Client.currentOrNull() == null) {
             this.javaReforged$slotId = -1;
             return;
         }
@@ -69,7 +69,7 @@ abstract class MinimapPipRenderStateMixin implements XaeroMinimapPipState {
             y1,
             1.0F
         );
-        this.javaReforged$slotId = LocalClientScope.currentClient().slotId();
+        this.javaReforged$slotId = Client.slotId();
         this.javaReforged$renderWidth = x1 - x0;
         this.javaReforged$renderHeight = y1 - y0;
         this.javaReforged$x0 = bounds.x0();

@@ -2,7 +2,7 @@ package net.jr.client.compat.create;
 
 import java.lang.reflect.Method;
 import net.jr.Java_reforged;
-import net.jr.client.runtime.client.LocalClient;
+import net.jr.client.runtime.client.ClientInstance;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.LevelAccessor;
 import net.neoforged.fml.ModList;
@@ -15,7 +15,7 @@ public final class CreateFlywheelLifecycle {
     private CreateFlywheelLifecycle() {
     }
 
-    public static void release(LocalClient client) {
+    public static void release(ClientInstance client) {
         if (client == null) {
             return;
         }

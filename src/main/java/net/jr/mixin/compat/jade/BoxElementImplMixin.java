@@ -17,7 +17,7 @@ abstract class BoxElementImplMixin {
         )
     )
     private int javaReforged$viewportWidth(Window window) {
-        return Viewport.width();
+        return Viewport.current().logicalGuiWidth();
     }
 
     @Redirect(
@@ -28,6 +28,6 @@ abstract class BoxElementImplMixin {
         )
     )
     private int javaReforged$viewportHeight(Window window) {
-        return Viewport.height();
+        return Viewport.current().logicalGuiHeight();
     }
 }

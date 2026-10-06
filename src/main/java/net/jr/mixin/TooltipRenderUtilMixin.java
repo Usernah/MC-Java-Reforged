@@ -22,7 +22,7 @@ public abstract class TooltipRenderUtilMixin {
         @Nullable Identifier style,
         CallbackInfo callback
     ) {
-        if (TooltipBackgroundPass.extract(graphics, x, y, width, height, style)) {
+        if (TooltipBackgroundPass.extractWithPadding(graphics, x, y, width, height, 4, style)) {
             callback.cancel();
         }
     }

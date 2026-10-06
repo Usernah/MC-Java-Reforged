@@ -1,7 +1,7 @@
 package net.jr.client.runtime.options;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.slot.LocalClientSlot;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.state.OptionsState;
 import net.jr.mixin.accessors.OptionsAccessor;
 import net.minecraft.client.CameraType;
@@ -32,7 +32,7 @@ public final class OptionsLifecycleHandler {
                 options.javaReforged$getOperatorItemsTab().get()
         );
 
-        for (LocalClientSlot slot : ClientRuntime.INSTANCE.slots().all()) {
+        for (Slots slot : ClientRuntime.INSTANCE.slots().all()) {
             slot.optionsState().initialize(initialValues);
         }
         ClientRuntime.INSTANCE.playerOptions().ensureLoaded(minecraft);

@@ -1,6 +1,8 @@
 package net.jr.client.runtime.network;
 
 import java.util.UUID;
+
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.minecraft.client.Minecraft;
@@ -10,8 +12,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.Connection;
 import javax.annotation.Nullable;
-import net.jr.client.runtime.client.LocalClient;
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.client.runtime.client.ClientInstance;
 import net.minecraft.client.player.LocalPlayer;
 
 public final class ClientPacketHandler {
@@ -64,7 +65,7 @@ public final class ClientPacketHandler {
 
     @Nullable
     public static ClientPacketListener activeConnection() {
-        LocalClient client = LocalClientScope.currentClientOrNull();
+        ClientInstance client = Client.currentOrNull();
         if (client == null) {
             Integer slotId = SlotScope.idOrNull();
             client = ClientRuntime.INSTANCE.clients().clientOrNull(slotId != null ? slotId : 0);

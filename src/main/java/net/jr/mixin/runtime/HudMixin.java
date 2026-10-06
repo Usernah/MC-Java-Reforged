@@ -1,10 +1,10 @@
 package net.jr.mixin.runtime;
 
-import net.jr.client.runtime.context.LocalClientScope;
+import net.jr.api.client.local.Client;
 import net.jr.client.runtime.render.pass.HudRenderPass;
 import net.jr.client.runtime.render.state.HudStateRouter;
 import net.jr.client.runtime.render.state.HudStateScope;
-import net.jr.client.runtime.ui.LocalChatRouter;
+import net.jr.client.runtime.ui.ChatRouter;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -34,7 +34,7 @@ public abstract class HudMixin {
             at = @At("HEAD")
     )
     private void javaReforged$installHudState(CallbackInfo callback) {
-        if (LocalClientScope.currentClientOrNull() != null) {
+        if (Client.currentOrNull() != null) {
             HudStateScope.begin((Hud)(Object)this);
         }
     }
@@ -44,7 +44,7 @@ public abstract class HudMixin {
             at = @At("RETURN")
     )
     private void javaReforged$captureHudState(CallbackInfo callback) {
-        if (LocalClientScope.currentClientOrNull() != null) {
+        if (Client.currentOrNull() != null) {
             HudStateScope.end((Hud)(Object)this);
         }
     }
@@ -73,7 +73,7 @@ public abstract class HudMixin {
             )
     )
     private ChatComponent javaReforged$useCurrentClientChat(Hud hud) {
-        return LocalChatRouter.component(this.chat);
+        return ChatRouter.component(this.chat);
     }
 
     @Redirect(
@@ -85,7 +85,9 @@ public abstract class HudMixin {
             )
     )
     private float javaReforged$getCurrentClientVignette(Hud hud) {
-        return HudStateRouter.vignetteBrightness(this.vignetteBrightness);
+        return Client.currentOrNull() != null
+                ? HudStateRouter.vignetteBrightness()
+                : this.vignetteBrightness;
     }
 
     @Redirect(
@@ -97,7 +99,9 @@ public abstract class HudMixin {
             )
     )
     private void javaReforged$setCurrentClientVignette(Hud hud, float value) {
-        if (!HudStateRouter.setVignetteBrightness(value)) {
+        if (Client.currentOrNull() != null) {
+            HudStateRouter.setVignetteBrightness(value);
+        } else {
             this.vignetteBrightness = value;
         }
     }

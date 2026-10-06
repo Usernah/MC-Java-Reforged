@@ -35,6 +35,10 @@ description = '''${mod_description}'''
 config = "${mod_id}.mixins.json"
 
 [[mixins]]
+config = "${mod_id}-sodium.mixins.json"
+requiredMods = ["sodium"]
+
+[[mixins]]
 config = "${mod_id}-jade.mixins.json"
 requiredMods = ["jade"]
 

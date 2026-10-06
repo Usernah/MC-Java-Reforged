@@ -1,7 +1,7 @@
 package net.jr.mixin.runtime;
 
-import net.jr.client.runtime.player.LocalPlayerPositionSync;
-import net.jr.client.runtime.player.LocalPlayerPolicy;
+import net.jr.client.runtime.player.PositionSync;
+import net.jr.client.runtime.player.PlayerPolicy;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class LocalPlayerMixin {
     @Inject(method = "isControlledCamera", at = @At("HEAD"), cancellable = true)
     private void javaReforged$isControlledCamera(CallbackInfoReturnable<Boolean> cir) {
-        cir.setReturnValue(LocalPlayerPolicy.isControlledCamera((LocalPlayer)(Object)this));
+        cir.setReturnValue(PlayerPolicy.isControlledCamera((LocalPlayer)(Object)this));
     }
 
     @Inject(method = "tick", at = @At("RETURN"))
     private void javaReforged$reportPositionWhenChunkIsMissing(CallbackInfo ci) {
-        LocalPlayerPositionSync.afterTick((LocalPlayer)(Object)this);
+        PositionSync.afterTick((LocalPlayer)(Object)this);
     }
 
     @Redirect(
@@ -28,7 +28,7 @@ public abstract class LocalPlayerMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;remove(Lnet/minecraft/world/entity/Entity$RemovalReason;)V")
     )
     private void javaReforged$retainLocalCameraPlayerUntilRespawn(LocalPlayer player, Entity.RemovalReason removalReason) {
-        if (!LocalPlayerPolicy.shouldRetainDeadClientPlayer(player)) {
+        if (!PlayerPolicy.shouldRetainDeadClientPlayer(player)) {
             player.remove(removalReason);
         }
     }

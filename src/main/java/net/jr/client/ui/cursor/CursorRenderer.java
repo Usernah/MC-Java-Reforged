@@ -1,10 +1,10 @@
 package net.jr.client.ui.cursor;
 
 import net.jr.Java_reforged;
+import net.jr.api.client.ui.Viewport;
 import net.jr.client.input.InputApi;
-import net.jr.client.runtime.input.LocalCursorVisibility;
-import net.jr.client.runtime.input.LocalScreenInput;
-import net.jr.client.runtime.input.LocalGamepadInputHandler;
+import net.jr.client.runtime.input.CursorVisibility;
+import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
@@ -33,8 +33,8 @@ public final class CursorRenderer {
     @SubscribeEvent
     public static void onRenderFrame(RenderFrameEvent.Pre event) {
         Minecraft minecraft = Minecraft.getInstance();
-        LocalCursorVisibility.setReplacementHidden(slotWantsSystemCursorHidden(minecraft));
-        LocalCursorVisibility.sync();
+        CursorVisibility.setReplacementHidden(slotWantsSystemCursorHidden(minecraft));
+        CursorVisibility.sync();
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -72,7 +72,7 @@ public final class CursorRenderer {
         if (minecraft == null || minecraft.gui.screen() == null) {
             return false;
         }
-        return LocalGamepadInputHandler.isControllerCursorActive()
+        return GamepadInputHandler.isControllerCursorActive()
             ? InputApi.isGamepadConnected()
             : InputApi.canPhysicalMouseDrive();
     }
@@ -86,8 +86,8 @@ public final class CursorRenderer {
     }
 
     private static CursorPosition resolveCursorPosition(Minecraft minecraft) {
-        if (LocalGamepadInputHandler.isControllerCursorActive() && hasLocalScreen(minecraft)) {
-            return new CursorPosition(LocalGamepadInputHandler.visualCursorX(), LocalGamepadInputHandler.visualCursorY());
+        if (GamepadInputHandler.isControllerCursorActive() && hasLocalScreen(minecraft)) {
+            return new CursorPosition(GamepadInputHandler.visualCursorX(), GamepadInputHandler.visualCursorY());
         }
         if (!InputApi.canPhysicalMouseDrive()) {
             return null;
@@ -99,16 +99,15 @@ public final class CursorRenderer {
     }
 
     private static CursorPosition resolveClientCursorPosition(Minecraft minecraft) {
-        if (LocalGamepadInputHandler.isControllerCursorActive()) {
-            return new CursorPosition(LocalGamepadInputHandler.visualCursorX(), LocalGamepadInputHandler.visualCursorY());
+        if (GamepadInputHandler.isControllerCursorActive()) {
+            return new CursorPosition(GamepadInputHandler.visualCursorX(), GamepadInputHandler.visualCursorY());
         }
         if (!InputApi.canPhysicalMouseDrive()) {
             return null;
         }
 
         return new CursorPosition(
-            LocalScreenInput.localGuiX(minecraft.mouseHandler),
-            LocalScreenInput.localGuiY(minecraft.mouseHandler)
+            Viewport.current().windowMouseToLocalGuiX(minecraft.mouseHandler.xpos()), Viewport.current().windowMouseToLocalGuiX(minecraft.mouseHandler.ypos())
         );
     }
 
@@ -117,7 +116,7 @@ public final class CursorRenderer {
             return;
         }
 
-        boolean shouldCenterCursor = LocalGamepadInputHandler.isControllerCursorActive();
+        boolean shouldCenterCursor = GamepadInputHandler.isControllerCursorActive();
 
         float finalHotspotX = shouldCenterCursor ? CURSOR_WIDTH / 2.0F : HOTSPOT_X;
         float finalHotspotY = shouldCenterCursor ? CURSOR_HEIGHT / 2.0F : HOTSPOT_Y;
@@ -133,7 +132,7 @@ public final class CursorRenderer {
     }
 
     private static Asset resolveCursorTexture() {
-        return LocalGamepadInputHandler.isControllerCursorActive()
+        return GamepadInputHandler.isControllerCursorActive()
             ? JOYSTICK_CURSOR_TEXTURE
             : MOUSE_CURSOR_TEXTURE;
     }

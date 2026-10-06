@@ -10,7 +10,7 @@ import java.util.function.BooleanSupplier;
 import javax.annotation.Nullable;
 import net.jr.api.client.input.IGamepad;
 import net.jr.api.client.input.IMutableInputAssignment;
-import net.jr.client.runtime.slot.LocalClientSlotRegistry;
+import net.jr.client.runtime.slot.ClientSlots;
 
 /** Owns controller assignment, neutralization and unique physical reconnects. */
 public final class InputAssignment implements IMutableInputAssignment {
@@ -56,7 +56,7 @@ public final class InputAssignment implements IMutableInputAssignment {
 
     @Override
     public List<IGamepad> gamepadsForSlot(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         this.refreshNeutralizationState();
         List<IGamepad> result = new ArrayList<>();
         boolean primaryMenuInput = slotId == KEYBOARD_MOUSE_SLOT
@@ -80,14 +80,14 @@ public final class InputAssignment implements IMutableInputAssignment {
 
     @Override
     public boolean hasDisconnectedGamepadForSlot(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         return this.assignedSlots.entrySet().stream().anyMatch(entry ->
             entry.getValue() == slotId && !entry.getKey().connected());
     }
 
     @Override
     public void assign(IGamepad gamepad, int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         if (!gamepad.connected()) {
             throw new IllegalArgumentException("Cannot assign disconnected gamepad");
         }
@@ -113,7 +113,7 @@ public final class InputAssignment implements IMutableInputAssignment {
 
     @Override
     public void unassignSlot(int slotId) {
-        LocalClientSlotRegistry.requireSlotId(slotId);
+        ClientSlots.requireSlotId(slotId);
         List<IGamepad> released = this.assignedSlots.entrySet().stream()
             .filter(entry -> entry.getValue() == slotId)
             .map(Map.Entry::getKey).toList();

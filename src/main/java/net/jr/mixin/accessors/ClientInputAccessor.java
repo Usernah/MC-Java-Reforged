@@ -1,6 +1,7 @@
 package net.jr.mixin.accessors;
 
 import net.minecraft.client.player.ClientInput;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec2;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -9,4 +10,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface ClientInputAccessor {
     @Accessor("moveVector")
     void javaReforged$setMoveVector(Vec2 movement);
+
+    @Accessor("keyPresses")
+    void javaReforged$setKeyPresses(Input key);
 }

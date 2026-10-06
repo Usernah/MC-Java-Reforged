@@ -2,6 +2,7 @@ package net.jr.client.runtime.render.experimental;
 
 import net.jr.ClientConfig;
 import net.jr.Java_reforged;
+import net.jr.bootstrap.OptionalModPresence;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 public final class ExperimentalRenderController {
@@ -22,7 +23,8 @@ public final class ExperimentalRenderController {
 
     public static void beginFrame() {
         RenderSystem.assertOnRenderThread();
-        requestedEnabled = ClientConfig.experimentalRenderOptimizations();
+        requestedEnabled = ClientConfig.experimentalRenderOptimizations()
+            && !OptionalModPresence.sodiumLoaded();
         if (!initialized) {
             initialized = true;
             enabled = requestedEnabled;

@@ -54,7 +54,7 @@ public final class GamepadGlyphThemeState {
     private static ControllerGlyphTheme themeForGlyphs(ControllerGlyphSet glyphs) {
         return switch (glyphs) {
             case GENERIC -> ControllerGlyphTheme.GENERIC_A;
-            case XBOX -> ControllerGlyphTheme.XBOX;
+            case XBOX -> ControllerGlyphTheme.XBOX_OLD;
             case XBOX_LEGACY -> ControllerGlyphTheme.XBOX_OLD;
             case STEAM -> ControllerGlyphTheme.STEAM;
             case PLAYSTATION -> ControllerGlyphTheme.PS;

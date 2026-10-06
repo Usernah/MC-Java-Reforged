@@ -1,7 +1,7 @@
 package net.jr.mixin.compat.bettercombat;
 
 import net.bettercombat.client.ClientNetwork;
-import net.jr.client.runtime.context.LocalClientExecution;
+import net.jr.client.runtime.context.InstanceExecution;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -17,6 +17,6 @@ abstract class ClientNetworkMixin {
         index = 0
     )
     private static Runnable javaReforged$captureLocalClient(Runnable action) {
-        return LocalClientExecution.capture(action);
+        return InstanceExecution.capture(action);
     }
 }
