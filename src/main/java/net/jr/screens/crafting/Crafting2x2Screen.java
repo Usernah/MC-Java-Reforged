@@ -1,9 +1,9 @@
 package net.jr.screens.crafting;
 
 import net.jr.api.client.resource.Asset;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
-import net.jr.client.ui.container.slots.SlotMaps;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotMaps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.InventoryMenu;
@@ -23,8 +23,8 @@ public final class Crafting2x2Screen extends AbstractCraftingScreen<InventoryMen
                 2,
                 2,
                 new CraftingScreenLayout(
-                        SlotGroup.PLAYER_CRAFTING_GRID,
-                        SlotGroup.PLAYER_CRAFTING_RESULT,
+                        ItemSlotGroup.PLAYER_CRAFTING_GRID,
+                        ItemSlotGroup.PLAYER_CRAFTING_RESULT,
                         13,
                         2,
                         18,
@@ -39,21 +39,19 @@ public final class Crafting2x2Screen extends AbstractCraftingScreen<InventoryMen
     }
 
     @Override
-    protected SlotGrid createSlotGrid() {
-        return new SlotGrid(SlotMaps.SURVIVAL_CRAFTING)
+    protected ItemSlotGrid createItemSlotGrid() {
+        return new ItemSlotGrid(ItemSlotMaps.SURVIVAL_CRAFTING)
                 .grid(
-                        SlotGroup.PLAYER_CRAFTING_GRID,
+                        ItemSlotGroup.PLAYER_CRAFTING_GRID,
                         this.leftPos + 14,
                         this.topPos + 96,
                         2,
                         18,
                         18,
-                        18,
-                        18,
                         16
                 )
                 .point(
-                        SlotGroup.PLAYER_CRAFTING_RESULT,
+                        ItemSlotGroup.PLAYER_CRAFTING_RESULT,
                         0,
                         this.leftPos + 86,
                         this.topPos + 101,
@@ -62,22 +60,18 @@ public final class Crafting2x2Screen extends AbstractCraftingScreen<InventoryMen
                         24
                 )
                 .grid(
-                        SlotGroup.PLAYER_INVENTORY,
+                        ItemSlotGroup.PLAYER_INVENTORY,
                         this.leftPos + 130,
                         this.topPos + 81,
                         9,
                         14,
-                        14,
-                        14,
                         14
                 )
                 .grid(
-                        SlotGroup.PLAYER_HOTBAR,
+                        ItemSlotGroup.PLAYER_HOTBAR,
                         this.leftPos + 130,
                         this.topPos + 127,
                         9,
-                        14,
-                        14,
                         14,
                         14
                 );

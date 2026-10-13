@@ -1,6 +1,8 @@
 package net.jr.client.ui.dsl;
 
 import net.jr.api.client.resource.Asset;
+import net.jr.client.ui.presentation.UiPresentation;
+import net.jr.client.ui.presentation.UiResolution;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -11,6 +13,16 @@ import java.util.function.Supplier;
 
 public final class UiDataContext implements UiCompiledDocument.DataContext {
     private final Map<List<String>, Supplier<?>> values = new LinkedHashMap<>();
+
+    public static UiDataContext withGlobals() {
+        UiDataContext context = new UiDataContext();
+        context.exposeAsset("global.font", () -> UiPresentation.currentFont().location());
+        context.exposeBoolean(
+            "global.full_hd",
+            () -> UiPresentation.resolution() == UiResolution.FULL_HD
+        );
+        return context;
+    }
 
     public void exposeNumber(String path, Supplier<? extends Number> value) {
         this.expose(path, value);

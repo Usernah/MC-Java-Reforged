@@ -4,8 +4,11 @@ import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.UiFileType;
 import net.jr.client.ui.dsl.UiCompiledDocument.AnimationDefinition;
-import net.jr.client.ui.dsl.UiCompiledDocument.ButtonDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.BoundsDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.ConditionalRenderableDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.DslBlockDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.DslNodeDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.EntryDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.Expression;
 import net.jr.client.ui.dsl.UiCompiledDocument.ImageDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.NineDefinition;
@@ -79,7 +82,7 @@ final class UiCompiler {
                 root = node;
             } else if (statement instanceof BlueprintUse use) {
                 throw this.error(document, use.position(),
-                    "A blueprint instance must be placed inside a renderables block");
+                    "A blueprint instance must be placed inside a block that can consume its structure");
             }
         }
         if (root == null) {
@@ -87,164 +90,363 @@ final class UiCompiler {
                 "Missing root block '" + expectedRoot + "'");
         }
 
-        Node elements = null;
-        Node renderables = null;
-        for (Statement statement : root.body()) {
-            if (!(statement instanceof Node node)
-                || (!node.name().equals("elements") && !node.name().equals("renderables"))) {
-                throw this.error(document, statement.position(),
-                    "Only 'elements' and 'renderables' blocks are supported inside '"
-                        + expectedRoot + "'");
-            }
-            if (node.name().equals("elements")) {
-                if (elements != null) {
-                    throw this.error(document, node.position(), "Duplicate 'elements' block");
-                }
-                elements = node;
-            } else {
-                if (renderables != null) {
-                    throw this.error(document, node.position(), "Duplicate 'renderables' block");
-                }
-                renderables = node;
-            }
-        }
-
-        List<ButtonDefinition> buttons = new ArrayList<>();
-        if (elements != null) {
-            for (Statement statement : elements.body()) {
-                if (!(statement instanceof Node node)) {
-                    throw this.error(document, statement.position(), "Expected an element declaration");
-                }
-                switch (node.name()) {
-                    case "button" -> buttons.add(this.compileButton(document, node));
-                    default -> throw this.error(document, node.position(),
-                        "Unsupported element type '" + node.name() + "'");
-                }
-            }
-        }
-
-        Map<UiRenderLayer, List<RenderableDefinition>> layers = this.compileRenderables(document, renderables);
-
-        ensureUniqueIds(document, buttons.stream().map(ButtonDefinition::id).toList(), "button");
-        List<String> renderableIds = layers.values().stream()
-            .flatMap(List::stream)
-            .map(RenderableDefinition::id)
-            .toList();
-        ensureUniqueIds(document, renderableIds, "layer renderable");
-        return new UiCompiledDocument(document.source(), document.type(), buttons, layers);
-    }
-
-    private Map<UiRenderLayer, List<RenderableDefinition>> compileRenderables(
-        UiDocument document,
-        Node renderables
-    ) throws UiCompileException {
-        Map<UiRenderLayer, List<RenderableDefinition>> layers = new LinkedHashMap<>();
-        if (renderables == null) {
-            return layers;
-        }
-        for (Statement statement : renderables.body()) {
-            if (!(statement instanceof Node layerNode)) {
-                throw this.error(document, statement.position(), "Expected a render layer block");
-            }
-            UiRenderLayer layer = switch (layerNode.name()) {
-                case "background" -> UiRenderLayer.BACKGROUND;
-                case "content" -> UiRenderLayer.CONTENT;
-                case "foreground" -> UiRenderLayer.FOREGROUND;
-                default -> throw this.error(document, layerNode.position(),
-                    "Unknown render layer '" + layerNode.name() + "'");
-            };
-            if (layers.containsKey(layer)) {
-                throw this.error(document, layerNode.position(),
-                    "Duplicate render layer '" + layerNode.name() + "'");
-            }
-
-            List<RenderableDefinition> elements = new ArrayList<>();
-            elements.addAll(this.compileRenderableStatements(
-                document, layerNode.body(), false, null, Map.of(), new ArrayDeque<>()
-            ));
-            layers.put(layer, List.copyOf(elements));
-        }
-        return layers;
-    }
-
-    private ButtonDefinition compileButton(UiDocument document, Node node) throws UiCompileException {
-        String id = this.nodeId(document, node);
-        Body body = this.body(
+        Map<String, Expression<Object>> properties = new LinkedHashMap<>();
+        Map<UiRenderLayer, List<EntryDefinition>> layers = new LinkedHashMap<>();
+        BoundsAccumulator bounds = new BoundsAccumulator();
+        this.compileRootStatements(
             document,
-            node,
-            List.of("x", "y", "w", "h", "scissor"),
-            List.of("renderables")
+            root.body(),
+            expectedRoot,
+            null,
+            Map.of(),
+            new ArrayDeque<>(),
+            properties,
+            layers,
+            bounds
         );
-        Expression<Float> x = this.number(document, body.require("x"), false, 0);
-        Expression<Float> y = this.number(document, body.require("y"), false, 0);
-        Expression<Float> width = this.number(document, body.require("w"), false, 0);
-        Expression<Float> height = this.number(document, body.require("h"), false, 0);
-        Expression<Boolean> scissor = body.property("scissor") == null
-            ? constant(false)
-            : this.bool(document, body.property("scissor"), false, 0);
 
-        List<RenderableDefinition> renderables = new ArrayList<>();
-        Node renderablesNode = body.node("renderables");
-        if (renderablesNode != null) {
-            renderables.addAll(this.compileRenderableStatements(
-                document, renderablesNode.body(), true, null, Map.of(), new ArrayDeque<>()
-            ));
-        }
-        ensureUniqueIds(document, renderables.stream().map(RenderableDefinition::id).toList(),
-            "renderable element in button '" + id + "'");
-        return new ButtonDefinition(id, x, y, width, height, scissor, renderables);
+        List<String> ids = layers.values().stream()
+            .flatMap(List::stream)
+            .map(EntryDefinition::id)
+            .toList();
+        ensureUniqueIds(document, ids, expectedRoot + " element");
+        return new UiCompiledDocument(
+            document.source(), document.type(), properties, bounds.definition, layers
+        );
     }
 
-    private List<RenderableDefinition> compileRenderableStatements(
+    private void compileRootStatements(
+        UiDocument document,
+        List<Statement> statements,
+        String rootName,
+        String idPrefix,
+        Map<String, Value> parameters,
+        Deque<BlueprintKey> expansionStack,
+        Map<String, Expression<Object>> properties,
+        Map<UiRenderLayer, List<EntryDefinition>> layers,
+        BoundsAccumulator bounds
+    ) throws UiCompileException {
+        for (Statement statement : statements) {
+            if (statement instanceof Property property) {
+                if (properties.putIfAbsent(
+                    property.name(),
+                    this.any(
+                        document,
+                        this.substituteValue(document, property.value(), parameters),
+                        false,
+                        0
+                    )
+                ) != null) {
+                    throw this.error(document, property.position(),
+                        "Duplicate document property '" + property.name() + "'");
+                }
+            } else if (statement instanceof Node node) {
+                UiRenderLayer layer = switch (node.name()) {
+                    case "background" -> UiRenderLayer.BACKGROUND;
+                    case "content" -> UiRenderLayer.CONTENT;
+                    case "foreground" -> UiRenderLayer.FOREGROUND;
+                    default -> throw this.error(document, node.position(),
+                        "Unknown " + rootName + " block '" + node.name() + "'");
+                };
+                if (layers.putIfAbsent(
+                    layer,
+                    this.compileEntries(
+                        document,
+                        node.body(),
+                        false,
+                        idPrefix,
+                        parameters,
+                        expansionStack,
+                        layer == UiRenderLayer.BACKGROUND ? bounds : null
+                    )
+                ) != null) {
+                    throw this.error(document, node.position(),
+                        "Duplicate '" + node.name() + "' block");
+                }
+            } else if (statement instanceof BlueprintUse use) {
+                this.expandBlueprint(
+                    document,
+                    use,
+                    idPrefix,
+                    parameters,
+                    expansionStack,
+                    (blueprintDocument, body, prefix, bindings, stack) -> {
+                        this.compileRootStatements(
+                            blueprintDocument,
+                            body,
+                            rootName,
+                            prefix,
+                            bindings,
+                            stack,
+                            properties,
+                            layers,
+                            bounds
+                        );
+                        return null;
+                    }
+                );
+            } else {
+                throw this.error(document, statement.position(),
+                    "Only properties, render blocks and blueprint instances are valid inside '"
+                        + rootName + "'");
+            }
+        }
+    }
+
+    private List<EntryDefinition> compileEntries(
         UiDocument document,
         List<Statement> statements,
         boolean allowThis,
         String idPrefix,
         Map<String, Value> parameters,
-        Deque<BlueprintKey> expansionStack
+        Deque<BlueprintKey> expansionStack,
+        BoundsAccumulator bounds
     ) throws UiCompileException {
-        List<RenderableDefinition> renderables = new ArrayList<>();
+        List<EntryDefinition> entries = new ArrayList<>();
         for (Statement statement : statements) {
-            if (statement instanceof Node element) {
-                Node expanded = this.substituteNode(document, element, parameters, idPrefix);
-                renderables.add(this.compileRenderable(document, expanded, allowThis));
+            if (statement instanceof Node node) {
+                if (node.name().equals("bounds")) {
+                    if (bounds == null) {
+                        throw this.error(document, node.position(),
+                            "Document bounds are only valid directly inside 'background'");
+                    }
+                    if (bounds.definition != null) {
+                        throw this.error(document, node.position(),
+                            "A UI document can only declare one bounds block");
+                    }
+                    bounds.definition = this.compileBounds(document, node, parameters);
+                    continue;
+                }
+                if (UiDslRegistry.find(node.name()).isPresent()) {
+                    Node expanded = this.substituteNodeHeader(document, node, parameters, idPrefix);
+                    entries.add(this.compileDslNode(
+                        document, expanded, idPrefix, parameters, expansionStack
+                    ));
+                } else {
+                    Node expanded = parameters.isEmpty() && idPrefix == null
+                        ? node
+                        : this.substituteNode(document, node, parameters, idPrefix);
+                    entries.add(this.compileRenderable(document, expanded, allowThis));
+                }
             } else if (statement instanceof BlueprintUse use) {
-                renderables.addAll(this.expandBlueprint(
-                    document, use, allowThis, idPrefix, parameters, expansionStack
+                entries.addAll(this.expandBlueprint(
+                    document,
+                    use,
+                    idPrefix,
+                    parameters,
+                    expansionStack,
+                    (blueprintDocument, body, prefix, bindings, stack) -> this.compileEntries(
+                        blueprintDocument, body, allowThis, prefix, bindings, stack, bounds
+                    )
                 ));
             } else if (statement instanceof ConditionalStatement conditional) {
                 Value conditionValue = this.substituteValue(document, conditional.condition(), parameters);
                 Expression<Boolean> condition = this.bool(document, conditionValue, allowThis, 0);
-                List<RenderableDefinition> conditionalRenderables = this.compileRenderableStatements(
+                List<EntryDefinition> nested = this.compileEntries(
                     document,
                     conditional.body(),
                     allowThis,
                     idPrefix,
                     parameters,
-                    expansionStack
+                    expansionStack,
+                    null
                 );
-                for (RenderableDefinition renderable : conditionalRenderables) {
-                    renderables.add(new ConditionalRenderableDefinition(
-                        renderable.id(),
-                        condition,
-                        renderable
-                    ));
+                for (EntryDefinition entry : nested) {
+                    if (!(entry instanceof RenderableDefinition renderable)) {
+                        throw this.error(document, conditional.position(),
+                            "Conditional widget declarations are not supported");
+                    }
+                    entries.add(new ConditionalRenderableDefinition(renderable.id(), condition, renderable));
                 }
             } else {
                 throw this.error(document, statement.position(),
-                    "Expected a renderable element, conditional block or blueprint instance");
+                    "Expected a visual element, conditional block or blueprint instance");
             }
         }
-        return renderables;
+        return List.copyOf(entries);
     }
 
-    private List<RenderableDefinition> expandBlueprint(
+    private BoundsDefinition compileBounds(
+        UiDocument document,
+        Node node,
+        Map<String, Value> parameters
+    ) throws UiCompileException {
+        if (!node.arguments().isEmpty()) {
+            throw this.error(document, node.position(), "bounds does not accept arguments");
+        }
+        Node expanded = parameters.isEmpty()
+            ? node
+            : this.substituteNode(document, node, parameters, null);
+        Body body = this.body(document, expanded, List.of("x", "y", "w", "h"), List.of());
+        Value x = body.property("x");
+        Value y = body.property("y");
+        return new BoundsDefinition(
+            x == null ? constant(0) : this.integer(document, x, false, 0),
+            y == null ? constant(0) : this.integer(document, y, false, 0),
+            this.integer(document, body.require("w"), false, 0),
+            this.integer(document, body.require("h"), false, 0)
+        );
+    }
+
+    private DslNodeDefinition compileDslNode(
+        UiDocument document,
+        Node node,
+        String idPrefix,
+        Map<String, Value> parameters,
+        Deque<BlueprintKey> expansionStack
+    ) throws UiCompileException {
+        String id = this.nodeId(document, node);
+        Map<String, Expression<Object>> properties = new LinkedHashMap<>();
+        Map<String, List<EntryDefinition>> renderBlocks = new LinkedHashMap<>();
+        List<DslBlockDefinition> children = new ArrayList<>();
+        this.compileDslStatements(
+            document,
+            node.body(),
+            "DSL element '" + id + "'",
+            idPrefix,
+            parameters,
+            expansionStack,
+            properties,
+            renderBlocks,
+            children
+        );
+        return new DslNodeDefinition(node.name(), id, properties, renderBlocks, children);
+    }
+
+    private DslBlockDefinition compileDslBlock(
+        UiDocument document,
+        Node node,
+        String idPrefix,
+        Map<String, Value> parameters,
+        Deque<BlueprintKey> expansionStack
+    ) throws UiCompileException {
+        List<Value> expandedArguments = new ArrayList<>();
+        for (Value argument : node.arguments()) {
+            expandedArguments.add(this.substituteValue(document, argument, parameters));
+        }
+        List<Expression<Object>> arguments = new ArrayList<>();
+        for (Value argument : expandedArguments) {
+            arguments.add(this.any(document, argument, false, 0));
+        }
+        String id = expandedArguments.size() == 1 && expandedArguments.getFirst() instanceof StringValue value
+            ? value.value()
+            : null;
+        Map<String, Expression<Object>> properties = new LinkedHashMap<>();
+        Map<String, List<EntryDefinition>> renderBlocks = new LinkedHashMap<>();
+        List<DslBlockDefinition> children = new ArrayList<>();
+        this.compileDslStatements(
+            document,
+            node.body(),
+            "DSL block '" + node.name() + "'",
+            idPrefix,
+            parameters,
+            expansionStack,
+            properties,
+            renderBlocks,
+            children
+        );
+        return new DslBlockDefinition(node.name(), arguments, id, properties, renderBlocks, children);
+    }
+
+    private void compileDslStatements(
+        UiDocument document,
+        List<Statement> statements,
+        String owner,
+        String idPrefix,
+        Map<String, Value> parameters,
+        Deque<BlueprintKey> expansionStack,
+        Map<String, Expression<Object>> properties,
+        Map<String, List<EntryDefinition>> renderBlocks,
+        List<DslBlockDefinition> children
+    ) throws UiCompileException {
+        for (Statement statement : statements) {
+            if (statement instanceof Property property) {
+                if (properties.putIfAbsent(
+                    property.name(),
+                    this.any(
+                        document,
+                        this.substituteValue(document, property.value(), parameters),
+                        false,
+                        0
+                    )
+                ) != null) {
+                    throw this.error(document, property.position(),
+                        "Duplicate property '" + property.name() + "'");
+                }
+            } else if (statement instanceof Node block) {
+                if (isRenderableBlock(block.name())) {
+                    if (renderBlocks.putIfAbsent(
+                        block.name(),
+                        this.compileVisualEntries(
+                            document, block, idPrefix, parameters, expansionStack
+                        )
+                    ) != null) {
+                        throw this.error(document, block.position(), "Duplicate block '" + block.name() + "'");
+                    }
+                } else {
+                    children.add(this.compileDslBlock(
+                        document, block, idPrefix, parameters, expansionStack
+                    ));
+                }
+            } else if (statement instanceof BlueprintUse use) {
+                this.expandBlueprint(
+                    document,
+                    use,
+                    idPrefix,
+                    parameters,
+                    expansionStack,
+                    (blueprintDocument, body, prefix, bindings, stack) -> {
+                        this.compileDslStatements(
+                            blueprintDocument,
+                            body,
+                            owner,
+                            prefix,
+                            bindings,
+                            stack,
+                            properties,
+                            renderBlocks,
+                            children
+                        );
+                        return null;
+                    }
+                );
+            } else {
+                throw this.error(document, statement.position(),
+                    "Only properties, child blocks and blueprint instances are valid inside " + owner);
+            }
+        }
+    }
+
+    private static boolean isRenderableBlock(String name) {
+        return name.equals("renderables") || name.equals("background");
+    }
+
+    private List<EntryDefinition> compileVisualEntries(
+        UiDocument document,
+        Node block,
+        String idPrefix,
+        Map<String, Value> parameters,
+        Deque<BlueprintKey> expansionStack
+    ) throws UiCompileException {
+        List<EntryDefinition> entries = this.compileEntries(
+            document, block.body(), true, idPrefix, parameters, expansionStack, null
+        );
+        for (EntryDefinition entry : entries) {
+            if (!(entry instanceof RenderableDefinition)) {
+                throw this.error(document, block.position(),
+                    "Block '" + block.name() + "' can only contain visual elements");
+            }
+        }
+        return entries;
+    }
+
+    private <T> T expandBlueprint(
         UiDocument caller,
         BlueprintUse use,
-        boolean allowThis,
         String parentPrefix,
         Map<String, Value> callerParameters,
-        Deque<BlueprintKey> expansionStack
+        Deque<BlueprintKey> expansionStack,
+        BlueprintConsumer<T> consumer
     ) throws UiCompileException {
         BlueprintTarget target = this.resolveBlueprint(caller, use);
         BlueprintDirective blueprint = target.blueprint();
@@ -270,30 +472,13 @@ final class UiCompiler {
             );
         }
 
-        Node renderables = null;
-        for (Statement statement : blueprint.body()) {
-            if (!(statement instanceof Node node) || !node.name().equals("renderables")) {
-                throw this.error(target.document(), statement.position(),
-                    "A visual blueprint may only contain one 'renderables' block");
-            }
-            if (renderables != null) {
-                throw this.error(target.document(), node.position(),
-                    "A blueprint can only contain one 'renderables' block");
-            }
-            renderables = node;
-        }
-        if (renderables == null) {
-            throw this.error(target.document(), blueprint.position(),
-                "Blueprint '" + blueprint.name() + "' is missing its 'renderables' block");
-        }
-
         String prefix = parentPrefix == null
             ? use.instanceId()
             : parentPrefix + "." + use.instanceId();
         expansionStack.addLast(key);
         try {
-            return this.compileRenderableStatements(
-                target.document(), renderables.body(), allowThis, prefix, bindings, expansionStack
+            return consumer.consume(
+                target.document(), blueprint.body(), prefix, bindings, expansionStack
             );
         } finally {
             expansionStack.removeLast();
@@ -337,6 +522,19 @@ final class UiCompiler {
         return new BlueprintTarget(importedDocument, blueprint);
     }
 
+    private Node substituteNodeHeader(
+        UiDocument document,
+        Node node,
+        Map<String, Value> parameters,
+        String idPrefix
+    ) throws UiCompileException {
+        List<Value> arguments = new ArrayList<>(
+            this.substituteValues(document, node.arguments(), parameters)
+        );
+        this.prefixNodeId(document, node, arguments, idPrefix, "DSL element");
+        return new Node(node.name(), arguments, node.body(), node.position());
+    }
+
     private Node substituteNode(
         UiDocument document,
         Node node,
@@ -349,12 +547,7 @@ final class UiCompiler {
         }
         if (idPrefix != null && (node.name().equals("image") || node.name().equals("video")
             || node.name().equals("text"))) {
-            if (arguments.size() != 1 || !(arguments.getFirst() instanceof StringValue id)
-                || id.value().isBlank()) {
-                throw this.error(document, node.position(),
-                    "A renderable inside a blueprint requires one non-empty quoted id");
-            }
-            arguments.set(0, new StringValue(idPrefix + "." + id.value(), id.position()));
+            this.prefixNodeId(document, node, arguments, idPrefix, "renderable");
         }
 
         List<Statement> body = new ArrayList<>();
@@ -373,6 +566,24 @@ final class UiCompiler {
             }
         }
         return new Node(node.name(), arguments, body, node.position());
+    }
+
+    private void prefixNodeId(
+        UiDocument document,
+        Node node,
+        List<Value> arguments,
+        String idPrefix,
+        String kind
+    ) throws UiCompileException {
+        if (idPrefix == null) {
+            return;
+        }
+        if (arguments.size() != 1 || !(arguments.getFirst() instanceof StringValue id)
+            || id.value().isBlank()) {
+            throw this.error(document, node.position(),
+                "A " + kind + " inside a blueprint requires one non-empty quoted id");
+        }
+        arguments.set(0, new StringValue(idPrefix + "." + id.value(), id.position()));
     }
 
     private Value substituteValue(UiDocument document, Value value, Map<String, Value> parameters)
@@ -811,7 +1022,32 @@ final class UiCompiler {
             return constant(null);
         }
         if (value instanceof UiDocument.ColorValue color) {
-            return constant(color.literal());
+            return constant(parseColor(document, color));
+        }
+        if (value instanceof ListValue list) {
+            List<Expression<Object>> values = new ArrayList<>();
+            for (Value item : list.values()) {
+                values.add(this.any(document, item, allowThis, depth + 1));
+            }
+            return context -> values.stream().map(item -> item.resolve(context)).toList();
+        }
+        if (value instanceof TupleValue tuple) {
+            List<Expression<Object>> values = new ArrayList<>();
+            for (Value item : tuple.values()) {
+                values.add(this.any(document, item, allowThis, depth + 1));
+            }
+            return context -> values.stream().map(item -> item.resolve(context)).toList();
+        }
+        if (value instanceof ObjectValue object) {
+            Map<String, Expression<Object>> values = new LinkedHashMap<>();
+            for (Map.Entry<String, Value> entry : object.values().entrySet()) {
+                values.put(entry.getKey(), this.any(document, entry.getValue(), allowThis, depth + 1));
+            }
+            return context -> {
+                Map<String, Object> resolvedValues = new LinkedHashMap<>();
+                values.forEach((name, expression) -> resolvedValues.put(name, expression.resolve(context)));
+                return java.util.Collections.unmodifiableMap(resolvedValues);
+            };
         }
         if (value instanceof ExposedDataValue data) {
             this.validateDataContext(document, data, allowThis);
@@ -1273,6 +1509,21 @@ final class UiCompiler {
     }
 
     private record BlueprintKey(Asset source, String name) {
+    }
+
+    private static final class BoundsAccumulator {
+        private BoundsDefinition definition;
+    }
+
+    @FunctionalInterface
+    private interface BlueprintConsumer<T> {
+        T consume(
+            UiDocument document,
+            List<Statement> statements,
+            String idPrefix,
+            Map<String, Value> parameters,
+            Deque<BlueprintKey> expansionStack
+        ) throws UiCompileException;
     }
 
     private final class Body {

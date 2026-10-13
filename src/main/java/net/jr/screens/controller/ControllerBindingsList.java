@@ -3,7 +3,6 @@ package net.jr.screens.controller;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.google.common.collect.ImmutableList;
 import net.jr.api.client.render.Draw;
-import net.jr.api.client.split.SplitScreen;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.viewport.ViewportArea;
@@ -20,7 +19,9 @@ import net.jr.client.ui.hint.glyph.KeyboardMouseGlyphResolver;
 import net.jr.client.ui.hint.glyph.KeyboardMouseGlyphTheme;
 import net.jr.client.ui.hint.render.GlyphTextureBounds;
 import net.jr.client.ui.hint.render.GlyphTextureBoundsCache;
-import net.jr.client.ui.layout.render.UILayoutRenderTarget;
+import net.jr.client.ui.render.composition.GuiCompositionTarget;
+import net.jr.client.ui.presentation.UiPresentation;
+import net.jr.client.ui.presentation.UiResolution;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -45,14 +46,10 @@ import java.util.function.Consumer;
 
 public class ControllerBindingsList extends ContainerObjectSelectionList<ControllerBindingsList.Entry> {
     private static final int ITEM_HEIGHT = 20;
-    private static final int HD_WIDTH = 1280;
-    private static final int HD_HEIGHT = 720;
-    private static final int FULL_HD_WIDTH = 1920;
-    private static final int FULL_HD_HEIGHT = 1080;
     private static final float COMPOSITE_PIXEL_BIAS = 0.35F;
     final ControllerBindingsScreen keyBindsScreen;
     private int maxNameWidth;
-    private final UILayoutRenderTarget glyphLayer = new UILayoutRenderTarget();
+    private final GuiCompositionTarget glyphLayer = new GuiCompositionTarget();
     private final List<Consumer<GuiGraphicsExtractor>> pendingGlyphDraws = new ArrayList<>();
     private float glyphLayerScale = 1.0F;
 
@@ -106,6 +103,8 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
                 this.glyphLayerScale,
                 FilterMode.LINEAR,
                 COMPOSITE_PIXEL_BIAS,
+                1.0F,
+                1.0F,
                 compositionGraphics -> {
                     for (Consumer<GuiGraphicsExtractor> draw : this.pendingGlyphDraws) {
                         draw.accept(compositionGraphics);
@@ -118,21 +117,20 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
     }
 
     private float resolveGlyphLayerScale(GuiGraphicsExtractor graphics) {
-        int referenceWidth = FULL_HD_WIDTH;
-        int referenceHeight = FULL_HD_HEIGHT;
+        UiResolution resolution = UiPresentation.resolution();
+        int referenceWidth = resolution.referenceWidth();
+        int referenceHeight = resolution.referenceHeight();
         Integer slotId = SlotScope.idOrNull();
         if (slotId != null && ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
             ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slotId);
-            if (SplitScreen.isActive()) {
-                referenceWidth = switch (viewport.layout()) {
-                    case TWO_VERTICAL, FOUR_GRID -> HD_WIDTH / 2;
-                    case SINGLE, TWO_HORIZONTAL -> HD_WIDTH;
-                };
-                referenceHeight = switch (viewport.layout()) {
-                    case TWO_HORIZONTAL, FOUR_GRID -> HD_HEIGHT / 2;
-                    case SINGLE, TWO_VERTICAL -> HD_HEIGHT;
-                };
-            }
+            referenceWidth = switch (viewport.layout()) {
+                case TWO_VERTICAL, FOUR_GRID -> referenceWidth / 2;
+                case SINGLE, TWO_HORIZONTAL -> referenceWidth;
+            };
+            referenceHeight = switch (viewport.layout()) {
+                case TWO_HORIZONTAL, FOUR_GRID -> referenceHeight / 2;
+                case SINGLE, TWO_VERTICAL -> referenceHeight;
+            };
         }
 
         float scale = Math.min(

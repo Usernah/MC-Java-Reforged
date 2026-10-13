@@ -3,6 +3,8 @@ package net.jr.client.components.widgets;
 import net.jr.client.components.interfaces.IWidgetRenderer;
 import net.jr.client.components.interfaces.IWidgetSoundHandler;
 import net.jr.client.components.navigation.UiAction;
+import net.jr.client.ui.dsl.DslNode;
+import net.jr.client.ui.dsl.UiDslKind;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.KeyEvent;
@@ -10,6 +12,8 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 public class Button extends JavaBaseWidget {
+
+    public static final UiDslKind<Button> DSL = new UiDslKind<>("button", Button.class);
 
     public OnPress onPress;
     private IWidgetRenderer renderer;
@@ -19,6 +23,19 @@ public class Button extends JavaBaseWidget {
         super(x, y, width, height, Component.empty());
         this.onPress = onPress;
         this.renderer = renderer;
+    }
+
+    public Button(DslNode dsl) {
+        super(dsl, Component.empty());
+        this.onPress = button -> {
+        };
+        this.completeDslConstruction(DSL);
+    }
+
+    public Button onPress(OnPress onPress) {
+        this.onPress = onPress == null ? button -> {
+        } : onPress;
+        return this;
     }
 
     @Override

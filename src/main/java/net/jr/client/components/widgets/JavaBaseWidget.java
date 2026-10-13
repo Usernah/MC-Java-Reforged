@@ -8,6 +8,10 @@ import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.input.InputActionHandler;
 import net.jr.client.sound.action.InputActionSounds;
+import net.jr.client.ui.dsl.DslNode;
+import net.jr.client.ui.dsl.DslElement;
+import net.jr.client.ui.dsl.UiCompiledDocument.EntryDefinition;
+import net.jr.client.ui.dsl.UiDslKind;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -17,7 +21,10 @@ import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class JavaBaseWidget extends AbstractWidget implements UiActionHandler, VisualElementsInterface {
+import java.util.List;
+
+public abstract class JavaBaseWidget extends AbstractWidget
+    implements UiActionHandler, VisualElementsInterface, DslElement {
 
     private static final IWidgetSoundHandler DEFAULT_SOUND_HANDLER = (handler, widget, event) -> {
         switch (event) {
@@ -36,11 +43,46 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
 
     protected IWidgetSoundHandler soundHandler = DEFAULT_SOUND_HANDLER;
     private final VisualState visualState;
+    private final DslNode dsl;
+    private final List<EntryDefinition> dslRenderables;
+    private final boolean dslScissor;
     private float animProgress = 0.0f;
 
     public JavaBaseWidget(int x, int y, int width, int height, Component message) {
+        this(x, y, width, height, message, null);
+    }
+
+    protected JavaBaseWidget(DslNode dsl, Component message) {
+        this(
+            Math.round(dsl.context().originX() + dsl.number("x")),
+            Math.round(dsl.context().originY() + dsl.number("y")),
+            Math.round(dsl.number("w")),
+            Math.round(dsl.number("h")),
+            message,
+            dsl
+        );
+    }
+
+    private JavaBaseWidget(
+        int x,
+        int y,
+        int width,
+        int height,
+        Component message,
+        DslNode dsl
+    ) {
         super(x, y, width, height, message);
         this.visualState = new VisualState(x, y, width, height);
+        this.dsl = dsl;
+        this.dslScissor = dsl != null && dsl.booleanOr("scissor", false);
+        this.dslRenderables = dsl == null ? List.of() : dsl.block("renderables");
+    }
+
+    protected final void completeDslConstruction(UiDslKind<?> kind) {
+        if (this.dsl == null) {
+            throw new IllegalStateException("This widget was not created from a DSL node");
+        }
+        this.dsl.finish(kind, this);
     }
 
     @Override
@@ -149,6 +191,60 @@ public abstract class JavaBaseWidget extends AbstractWidget implements UiActionH
 
     @Override
     protected void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        if (this.dsl == null || this.dslRenderables.isEmpty()) {
+            return;
+        }
+        if (this.dslScissor) {
+            guiGraphics.enableScissor(
+                this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight()
+            );
+        }
+        try {
+            this.dsl.context().extractBlock(
+                this.dslRenderables,
+                guiGraphics,
+                this::resolveDslValue,
+                mouseX,
+                mouseY,
+                partialTick,
+                this.getX(),
+                this.getY()
+            );
+        } finally {
+            if (this.dslScissor) {
+                guiGraphics.disableScissor();
+            }
+        }
+    }
+
+    public final void closeDsl() {
+        this.cancelInteraction();
+    }
+
+    protected Object resolveDslProperty(String name) {
+        throw new IllegalArgumentException("Unknown widget DSL data: ${this." + name + "}");
+    }
+
+    private Object resolveDslValue(List<String> path) {
+        if (path.isEmpty() || !path.getFirst().equals("this")) {
+            return this.dsl.data().resolve(path);
+        }
+        if (path.size() != 2) {
+            throw new IllegalArgumentException("Unknown widget DSL data: ${" + String.join(".", path) + "}");
+        }
+        return switch (path.get(1)) {
+            case "x" -> this.getX();
+            case "y" -> this.getY();
+            case "w", "width" -> this.getWidth();
+            case "h", "height" -> this.getHeight();
+            case "focused" -> this.isFocused();
+            case "hovered" -> this.isHovered();
+            case "pressed" -> this.isPressed();
+            case "active" -> this.active;
+            case "visible" -> this.visible;
+            case "alpha" -> this.getAlpha();
+            default -> this.resolveDslProperty(path.get(1));
+        };
     }
 
     @Override

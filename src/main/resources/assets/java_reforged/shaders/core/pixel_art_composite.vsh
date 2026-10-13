@@ -13,15 +13,18 @@ layout(std140) uniform Projection {
 in vec3 Position;
 in vec2 UV0;
 in vec4 Color;
+in ivec2 UV1;
 in float LineWidth;
 
 out vec2 texCoord0;
 out vec4 vertexColor;
 out float pixelBias;
+out vec2 sampleFootprint;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
     texCoord0 = UV0;
     vertexColor = Color;
     pixelBias = LineWidth;
+    sampleFootprint = vec2(UV1) / 256.0;
 }

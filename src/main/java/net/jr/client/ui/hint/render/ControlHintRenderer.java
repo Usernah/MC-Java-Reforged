@@ -3,15 +3,14 @@ package net.jr.client.ui.hint.render;
 import java.util.ArrayList;
 import java.util.List;
 import net.jr.api.client.render.Draw;
-import net.jr.api.client.local.Client;
-import net.jr.api.client.split.SplitScreen;
 import net.jr.client.ui.hud.HudTransparency;
 import net.jr.client.ui.hint.ControlHintContext;
 import net.jr.client.ui.hint.model.HintPlacement;
 import net.jr.client.ui.hint.model.ResolvedControlHint;
 import net.jr.client.ui.hint.model.ResolvedControlHintIcon;
 import net.jr.client.ui.hint.model.ResolvedControlHintInput;
-import net.jr.registry.ModFonts;
+import net.jr.client.ui.presentation.UiPresentation;
+import net.jr.client.ui.presentation.UiResolution;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
@@ -23,7 +22,7 @@ public final class ControlHintRenderer {
     }
 
     private static ControlHintMetrics metrics() {
-        return SplitScreen.isActive()
+        return UiPresentation.glyphResolution() == UiResolution.HD
                 ? ControlHintMetrics.HD
                 : ControlHintMetrics.DEFAULT;
     }
@@ -153,14 +152,9 @@ public final class ControlHintRenderer {
             Draw.TextBuilder labelText = Draw.text(hint.label())
                     .scale(metrics.menuTextScale())
                     .shadowColor(TEXT_SHADOW)
-                    .color(TEXT_COLOR);
-
-            if (
-                    SplitScreen.isActive()
-                            && Client.count() > 1
-            ) {
-                labelText.font(ModFonts.MINECRAFT_MIN);
-            }
+                    .legacyShadow(UiPresentation.resolution().legacyTextShadow())
+                    .color(TEXT_COLOR)
+                    .font(UiPresentation.currentFont());
 
             int textY = Math.round(
                     anchorY - labelText.lineHeight() / 2.0F
@@ -318,19 +312,14 @@ public final class ControlHintRenderer {
                                 alpha
                         )
                 )
+                .legacyShadow(UiPresentation.resolution().legacyTextShadow())
                 .color(
                         HudTransparency.applyAlpha(
                                 TEXT_COLOR,
                                 alpha
                         )
-                );
-
-        if (
-                SplitScreen.isActive()
-                        && Client.count() > 1
-        ) {
-            labelText.font(ModFonts.MINECRAFT_MIN);
-        }
+                )
+                .font(UiPresentation.currentFont());
 
         int textBlockWidth =
                 labelText.width()
@@ -440,6 +429,7 @@ public final class ControlHintRenderer {
                                 alpha
                         )
                 )
+                .legacyShadow(UiPresentation.resolution().legacyTextShadow())
                 .color(
                         HudTransparency.applyAlpha(
                                 TEXT_COLOR,

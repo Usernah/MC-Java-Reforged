@@ -51,17 +51,23 @@ public final class GuiViewportScope implements AutoCloseable {
 
     public static int mapPictureInPictureX(int x) {
         CoordinateMapping mapping = currentMappingOrNull();
-        return mapping == null ? x : Math.round(mapping.x() + x * mapping.scaleX());
+        return mapping == null ? x : Math.round(
+            mapping.x() + x * mapping.scaleX() * ViewportGuiScale.activeScreenScale()
+        );
     }
 
     public static int mapPictureInPictureY(int y) {
         CoordinateMapping mapping = currentMappingOrNull();
-        return mapping == null ? y : Math.round(mapping.y() + y * mapping.scaleY());
+        return mapping == null ? y : Math.round(
+            mapping.y() + y * mapping.scaleY() * ViewportGuiScale.activeScreenScale()
+        );
     }
 
     public static float mapPictureInPictureScale(float scale) {
         CoordinateMapping mapping = currentMappingOrNull();
-        return mapping == null ? scale : scale * Math.min(mapping.scaleX(), mapping.scaleY());
+        return mapping == null
+            ? scale
+            : scale * Math.min(mapping.scaleX(), mapping.scaleY()) * ViewportGuiScale.activeScreenScale();
     }
 
     public static PictureInPictureBounds mapPictureInPicture(
@@ -82,12 +88,16 @@ public final class GuiViewportScope implements AutoCloseable {
 
     public static int mapScissorTestX(int x) {
         CoordinateMapping mapping = currentMappingOrNull();
-        return mapping == null ? x : Math.round(mapping.x() + x * mapping.scaleX());
+        return mapping == null ? x : Math.round(
+            mapping.x() + x * mapping.scaleX() * ViewportGuiScale.activeScreenScale()
+        );
     }
 
     public static int mapScissorTestY(int y) {
         CoordinateMapping mapping = currentMappingOrNull();
-        return mapping == null ? y : Math.round(mapping.y() + y * mapping.scaleY());
+        return mapping == null ? y : Math.round(
+            mapping.y() + y * mapping.scaleY() * ViewportGuiScale.activeScreenScale()
+        );
     }
 
     private static CoordinateMapping currentMappingOrNull() {

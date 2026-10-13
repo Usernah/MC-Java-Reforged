@@ -40,8 +40,8 @@ public final class ScreenOverlays {
         return current().render(
             screen,
             graphics,
-            ViewportGuiScale.logicalWidth(viewport),
-            ViewportGuiScale.logicalHeight(viewport),
+            ViewportGuiScale.screenLogicalWidth(viewport),
+            ViewportGuiScale.screenLogicalHeight(viewport),
             partialTick
         );
     }

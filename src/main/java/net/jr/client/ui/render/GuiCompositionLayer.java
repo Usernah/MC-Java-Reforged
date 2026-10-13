@@ -2,12 +2,12 @@ package net.jr.client.ui.render;
 
 import com.mojang.blaze3d.textures.FilterMode;
 import java.util.function.Consumer;
-import net.jr.client.ui.layout.render.UILayoutRenderTarget;
+import net.jr.client.ui.render.composition.GuiCompositionTarget;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /** Renders a fixed canvas into a GUI viewport. */
 public final class GuiCompositionLayer implements AutoCloseable {
-    private final UILayoutRenderTarget target = new UILayoutRenderTarget();
+    private final GuiCompositionTarget target = new GuiCompositionTarget();
     private final int canvasWidth;
     private final int canvasHeight;
     private final float presentationScale;
@@ -74,6 +74,8 @@ public final class GuiCompositionLayer implements AutoCloseable {
             scaleY,
             filter,
             pixelBias,
+            1.0F,
+            1.0F,
             canvasGraphics -> extractor.accept(new Canvas(
                 canvasGraphics,
                 destinationX,

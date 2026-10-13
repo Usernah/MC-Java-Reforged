@@ -2,11 +2,11 @@ package net.jr.screens;
 
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
-import net.jr.client.ui.container.slots.SlotMaps;
-import net.jr.client.ui.container.slots.VanillaSlotLayer;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotMaps;
+import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -24,12 +24,12 @@ import net.minecraft.world.item.crafting.display.StonecutterRecipeDisplay;
 
 
 public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu>
-        implements CustomSlotLayout {
+        implements CustomItemSlotLayout {
     private static final Asset BACKGROUND =
             Asset.MC("textures/gui/container/inventory.png");
 
-    private VanillaSlotLayer slotLayer;
-    private SlotGrid slotGrid;
+    private VanillaItemSlotLayer itemSlotLayer;
+    private ItemSlotGrid itemSlotGrid;
     private final EffectsInInventory effects;
 
     public InventoryScreen(InventoryMenu menu, Inventory inventory, Component title) {
@@ -40,25 +40,23 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
     @Override
     protected void init() {
         super.init();
-        this.slotLayer = new VanillaSlotLayer(this, this.menu, this.font, 18);
-        this.slotGrid = this.createSlotGrid();
+        this.itemSlotLayer = new VanillaItemSlotLayer(this, this.menu, this.font, 18);
+        this.itemSlotGrid = this.createItemSlotGrid();
     }
 
-    private SlotGrid createSlotGrid() {
-        return new SlotGrid(SlotMaps.SURVIVAL_INVENTORY)
+    private ItemSlotGrid createItemSlotGrid() {
+        return new ItemSlotGrid(ItemSlotMaps.SURVIVAL_INVENTORY)
                 .grid(
-                        SlotGroup.PLAYER_ARMOR,
+                        ItemSlotGroup.PLAYER_ARMOR,
                         this.leftPos + 46,
                         this.topPos + 7,
                         1,
                         18,
                         18,
-                        18,
-                        18,
                         16
                 )
                 .point(
-                        SlotGroup.PLAYER_OFFHAND,
+                        ItemSlotGroup.PLAYER_OFFHAND,
                         0,
                         this.leftPos + 115,
                         this.topPos + 61,
@@ -67,23 +65,19 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
                         16
                 )
                 .grid(
-                        SlotGroup.PLAYER_INVENTORY,
+                        ItemSlotGroup.PLAYER_INVENTORY,
                         this.leftPos + 7,
                         this.topPos + 83,
                         9,
                         18,
                         18,
-                        18,
-                        18,
                         16
                 )
                 .grid(
-                        SlotGroup.PLAYER_HOTBAR,
+                        ItemSlotGroup.PLAYER_HOTBAR,
                         this.leftPos + 7,
                         this.topPos + 141,
                         9,
-                        18,
-                        18,
                         18,
                         18,
                         16
@@ -91,13 +85,13 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
     }
 
     @Override
-    public SlotGrid slotGrid() {
-        return this.slotGrid;
+    public ItemSlotGrid itemSlotGrid() {
+        return this.itemSlotGrid;
     }
 
     @Override
-    public VanillaSlotLayer slotLayer() {
-        return this.slotLayer;
+    public VanillaItemSlotLayer itemSlotLayer() {
+        return this.itemSlotLayer;
     }
 
     @Override
@@ -134,11 +128,11 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
             }
         }
         this.effects.extractRenderState(graphics,mouseX,mouseY);
-        this.slotLayer.updateHovered(this.slotGrid, mouseX, mouseY);
-        this.slotLayer.renderSlotMap(graphics, this.slotGrid);
-        this.slotLayer.renderHoveredSlot(graphics, this.slotGrid);
-        this.slotLayer.renderCarriedItem(graphics, mouseX, mouseY);
-        this.slotLayer.renderTooltip(graphics, this.slotGrid, mouseX, mouseY);
+        this.itemSlotLayer.updateHovered(this.itemSlotGrid, mouseX, mouseY);
+        this.itemSlotLayer.renderItemSlotMap(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderHoveredItemSlot(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderCarriedItem(graphics, mouseX, mouseY);
+        this.itemSlotLayer.renderTooltip(graphics, this.itemSlotGrid, mouseX, mouseY);
     }
 
     @Override
@@ -154,8 +148,8 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
             }
             return true;
         }
-        return this.slotLayer.mouseClicked(
-                this.slotGrid,
+        return this.itemSlotLayer.mouseClicked(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -176,8 +170,8 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
                 return focused.mouseReleased(event);
             }
         }
-        return this.slotLayer.mouseReleased(
-                this.slotGrid,
+        return this.itemSlotLayer.mouseReleased(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -195,8 +189,8 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
         if (focused != null && this.isDragging() && event.button() == 0) {
             return focused.mouseDragged(event, dragX, dragY);
         }
-        return this.slotLayer.mouseDragged(
-                this.slotGrid,
+        return this.itemSlotLayer.mouseDragged(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -207,7 +201,7 @@ public final class InventoryScreen extends AbstractContainerScreen<InventoryMenu
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        return this.slotLayer.keyPressed(this.slotGrid, event.key(), event.scancode())
+        return this.itemSlotLayer.keyPressed(this.itemSlotGrid, event.key(), event.scancode())
                 || super.keyPressed(event);
     }
 }

@@ -50,8 +50,7 @@ public final class UiDocumentManager {
     }
 
     public Optional<UiCompiledDocument> getCompiled(UiFile file) {
-        String suffix = UiPresentation.documentVariantSuffix();
-        if (!suffix.isEmpty()) {
+        for (String suffix : UiPresentation.documentVariantSuffixes()) {
             UiCompiledDocument variant = this.compiledDocumentsByAsset.get(variantAsset(file, suffix));
             if (variant != null) {
                 return Optional.of(variant);
@@ -146,8 +145,16 @@ public final class UiDocumentManager {
                 this.load(file.asset(), file.type()).ifPresent(document ->
                     this.registeredDocuments.put(file, document)
                 );
-                this.loadOptionalVariant(file, UiPresentation.PORTABLE_SUFFIX);
-                this.loadOptionalVariant(file, UiPresentation.SPLIT_SCREEN_SUFFIX);
+                this.loadOptionalVariant(file, UiPresentation.HD_SUFFIX);
+                this.loadOptionalVariant(file, UiPresentation.FULL_HD_SUFFIX);
+                this.loadOptionalVariant(
+                    file,
+                    UiPresentation.HD_SUFFIX + UiPresentation.SMALL_SUFFIX
+                );
+                this.loadOptionalVariant(
+                    file,
+                    UiPresentation.FULL_HD_SUFFIX + UiPresentation.SMALL_SUFFIX
+                );
             }
             UiCompiler compiler = new UiCompiler(this.loadedDocuments);
             for (Map.Entry<UiFile, UiDocument> entry : this.registeredDocuments.entrySet()) {

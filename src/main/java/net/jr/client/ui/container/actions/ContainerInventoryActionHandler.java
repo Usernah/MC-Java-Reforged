@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.jr.experimental_features.minigame.client.BattleClientState;
 import net.jr.experimental_features.minigame.network.BattleNetwork;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.minecraft.client.Minecraft;
@@ -136,8 +136,9 @@ public final class ContainerInventoryActionHandler {
 
     private static Slot actionSlot(AbstractContainerScreen<?> screen, boolean requireItem) {
         boolean focusNavigationActive = UiInputModeController.isFocusNavigationActive();
-        if (screen instanceof CustomSlotLayout layout) {
-            return layout.slotLayer().resolveActionSlot(focusNavigationActive, requireItem);
+        CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
+        if (layout != null) {
+            return layout.itemSlotLayer().resolveActionItemSlot(focusNavigationActive, requireItem);
         }
 
         Slot target = focusNavigationActive ? focused(screen) : hovered(screen);
@@ -145,7 +146,7 @@ public final class ContainerInventoryActionHandler {
     }
 
     private static Slot focused(AbstractContainerScreen<?> screen) {
-        Integer focusedIndex = ContainerSlotFocusController.getFocusedSlotIndex(screen);
+        Integer focusedIndex = ContainerItemSlotFocusController.getFocusedItemSlotIndex(screen);
         if (focusedIndex == null
             || focusedIndex < 0
             || focusedIndex >= screen.getMenu().slots.size()) {
@@ -155,7 +156,7 @@ public final class ContainerInventoryActionHandler {
     }
 
     private static Slot hovered(AbstractContainerScreen<?> screen) {
-        return accessor(screen).javaReforged$getHoveredSlot();
+        return accessor(screen).javaReforged$getHoveredItemSlot();
     }
 
     private static boolean isUsableActionSlot(Slot slot, boolean requireItem) {

@@ -23,8 +23,8 @@ public record ControlHintMetrics(
             10F,
             0,
             2,
-            3.5F,
-            3.5F
+            3.0F,
+            3.0F
     );
 
     public static final ControlHintMetrics HD = new ControlHintMetrics(

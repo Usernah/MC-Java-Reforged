@@ -14,7 +14,7 @@ import java.util.Set;
 public interface AbstractContainerScreenAccessor {
     @Accessor("hoveredSlot")
     @Nullable
-    Slot javaReforged$getHoveredSlot();
+    Slot javaReforged$getHoveredItemSlot();
 
     @Accessor("hoveredSlot")
     void javaReforged$setHoveredSlot(@Nullable Slot slot);
@@ -34,8 +34,14 @@ public interface AbstractContainerScreenAccessor {
     @Accessor("leftPos")
     int javaReforged$getLeftPos();
 
+    @Accessor("leftPos")
+    void javaReforged$setLeftPos(int leftPos);
+
     @Accessor("topPos")
     int javaReforged$getTopPos();
+
+    @Accessor("topPos")
+    void javaReforged$setTopPos(int topPos);
 
     @Accessor("imageWidth")
     int javaReforged$getImageWidth();

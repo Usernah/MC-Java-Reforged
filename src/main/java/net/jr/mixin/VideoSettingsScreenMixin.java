@@ -1,14 +1,13 @@
 package net.jr.mixin;
 
-import net.jr.client.ui.presentation.InterfaceProfileOptionsHandler;
 import net.jr.client.ui.presentation.RenderOptimizationOptionsHandler;
+import net.jr.client.ui.presentation.VideoOptionsHandler;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(VideoSettingsScreen.class)
@@ -22,12 +21,7 @@ public abstract class VideoSettingsScreenMixin extends OptionsSubScreen {
             net.minecraft.client.Options options,
             CallbackInfoReturnable<OptionInstance<?>[]> cir
     ) {
-        cir.setReturnValue(InterfaceProfileOptionsHandler.extend(options, cir.getReturnValue()));
-    }
-
-    @Inject(method = "tick", at = @At("TAIL"))
-    private void javaReforged$updateProfileLock(CallbackInfo ci) {
-        InterfaceProfileOptionsHandler.updateSplitLock(this.list);
+        cir.setReturnValue(VideoOptionsHandler.extend(options, cir.getReturnValue()));
     }
 
     @Inject(method = "qualityOptions", at = @At("RETURN"), cancellable = true)

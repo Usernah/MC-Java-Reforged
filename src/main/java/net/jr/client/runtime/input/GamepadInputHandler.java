@@ -23,9 +23,9 @@ import net.jr.client.components.navigation.UiActionFeedback;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.components.widgets.ScrollPanelElement;
 import net.jr.mixin.accessors.MouseHandlerAccessor;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.container.actions.ContainerInventoryActionHandler;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.overlay.ScreenOverlays;
 import net.jr.client.ui.cursor.MouseCoordinates;
@@ -234,8 +234,12 @@ public final class GamepadInputHandler {
                 || UiInputModeController.isFocusNavigationActive()
                 || screen.isDragging()
                 || InputActionHandler.hasActivePointerGesture()
-                || !(screen instanceof CustomSlotLayout layout)
                 || !isJoystickCursorActive(slotId)) {
+            return;
+        }
+
+        CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
+        if (layout == null) {
             return;
         }
 
@@ -366,11 +370,11 @@ public final class GamepadInputHandler {
         return cursorState(slotId).virtualCursorY;
     }
 
-    public static void moveVirtualCursorToFocusedSlot(double guiX, double guiY) {
-        moveVirtualCursorToFocusedSlot(currentCursorSlotId(), guiX, guiY);
+    public static void moveVirtualCursorToFocusedItemSlot(double guiX, double guiY) {
+        moveVirtualCursorToFocusedItemSlot(currentCursorSlotId(), guiX, guiY);
     }
 
-    public static void moveVirtualCursorToFocusedSlot(int slotId, double guiX, double guiY) {
+    public static void moveVirtualCursorToFocusedItemSlot(int slotId, double guiX, double guiY) {
         setCursorPosition(slotId, guiX, guiY, true);
     }
 
@@ -423,11 +427,11 @@ public final class GamepadInputHandler {
         );
     }
 
-    public static void releaseFocusedSlotCursor() {
-        releaseFocusedSlotCursor(currentCursorSlotId());
+    public static void releaseFocusedItemSlotCursor() {
+        releaseFocusedItemSlotCursor(currentCursorSlotId());
     }
 
-    public static void releaseFocusedSlotCursorToJoystick() {
+    public static void releaseFocusedItemSlotCursorToJoystick() {
         int slotId = currentCursorSlotId();
         LocalCursorState state = cursorState(slotId);
         if (state.cursorInputSource != CursorInputSource.FOCUS_SLOT) {
@@ -442,7 +446,7 @@ public final class GamepadInputHandler {
         resetFocusCursorAnimation(slotId, visualX, visualY);
     }
 
-    public static void releaseFocusedSlotCursor(int slotId) {
+    public static void releaseFocusedItemSlotCursor(int slotId) {
         LocalCursorState state = cursorState(slotId);
         if (state.cursorInputSource == CursorInputSource.FOCUS_SLOT) {
             state.cursorInputSource = CursorInputSource.MOUSE;
@@ -587,7 +591,7 @@ public final class GamepadInputHandler {
 
     static boolean activateFocusedElement(Screen screen, int mouseButton) {
         if (screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> containerScreen
-            && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen)) {
+            && ContainerItemSlotFocusController.isVanillaItemSlotFocusActive(containerScreen)) {
             return ContainerInventoryActionHandler.pickupFocusedOrHoveredSlot(containerScreen, mouseButton);
         }
 
@@ -695,13 +699,13 @@ public final class GamepadInputHandler {
         }
 
         if (screen instanceof AbstractContainerScreen<?> containerScreen
-                && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen)) {
+                && ContainerItemSlotFocusController.isVanillaItemSlotFocusActive(containerScreen)) {
 
-            ContainerSlotFocusController.FocusedSlotCenter center =
-                    ContainerSlotFocusController.getFocusedSlotCenter(containerScreen);
+            ContainerItemSlotFocusController.FocusedItemSlotCenter center =
+                    ContainerItemSlotFocusController.getFocusedItemSlotCenter(containerScreen);
 
             if (center != null) {
-                moveVirtualCursorToFocusedSlot(center.guiX(), center.guiY());
+                moveVirtualCursorToFocusedItemSlot(center.guiX(), center.guiY());
             }
 
             return;
@@ -716,7 +720,7 @@ public final class GamepadInputHandler {
         double centerX = rectangle.left() + rectangle.width() / 2.0D;
         double centerY = rectangle.top() + rectangle.height() / 2.0D;
 
-        moveVirtualCursorToFocusedSlot(centerX, centerY);
+        moveVirtualCursorToFocusedItemSlot(centerX, centerY);
     }
 
     public static void syncVirtualCursorToFocus(Screen screen) {
@@ -788,9 +792,9 @@ public final class GamepadInputHandler {
         if (ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
             ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slotId);
             state.virtualCursorX = (mc.mouseHandler.xpos() - viewport.windowX())
-                * ViewportGuiScale.logicalWidth(viewport) / viewport.windowWidth();
+                * ViewportGuiScale.screenLogicalWidth(viewport) / viewport.windowWidth();
             state.virtualCursorY = (mc.mouseHandler.ypos() - viewport.windowY())
-                * ViewportGuiScale.logicalHeight(viewport) / viewport.windowHeight();
+                * ViewportGuiScale.screenLogicalHeight(viewport) / viewport.windowHeight();
         } else {
             state.virtualCursorX = MouseCoordinates.rawMouseToGlobalGuiX(mc, mc.mouseHandler.xpos());
             state.virtualCursorY = MouseCoordinates.rawMouseToGlobalGuiY(mc, mc.mouseHandler.ypos());
@@ -811,7 +815,7 @@ public final class GamepadInputHandler {
     private static int cursorSpaceWidth(Minecraft mc, int slotId, Screen screen) {
         ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
         if (viewport != null) {
-            return ViewportGuiScale.logicalWidth(viewport);
+            return ViewportGuiScale.screenLogicalWidth(viewport);
         }
         return screen != null && screen.width > 1 ? screen.width : Math.max(1, mc.getWindow().getGuiScaledWidth());
     }
@@ -819,7 +823,7 @@ public final class GamepadInputHandler {
     private static int cursorSpaceHeight(Minecraft mc, int slotId, Screen screen) {
         ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
         if (viewport != null) {
-            return ViewportGuiScale.logicalHeight(viewport);
+            return ViewportGuiScale.screenLogicalHeight(viewport);
         }
         return screen != null && screen.height > 1 ? screen.height : Math.max(1, mc.getWindow().getGuiScaledHeight());
     }

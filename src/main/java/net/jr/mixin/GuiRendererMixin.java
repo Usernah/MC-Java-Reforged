@@ -2,7 +2,7 @@ package net.jr.mixin;
 
 import net.jr.client.render.item.GuiItemFrameState;
 import net.jr.client.render.item.GuiItemRenderPass;
-import net.jr.client.ui.layout.render.UILayoutRenderQueue;
+import net.jr.client.ui.render.composition.GuiCompositionQueue;
 import net.minecraft.client.gui.render.GuiItemAtlas;
 import net.minecraft.client.gui.render.GuiRenderer;
 import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
@@ -22,7 +22,7 @@ public abstract class GuiRendererMixin {
 
     @Inject(method = "render", at = @At("HEAD"))
     private void javaReforged$renderLiveLayoutTargets(CallbackInfo ci) {
-        UILayoutRenderQueue.renderQueued();
+        GuiCompositionQueue.renderQueued();
     }
 
     @Inject(method = "prepareItemElements", at = @At("HEAD"))

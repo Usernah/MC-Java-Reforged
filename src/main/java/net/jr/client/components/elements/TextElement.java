@@ -28,6 +28,7 @@ public class TextElement implements VisualElementsInterface {
     private float scale = 1.0F;
     private int color = 0xFFFFFFFF;
     private boolean shadow;
+    private boolean legacyShadow;
     private Integer shadowColor;
     private Integer outlineColor;
     private Draw.TextAlign align = Draw.TextAlign.LEFT;
@@ -124,6 +125,14 @@ public class TextElement implements VisualElementsInterface {
 
     public void setShadow(boolean shadow) {
         this.shadow = shadow;
+    }
+
+    public boolean legacyShadow() {
+        return this.legacyShadow;
+    }
+
+    public void setLegacyShadow(boolean legacyShadow) {
+        this.legacyShadow = legacyShadow;
     }
 
     public Integer shadowColor() {
@@ -284,6 +293,7 @@ public class TextElement implements VisualElementsInterface {
         builder.scale(this.scale)
             .color(this.colorWithElementAlpha())
             .shadow(this.shadow)
+            .legacyShadow(this.legacyShadow)
             .align(alignment);
         if (this.shadowColor != null) {
             builder.shadowColor(this.shadowColor);

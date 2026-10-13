@@ -6,7 +6,7 @@ import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.Cursor;
 import net.jr.client.components.widgets.Button;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.mixin.accessors.ScreenAccesor;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Renderable;
@@ -71,7 +71,7 @@ public abstract class EnchantmentScreenMixin {
                     .onPress(button -> {
                         if (screen.getMenu().clickMenuButton(Client.current().player(), index)) {
                             screen.getMinecraft().gameMode.handleInventoryButtonClick(screen.getMenu().containerId, index);
-                            ContainerSlotFocusController.focusSlot(screen, screen.getMenu().getSlot(0));
+                            ContainerItemSlotFocusController.focusItemSlot(screen, screen.getMenu().getSlot(0));
                         }
                     })
                     .withRenderer((gui, button, mouseX, mouseY, partialTick) -> {

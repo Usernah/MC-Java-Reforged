@@ -6,7 +6,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.bytedeco.opencv.opencv_dnn.SplitLayer;
 
 public final class ViewportHudLayout {
-    private static final float BOTTOM_SCALE_BIG = 1.5F;
+    private static final float BOTTOM_SCALE_BIG = 1.4F;
     private static final float BOTTOM_SCALE = 1.0F;
     private static final float BOTTOM_PIVOT_Y_OFFSET = 1.0F;
     private static final ThreadLocal<Float> ACTIVE_BOTTOM_INSET =

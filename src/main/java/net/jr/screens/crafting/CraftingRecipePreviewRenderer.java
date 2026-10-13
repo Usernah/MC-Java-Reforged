@@ -2,9 +2,9 @@ package net.jr.screens.crafting;
 
 import net.jr.client.render.item.ItemRenderOpacity;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
-import net.jr.client.ui.container.slots.SlotPos;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotPos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.recipebook.PlaceRecipeHelper;
@@ -27,14 +27,14 @@ final class CraftingRecipePreviewRenderer {
 
     private final int columns;
     private final int rows;
-    private final SlotGroup craftingGridGroup;
-    private final SlotGroup craftingResultGroup;
+    private final ItemSlotGroup craftingGridGroup;
+    private final ItemSlotGroup craftingResultGroup;
 
     CraftingRecipePreviewRenderer(
             int columns,
             int rows,
-            SlotGroup craftingGridGroup,
-            SlotGroup craftingResultGroup
+            ItemSlotGroup craftingGridGroup,
+            ItemSlotGroup craftingResultGroup
     ) {
         this.columns = columns;
         this.rows = rows;
@@ -46,7 +46,7 @@ final class CraftingRecipePreviewRenderer {
             GuiGraphicsExtractor graphics,
             RecipeDisplay display,
             ContextMap displayContext,
-            SlotGrid slots,
+            ItemSlotGrid slots,
             AbstractContainerMenu menu,
             Inventory inventory,
             boolean craftable
@@ -120,7 +120,7 @@ final class CraftingRecipePreviewRenderer {
         return null;
     }
 
-    private void renderIngredient(GuiGraphicsExtractor graphics, SlotPos slot, ItemChoice choice) {
+    private void renderIngredient(GuiGraphicsExtractor graphics, ItemSlotPos slot, ItemChoice choice) {
         if (slot == null) {
             return;
         }
@@ -138,7 +138,7 @@ final class CraftingRecipePreviewRenderer {
 
     private void renderResult(
             GuiGraphicsExtractor graphics,
-            SlotPos slot,
+            ItemSlotPos slot,
             ItemStack result,
             boolean available
     ) {

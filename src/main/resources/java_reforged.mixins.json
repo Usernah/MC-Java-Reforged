@@ -6,7 +6,9 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "AdvancementDisplayMixin",
+    "ServerPlayerDeathMixin",
     "ServerPlayerRecipeMixin",
+    "ServerPlayerVisibilityMixin",
     "ServerRecipeBookMixin",
     "accessors.BlockItemAccessor",
     "accessors.TntBlockAccessor",
@@ -41,7 +43,6 @@
     "SoundManagerMixin",
     "TooltipRenderUtilMixin",
     "VideoSettingsScreenMixin",
-    "WindowMixin",
     "accessors.AbstractContainerScreenAccessor",
     "accessors.AbstractSliderButtonAccessor",
     "accessors.ChannelAccessor",

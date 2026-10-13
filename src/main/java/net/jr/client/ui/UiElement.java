@@ -10,20 +10,17 @@ import net.jr.client.ui.dsl.UiCompiledDocument.RenderableDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.TextDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.Vector2Definition;
 import net.jr.client.ui.dsl.UiCompiledDocument.VideoDefinition;
-import net.jr.client.ui.dsl.UiRenderLayer;
 import net.jr.api.client.video.VideoHolder;
 import net.jr.api.client.video.VideoRegister;
 import net.jr.client.components.elements.ImageElement;
 import net.jr.client.components.elements.TextElement;
 import net.jr.client.components.elements.VideoElement;
-import net.jr.client.ui.layout.UILayout;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public final class UiElement {
     private UiElement() {
@@ -33,7 +30,7 @@ public final class UiElement {
         return definitions.stream().map(UiElement::renderable).toList();
     }
 
-    private static ElementRenderable renderable(RenderableDefinition definition) {
+    public static ElementRenderable renderable(RenderableDefinition definition) {
         if (definition instanceof ConditionalRenderableDefinition conditional) {
             return new ConditionalElement(conditional);
         }
@@ -93,35 +90,6 @@ public final class UiElement {
 
         @Override
         default void close() {
-        }
-    }
-
-    public static final class Layer {
-        private final UiRenderLayer type;
-        private final UILayout host;
-        private final List<ElementRenderable> renderables;
-
-        public Layer(UiRenderLayer type, UILayout currentLayout) {
-            this.type = Objects.requireNonNull(type, "type");
-            this.host = Objects.requireNonNull(currentLayout, "currentLayout");
-            this.renderables = UiElement.renderables(this.host.uiDocument().renderables(this.type));
-            this.host.attachUiLayer(this);
-        }
-
-        public UiRenderLayer type() {
-            return this.type;
-        }
-
-        public void render(GuiGraphicsExtractor graphics) {
-            for (ElementRenderable renderable : this.renderables) {
-                renderable.render(graphics, this.host.uiData(), 0.0F, 0.0F);
-            }
-        }
-
-        public void close() {
-            for (ElementRenderable renderable : this.renderables) {
-                renderable.close();
-            }
         }
     }
 

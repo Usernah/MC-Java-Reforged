@@ -11,13 +11,13 @@ import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.components.widgets.ScrollbarElement;
 import net.jr.client.components.widgets.item.AbstractItemGridElement;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
-import net.jr.client.ui.container.slots.SlotHighlightRenderer;
-import net.jr.client.ui.container.slots.SlotMap;
-import net.jr.client.ui.container.slots.SlotSlice;
-import net.jr.client.ui.container.slots.VanillaSlotLayer;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotHighlightRenderer;
+import net.jr.client.ui.container.slots.ItemSlotMap;
+import net.jr.client.ui.container.slots.ItemSlotSlice;
+import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
 import net.jr.client.ui.navigation.UiInputModeController;
@@ -37,7 +37,7 @@ import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 import org.lwjgl.glfw.GLFW;
 
 public final class StonecutterScreen extends AbstractContainerScreen<StonecutterMenu>
-        implements UiActionHandler, CustomSlotLayout, FocusCursorVisibilityHost {
+        implements UiActionHandler, CustomItemSlotLayout, FocusCursorVisibilityHost {
     private static final Asset BACKGROUND =
             Asset.MC("textures/gui/container/stonecutter.png");
     private static final Asset RECIPE_SLOT =
@@ -46,20 +46,20 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
             Asset.MC("textures/gui/sprites/container/stonecutter/scroller.png");
     private static final Asset SCROLLER_DISABLED =
             Asset.MC("textures/gui/sprites/container/stonecutter/scroller_disabled.png");
-    private static final SlotMap SLOT_MAP = SlotMap.fromSlices(
-            new SlotSlice(SlotGroup.STONECUTTER_INPUT, new int[] {0}),
-            new SlotSlice(SlotGroup.PLAYER_INVENTORY, new int[] {
+    private static final ItemSlotMap SLOT_MAP = ItemSlotMap.fromSlices(
+            new ItemSlotSlice(ItemSlotGroup.STONECUTTER_INPUT, new int[] {0}),
+            new ItemSlotSlice(ItemSlotGroup.PLAYER_INVENTORY, new int[] {
                     2, 3, 4, 5, 6, 7, 8, 9, 10,
                     11, 12, 13, 14, 15, 16, 17, 18, 19,
                     20, 21, 22, 23, 24, 25, 26, 27, 28
             }),
-            new SlotSlice(SlotGroup.PLAYER_HOTBAR, new int[] {
+            new ItemSlotSlice(ItemSlotGroup.PLAYER_HOTBAR, new int[] {
                     29, 30, 31, 32, 33, 34, 35, 36, 37
             })
     );
 
-    private VanillaSlotLayer slotLayer;
-    private SlotGrid slotGrid;
+    private VanillaItemSlotLayer itemSlotLayer;
+    private ItemSlotGrid itemSlotGrid;
     private RecipeGrid recipeGrid;
     private FocusRegion focusRegion = FocusRegion.RECIPES;
     private PendingCraft pendingCraft;
@@ -73,11 +73,11 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
     @Override
     protected void init() {
         super.init();
-        this.slotLayer = new VanillaSlotLayer(this, this.menu, this.font, 18);
-        this.slotGrid = new SlotGrid(SLOT_MAP)
-                .point(SlotGroup.STONECUTTER_INPUT, 0, this.leftPos + 18, this.topPos + 32, 18, 18, 16)
-                .grid(SlotGroup.PLAYER_INVENTORY, this.leftPos + 7, this.topPos + 83, 9, 18, 18, 18, 18, 16)
-                .grid(SlotGroup.PLAYER_HOTBAR, this.leftPos + 7, this.topPos + 141, 9, 18, 18, 18, 18, 16);
+        this.itemSlotLayer = new VanillaItemSlotLayer(this, this.menu, this.font, 18);
+        this.itemSlotGrid = new ItemSlotGrid(SLOT_MAP)
+                .point(ItemSlotGroup.STONECUTTER_INPUT, 0, this.leftPos + 18, this.topPos + 32, 18, 18, 16)
+                .grid(ItemSlotGroup.PLAYER_INVENTORY, this.leftPos + 7, this.topPos + 83, 9, 18, 18, 16)
+                .grid(ItemSlotGroup.PLAYER_HOTBAR, this.leftPos + 7, this.topPos + 141, 9, 18, 18, 16);
         this.recipeGrid = new RecipeGrid(this.leftPos + 52, this.topPos + 15);
         this.recipeGrid.setAutoPlaceScrollbar(false);
         this.recipeGrid.setFixedScrollbarHandleSize(15.0F);
@@ -254,11 +254,11 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
                 .color(0xFF404040)
                 .draw(graphics);
         this.recipeGrid.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        this.slotLayer.updateHovered(this.slotGrid, mouseX, mouseY);
-        this.slotLayer.renderSlotMap(graphics, this.slotGrid);
-        this.slotLayer.renderHoveredSlot(graphics, this.slotGrid);
-        this.slotLayer.renderCarriedItem(graphics, mouseX, mouseY);
-        this.slotLayer.renderTooltip(graphics, this.slotGrid, mouseX, mouseY);
+        this.itemSlotLayer.updateHovered(this.itemSlotGrid, mouseX, mouseY);
+        this.itemSlotLayer.renderItemSlotMap(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderHoveredItemSlot(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderCarriedItem(graphics, mouseX, mouseY);
+        this.itemSlotLayer.renderTooltip(graphics, this.itemSlotGrid, mouseX, mouseY);
         RecipeCell recipe = this.recipeGrid.recipeCellAt(
                 mouseX,
                 mouseY,
@@ -281,8 +281,8 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
             this.enterRecipeFocus();
             return true;
         }
-        boolean handled = this.slotLayer.mouseClicked(
-                this.slotGrid,
+        boolean handled = this.itemSlotLayer.mouseClicked(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -293,7 +293,7 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
                 this.imageHeight
         );
         if (handled) {
-            this.enterSlotFocus();
+            this.enterItemSlotFocus();
         }
         return handled;
     }
@@ -301,8 +301,8 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         boolean recipeHandled = this.recipeGrid.mouseReleased(event);
-        boolean slotHandled = this.slotLayer.mouseReleased(
-                this.slotGrid,
+        boolean slotHandled = this.itemSlotLayer.mouseReleased(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -318,8 +318,8 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         return this.recipeGrid.mouseDragged(event, dragX, dragY)
-                || this.slotLayer.mouseDragged(
-                this.slotGrid,
+                || this.itemSlotLayer.mouseDragged(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -346,7 +346,7 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
         if (this.focusRegion == FocusRegion.RECIPES && navigation != null && this.handleUiAction(navigation)) {
             return true;
         }
-        return this.slotLayer.keyPressed(this.slotGrid, event.key(), event.scancode())
+        return this.itemSlotLayer.keyPressed(this.itemSlotGrid, event.key(), event.scancode())
                 || super.keyPressed(event);
     }
 
@@ -359,13 +359,13 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
             return true;
         }
         if (action == UiAction.MOVE_DOWN) {
-            this.enterSlotFocus();
-            this.focusSlot(2);
+            this.enterItemSlotFocus();
+            this.focusItemSlot(2);
             return true;
         }
         if (action == UiAction.MOVE_LEFT) {
-            this.enterSlotFocus();
-            this.focusSlot(0);
+            this.enterItemSlotFocus();
+            this.focusItemSlot(0);
             return true;
         }
         return action.isDirectional();
@@ -373,23 +373,23 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
 
     private void enterRecipeFocus() {
         this.focusRegion = FocusRegion.RECIPES;
-        this.slotLayer.clearFocusedSlot();
+        this.itemSlotLayer.clearFocusedItemSlot();
         this.setFocused(this.recipeGrid);
         if (this.recipeGrid.getFocused() == null) {
             this.recipeGrid.focusFirstEntry();
         }
     }
 
-    private void enterSlotFocus() {
+    private void enterItemSlotFocus() {
         this.focusRegion = FocusRegion.SLOTS;
         this.recipeGrid.clearEntryFocus();
         this.setFocused(null);
     }
 
-    private void focusSlot(int index) {
+    private void focusItemSlot(int index) {
         Slot slot = this.menu.slots.get(index);
-        this.slotLayer.setFocusedSlot(slot);
-        var position = this.slotGrid.get(index);
+        this.itemSlotLayer.setFocusedItemSlot(slot);
+        var position = this.itemSlotGrid.get(index);
         Cursor.moveTo(
                 position.x() + position.width() / 2.0D,
                 position.y() + position.height() / 2.0D
@@ -411,26 +411,26 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
     }
 
     @Override
-    public SlotGrid slotGrid() {
-        return this.slotGrid;
+    public ItemSlotGrid itemSlotGrid() {
+        return this.itemSlotGrid;
     }
 
     @Override
-    public VanillaSlotLayer slotLayer() {
-        return this.slotLayer;
+    public VanillaItemSlotLayer itemSlotLayer() {
+        return this.itemSlotLayer;
     }
 
     @Override
-    public boolean allowsSlotFocusNavigation() {
+    public boolean allowsItemSlotFocusNavigation() {
         return this.focusRegion == FocusRegion.SLOTS;
     }
 
     @Override
     public boolean seedFocusFromPointer(double guiX, double guiY) {
-        Slot slot = this.slotLayer.getSlotAt(this.slotGrid, guiX, guiY);
+        Slot slot = this.itemSlotLayer.getItemSlotAt(this.itemSlotGrid, guiX, guiY);
         if (slot != null) {
-            this.enterSlotFocus();
-            this.slotLayer.setFocusedSlot(slot);
+            this.enterItemSlotFocus();
+            this.itemSlotLayer.setFocusedItemSlot(slot);
             return true;
         }
         RecipeCell recipe = this.recipeGrid.recipeCellAt(guiX, guiY, false);
@@ -446,7 +446,7 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
     public void clearFocusForPointer() {
         this.focusRegion = FocusRegion.NONE;
         this.recipeGrid.clearEntryFocus();
-        this.slotLayer.clearFocusedSlot();
+        this.itemSlotLayer.clearFocusedItemSlot();
     }
 
     @Override
@@ -455,7 +455,7 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
     }
 
     @Override
-    public boolean handleSlotNavigationBoundary(int keyCode) {
+    public boolean handleItemSlotNavigationBoundary(int keyCode) {
         if (this.focusRegion == FocusRegion.SLOTS && keyCode == GLFW.GLFW_KEY_UP) {
             return this.focusFirstRecipeAndMoveCursor();
         }
@@ -467,7 +467,7 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
         CursorMagnetTarget recipeTarget = this.recipeGrid.cursorMagnetTargetAt(guiX, guiY);
         return recipeTarget != null
                 ? recipeTarget
-                : CustomSlotLayout.super.cursorMagnetTargetAt(guiX, guiY);
+                : CustomItemSlotLayout.super.cursorMagnetTargetAt(guiX, guiY);
     }
 
     private final class RecipeGrid extends AbstractItemGridElement<RecipeOption> {
@@ -513,7 +513,7 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
                 graphics.item(this.recipe.icon, this.getX() + 1, this.getY() + 1);
             }
             if (this.isFocused() || this.isHovered()) {
-                SlotHighlightRenderer.draw(
+                ItemSlotHighlightRenderer.draw(
                         graphics,
                         this.getX(),
                         this.getY(),

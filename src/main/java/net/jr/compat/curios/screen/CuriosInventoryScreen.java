@@ -3,11 +3,11 @@ package net.jr.compat.curios.screen;
 import com.mojang.datafixers.util.Pair;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
-import net.jr.client.ui.container.slots.SlotMaps;
-import net.jr.client.ui.container.slots.VanillaSlotLayer;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotMaps;
+import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
 import net.jr.screens.InventoryScreen;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -49,7 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosMenu>
-    implements CustomSlotLayout, ICuriosScreen {
+    implements CustomItemSlotLayout, ICuriosScreen {
     private static final Asset BACKGROUND = Asset.MC("textures/gui/container/inventory.png");
     private static final Identifier CURIO_INVENTORY = Identifier.fromNamespaceAndPath(
         CuriosConstants.MOD_ID,
@@ -57,8 +57,8 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
     );
 
     private final List<RenderButton> renderButtons = new ArrayList<>();
-    private VanillaSlotLayer slotLayer;
-    private SlotGrid slotGrid;
+    private VanillaItemSlotLayer itemSlotLayer;
+    private ItemSlotGrid itemSlotGrid;
     private Slot lastSlot;
     private int slotCount = -1;
     private int currentPage = -1;
@@ -71,17 +71,17 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
     @Override
     protected void init() {
         super.init();
-        this.slotLayer = new VanillaSlotLayer(this, this.menu, this.font, 18);
+        this.itemSlotLayer = new VanillaItemSlotLayer(this, this.menu, this.font, 18);
         this.rebuildCuriosLayout();
         this.addCuriosButtons();
     }
 
     private void rebuildCuriosLayout() {
-        SlotGrid grid = new SlotGrid(SlotMaps.SURVIVAL_INVENTORY)
-            .grid(SlotGroup.PLAYER_ARMOR, this.leftPos + 46, this.topPos + 7, 1, 18, 18, 18, 18, 16)
-            .point(SlotGroup.PLAYER_OFFHAND, 0, this.leftPos + 115, this.topPos + 61, 18, 18, 16)
-            .grid(SlotGroup.PLAYER_INVENTORY, this.leftPos + 7, this.topPos + 83, 9, 18, 18, 18, 18, 16)
-            .grid(SlotGroup.PLAYER_HOTBAR, this.leftPos + 7, this.topPos + 141, 9, 18, 18, 18, 18, 16);
+        ItemSlotGrid grid = new ItemSlotGrid(ItemSlotMaps.SURVIVAL_INVENTORY)
+            .grid(ItemSlotGroup.PLAYER_ARMOR, this.leftPos + 46, this.topPos + 7, 1, 18, 18, 16)
+            .point(ItemSlotGroup.PLAYER_OFFHAND, 0, this.leftPos + 115, this.topPos + 61, 18, 18, 16)
+            .grid(ItemSlotGroup.PLAYER_INVENTORY, this.leftPos + 7, this.topPos + 83, 9, 18, 18, 16)
+            .grid(ItemSlotGroup.PLAYER_HOTBAR, this.leftPos + 7, this.topPos + 141, 9, 18, 18, 16);
 
         for (int slotId = 46; slotId < this.menu.slots.size(); slotId++) {
             Slot slot = this.menu.slots.get(slotId);
@@ -95,7 +95,7 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
             );
         }
 
-        this.slotGrid = grid;
+        this.itemSlotGrid = grid;
         this.slotCount = this.menu.slots.size();
         this.lastSlot = this.menu.slots.isEmpty() ? null : this.menu.slots.getLast();
         this.currentPage = this.menu.currentPage;
@@ -142,7 +142,7 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
         for (int slotId = 46; slotId < this.menu.slots.size(); slotId++) {
             Slot slot = this.menu.slots.get(slotId);
             if (slot instanceof CurioSlot curioSlot && curioSlot.canToggleRender()) {
-                var pos = this.slotGrid.get(slot.index);
+                var pos = this.itemSlotGrid.get(slot.index);
                 RenderButton renderButton = new RenderButton(
                     curioSlot,
                     pos.x() + 13,
@@ -315,7 +315,7 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
 
             for (Slot slot : this.menu.slots) {
                 if (slot instanceof CurioSlot curioSlot && curioSlot.isCosmetic()) {
-                    var pos = this.slotGrid.get(slot.index);
+                    var pos = this.itemSlotGrid.get(slot.index);
                     graphics.blit(RenderPipelines.GUI_TEXTURED, CURIO_INVENTORY,
                         pos.x(), pos.y(), 32, 50, 18, 18, 256, 256);
                 }
@@ -335,18 +335,18 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
                 renderable.extractRenderState(graphics, mouseX, mouseY, partialTick);
             }
         }
-        this.slotLayer.updateHovered(this.slotGrid, mouseX, mouseY);
-        this.slotLayer.renderSlotMap(graphics, this.slotGrid);
-        this.slotLayer.renderHoveredSlot(graphics, this.slotGrid);
+        this.itemSlotLayer.updateHovered(this.itemSlotGrid, mouseX, mouseY);
+        this.itemSlotLayer.renderItemSlotMap(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderHoveredItemSlot(graphics, this.itemSlotGrid);
         for (RenderButton renderButton : this.renderButtons) {
             renderButton.renderButtonOverlay(graphics, mouseX, mouseY, partialTick);
         }
-        this.slotLayer.renderCarriedItem(graphics, mouseX, mouseY);
+        this.itemSlotLayer.renderCarriedItem(graphics, mouseX, mouseY);
         this.extractSlotTooltip(graphics, mouseX, mouseY);
     }
 
     private void extractSlotTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        Slot slot = this.slotLayer.getHoveredSlot();
+        Slot slot = this.itemSlotLayer.getHoveredItemSlot();
         if (slot == null || !this.menu.getCarried().isEmpty()) {
             return;
         }
@@ -388,8 +388,8 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
             }
             return true;
         }
-        return this.slotLayer.mouseClicked(
-            this.slotGrid,
+        return this.itemSlotLayer.mouseClicked(
+            this.itemSlotGrid,
             event.x(),
             event.y(),
             event.button(),
@@ -410,8 +410,8 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
                 return focused.mouseReleased(event);
             }
         }
-        return this.slotLayer.mouseReleased(
-            this.slotGrid,
+        return this.itemSlotLayer.mouseReleased(
+            this.itemSlotGrid,
             event.x(),
             event.y(),
             event.button(),
@@ -429,8 +429,8 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
         if (focused != null && this.isDragging() && event.button() == 0) {
             return focused.mouseDragged(event, dragX, dragY);
         }
-        return this.slotLayer.mouseDragged(
-            this.slotGrid,
+        return this.itemSlotLayer.mouseDragged(
+            this.itemSlotGrid,
             event.x(),
             event.y(),
             event.button(),
@@ -454,17 +454,17 @@ public final class CuriosInventoryScreen extends AbstractContainerScreen<CuriosM
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        return this.slotLayer.keyPressed(this.slotGrid, event.key(), event.scancode())
+        return this.itemSlotLayer.keyPressed(this.itemSlotGrid, event.key(), event.scancode())
             || super.keyPressed(event);
     }
 
     @Override
-    public SlotGrid slotGrid() {
-        return this.slotGrid;
+    public ItemSlotGrid itemSlotGrid() {
+        return this.itemSlotGrid;
     }
 
     @Override
-    public VanillaSlotLayer slotLayer() {
-        return this.slotLayer;
+    public VanillaItemSlotLayer itemSlotLayer() {
+        return this.itemSlotLayer;
     }
 }

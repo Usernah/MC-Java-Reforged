@@ -9,6 +9,8 @@ import com.mojang.blaze3d.platform.Window;
 import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.input.InputActionHandler;
 import net.jr.client.runtime.context.SlotExecution;
+import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -49,7 +51,9 @@ public abstract class MouseHandlerMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledXPos(Lcom/mojang/blaze3d/platform/Window;)D")
     )
     private double javaReforged$readLocalMouseX(MouseHandler mouseHandler, com.mojang.blaze3d.platform.Window window) {
-        return Viewport.current().windowMouseToLocalGuiX(mouseHandler.xpos());
+        ViewportArea viewport = Viewport.current();
+        return viewport.windowMouseToLocalGuiX(mouseHandler.xpos())
+            * ViewportGuiScale.screenLogicalWidth(viewport) / viewport.guiWidth();
     }
 
     @Redirect(
@@ -57,7 +61,9 @@ public abstract class MouseHandlerMixin {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledYPos(Lcom/mojang/blaze3d/platform/Window;)D")
     )
     private double javaReforged$readLocalMouseY(MouseHandler mouseHandler, com.mojang.blaze3d.platform.Window window) {
-        return Viewport.current().windowMouseToLocalGuiY(mouseHandler.ypos());
+        ViewportArea viewport = Viewport.current();
+        return viewport.windowMouseToLocalGuiY(mouseHandler.ypos())
+            * ViewportGuiScale.screenLogicalHeight(viewport) / viewport.guiHeight();
     }
 
     @Redirect(
@@ -65,7 +71,8 @@ public abstract class MouseHandlerMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledXPos(Lcom/mojang/blaze3d/platform/Window;D)D")
     )
     private double javaReforged$readAccumulatedLocalMouseX(Window window, double x) {
-        return Viewport.current().windowDeltaToGuiX(x);
+        ViewportArea viewport = Viewport.current();
+        return x * ViewportGuiScale.screenLogicalWidth(viewport) / viewport.windowWidth();
     }
 
     @Redirect(
@@ -73,7 +80,8 @@ public abstract class MouseHandlerMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;getScaledYPos(Lcom/mojang/blaze3d/platform/Window;D)D")
     )
     private double javaReforged$readAccumulatedLocalMouseY(Window window, double y) {
-        return Viewport.current().windowDeltaToGuiY(y);
+        ViewportArea viewport = Viewport.current();
+        return y * ViewportGuiScale.screenLogicalHeight(viewport) / viewport.windowHeight();
     }
 
     @Redirect(

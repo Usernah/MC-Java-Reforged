@@ -7,7 +7,7 @@ import net.jr.client.runtime.input.InputActionHandler;
 import net.jr.client.runtime.state.UiNavigationState;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.input.CursorVisibility;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.mixin.accessors.MouseHandlerAccessor;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
@@ -74,7 +74,7 @@ public final class UiInputModeController {
         }
 
         return screen instanceof AbstractContainerScreen<?> containerScreen
-                && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen);
+                && ContainerItemSlotFocusController.isVanillaItemSlotFocusActive(containerScreen);
     }
 
     public static boolean shouldSuppressPointerHover() {
@@ -278,9 +278,9 @@ public final class UiInputModeController {
             || keyCode == GLFW.GLFW_KEY_RIGHT;
     }
 
-    public static boolean applyContainerSlotFocusFallback(Screen screen, int keyCode) {
+    public static boolean applyContainerItemSlotFocusFallback(Screen screen, int keyCode) {
         return screen instanceof AbstractContainerScreen<?> containerScreen
-            && ContainerSlotFocusController.moveFocus(containerScreen, keyCode);
+            && ContainerItemSlotFocusController.moveFocus(containerScreen, keyCode);
     }
 
     public static boolean applyUnifiedContainerFocusNavigation(Screen screen, int keyCode) {
@@ -304,9 +304,9 @@ public final class UiInputModeController {
             ScreenFocusController.clearFocusState(screen);
         }
         if (controllerPointer) {
-            GamepadInputHandler.releaseFocusedSlotCursorToJoystick();
+            GamepadInputHandler.releaseFocusedItemSlotCursorToJoystick();
         } else {
-            GamepadInputHandler.releaseFocusedSlotCursor();
+            GamepadInputHandler.releaseFocusedItemSlotCursor();
         }
         CursorVisibility.setReplacementHidden(false);
     }

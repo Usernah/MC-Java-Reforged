@@ -25,10 +25,10 @@ import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.sound.action.WidgetInputSounds;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.container.actions.ContainerInventoryActionHandler;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
@@ -370,10 +370,11 @@ public final class InputActionHandler {
     ) {
         Slot cachedHoveredSlot =
                 ((AbstractContainerScreenAccessor) screen)
-                        .javaReforged$getHoveredSlot();
+                        .javaReforged$getHoveredItemSlot();
         Slot hoveredSlot = cachedHoveredSlot;
-        if (screen instanceof CustomSlotLayout layout) {
-            hoveredSlot = layout.slotLayer().getSlotAt(layout.slotGrid(), mouseX, mouseY);
+        CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
+        if (layout != null) {
+            hoveredSlot = layout.itemSlotLayer().getItemSlotAt(layout.itemSlotGrid(), mouseX, mouseY);
         }
 
         boolean validVanillaSlot =
@@ -585,7 +586,7 @@ public final class InputActionHandler {
             tickNavigationRepeat(state, screen);
 
             if (screen instanceof AbstractContainerScreen<?> containerScreen) {
-                refreshPointerSlotHover(screen);
+                refreshPointerItemSlotHover(screen);
                 consumeMappedContainerAction(state, containerScreen, ContainerAction.TAKE_ALL, controllerUiActive, tabNavigation);
                 consumeMappedContainerAction(state, containerScreen, ContainerAction.STORE_ALL, controllerUiActive, tabNavigation);
                 consumeMappedContainerAction(state, containerScreen, ContainerAction.QUICK_MOVE, controllerUiActive, tabNavigation);
@@ -633,15 +634,15 @@ public final class InputActionHandler {
                 screen.afterKeyboardAction();
             } else if (UiInputModeController.isFocusNavigationActive() && !textInputFocused) {
                 boolean focusedContainerSlot =
-                        hasFocusedContainerSlot(screen);
+                        hasFocusedContainerItemSlot(screen);
 
                 GamepadInputHandler.FocusedElementCenter focusCenter = null;
 
                 if (focusedContainerSlot
                         && screen instanceof AbstractContainerScreen<?> containerScreen) {
 
-                    ContainerSlotFocusController.FocusedSlotCenter slotCenter =
-                            ContainerSlotFocusController.getFocusedSlotCenter(containerScreen);
+                    ContainerItemSlotFocusController.FocusedItemSlotCenter slotCenter =
+                            ContainerItemSlotFocusController.getFocusedItemSlotCenter(containerScreen);
 
                     if (slotCenter != null) {
                         mouseX = slotCenter.guiX();
@@ -664,7 +665,7 @@ public final class InputActionHandler {
                         action.dragX = mouseX;
                         action.dragY = mouseY;
                     }
-                } else if (hasFocusedContainerSlot(screen)) {
+                } else if (hasFocusedContainerItemSlot(screen)) {
                     handled = clickScreen(screen, action, mouseX, mouseY);
                 } else {
                     boolean directFocusAction =
@@ -808,14 +809,14 @@ public final class InputActionHandler {
         action.wasDown = down;
     }
 
-    private static void refreshPointerSlotHover(Screen screen) {
-        if (!(screen instanceof CustomSlotLayout layout)
-                || UiInputModeController.isFocusNavigationActive()) {
+    private static void refreshPointerItemSlotHover(Screen screen) {
+        CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
+        if (layout == null || UiInputModeController.isFocusNavigationActive()) {
             return;
         }
 
-        layout.slotLayer().updateHovered(
-                layout.slotGrid(),
+        layout.itemSlotLayer().updateHovered(
+                layout.itemSlotGrid(),
                 GamepadInputHandler.cursorX(),
                 GamepadInputHandler.cursorY()
         );
@@ -823,13 +824,13 @@ public final class InputActionHandler {
 
     private static boolean shouldBeginContainerQuickCraft(Screen screen, boolean requireFocusedSlot) {
         return screen instanceof AbstractContainerScreen<?> containerScreen
-            && (!requireFocusedSlot || ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen))
+            && (!requireFocusedSlot || ContainerItemSlotFocusController.isVanillaItemSlotFocusActive(containerScreen))
             && !containerScreen.getMenu().getCarried().isEmpty();
     }
 
-    private static boolean hasFocusedContainerSlot(Screen screen) {
+    private static boolean hasFocusedContainerItemSlot(Screen screen) {
         return screen instanceof AbstractContainerScreen<?> containerScreen
-            && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen);
+            && ContainerItemSlotFocusController.isVanillaItemSlotFocusActive(containerScreen);
     }
 
     private static boolean clickScreen(

@@ -3,7 +3,7 @@ package net.jr.client.sound.action;
 import net.jr.registry.ModSounds;
 import net.jr.client.components.navigation.UiActionFeedback;
 import net.jr.client.components.widgets.item.CreativeItemSlotElement;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -34,7 +34,7 @@ public final class InputActionSounds {
     public static FocusSnapshot captureFocus(Screen screen) {
         GuiEventListener focusedWidget = UiInputModeController.focusedElement(screen);
         Integer focusedSlot = screen instanceof AbstractContainerScreen<?> containerScreen
-                ? ContainerSlotFocusController.getFocusedSlotIndex(containerScreen)
+                ? ContainerItemSlotFocusController.getFocusedItemSlotIndex(containerScreen)
                 : null;
         return new FocusSnapshot(focusedWidget, focusedSlot);
     }

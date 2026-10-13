@@ -47,7 +47,9 @@ final class SodiumRendererStateRouter {
 
     boolean bindExistingRenderer(Object renderer, ClientLevel level) {
         this.registerInitial(renderer);
-        if (this.sharedBuilder == null) {
+        if (this.sharedBuilder == null
+            || SodiumRendererBridge.sectionManager(renderer) == null
+            || SodiumRendererBridge.uniformBufferManager(renderer) == null) {
             return false;
         }
 

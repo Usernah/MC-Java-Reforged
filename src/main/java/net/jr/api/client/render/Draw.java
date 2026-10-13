@@ -316,6 +316,11 @@ public final class Draw {
             return this;
         }
 
+        public TextBuilder legacyShadow(boolean legacyShadow) {
+            this.delegate.legacyShadow(legacyShadow);
+            return this;
+        }
+
         public TextBuilder shadowColor(int a, int r, int g, int b) {
             this.delegate.shadowColor(a, r, g, b);
             return this;

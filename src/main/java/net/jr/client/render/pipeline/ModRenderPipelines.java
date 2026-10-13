@@ -35,6 +35,7 @@ public final class ModRenderPipelines {
         .addAttribute("Position", GpuFormat.RGB32_FLOAT)
         .addAttribute("UV0", GpuFormat.RG32_FLOAT)
         .addAttribute("Color", GpuFormat.RGBA8_UNORM)
+        .addAttribute("UV1", GpuFormat.RG16_SINT)
         .addAttribute("LineWidth", GpuFormat.R32_FLOAT)
         .build();
 

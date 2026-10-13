@@ -12,29 +12,36 @@ import java.util.Objects;
 public final class UiCompiledDocument {
     private final Asset source;
     private final UiFileType type;
-    private final Map<String, ButtonDefinition> buttons;
-    private final Map<UiRenderLayer, List<RenderableDefinition>> renderables;
+    private final Map<String, Expression<Object>> properties;
+    private final BoundsDefinition bounds;
+    private final Map<String, DslNodeDefinition> elements;
+    private final Map<UiRenderLayer, List<EntryDefinition>> layers;
 
     public UiCompiledDocument(
         Asset source,
         UiFileType type,
-        List<ButtonDefinition> buttons,
-        Map<UiRenderLayer, List<RenderableDefinition>> renderables
+        Map<String, Expression<Object>> properties,
+        BoundsDefinition bounds,
+        Map<UiRenderLayer, List<EntryDefinition>> layers
     ) {
         this.source = Objects.requireNonNull(source, "source");
         this.type = Objects.requireNonNull(type, "type");
-        Map<String, ButtonDefinition> indexed = new LinkedHashMap<>();
-        for (ButtonDefinition button : buttons) {
-            if (indexed.putIfAbsent(button.id(), button) != null) {
-                throw new IllegalArgumentException("Duplicate button id '" + button.id() + "'");
+        this.properties = Map.copyOf(properties);
+        this.bounds = bounds;
+        Map<String, DslNodeDefinition> indexed = new LinkedHashMap<>();
+        Map<UiRenderLayer, List<EntryDefinition>> copiedLayers = new LinkedHashMap<>();
+        for (UiRenderLayer layer : UiRenderLayer.values()) {
+            List<EntryDefinition> entries = List.copyOf(layers.getOrDefault(layer, List.of()));
+            copiedLayers.put(layer, entries);
+            for (EntryDefinition entry : entries) {
+                if (entry instanceof DslNodeDefinition element
+                    && indexed.putIfAbsent(element.id(), element) != null) {
+                    throw new IllegalArgumentException("Duplicate DSL element id '" + element.id() + "'");
+                }
             }
         }
-        this.buttons = Map.copyOf(indexed);
-        Map<UiRenderLayer, List<RenderableDefinition>> copiedLayers = new LinkedHashMap<>();
-        for (UiRenderLayer layer : UiRenderLayer.values()) {
-            copiedLayers.put(layer, List.copyOf(renderables.getOrDefault(layer, List.of())));
-        }
-        this.renderables = Map.copyOf(copiedLayers);
+        this.elements = Map.copyOf(indexed);
+        this.layers = Map.copyOf(copiedLayers);
     }
 
     public Asset source() {
@@ -45,18 +52,64 @@ public final class UiCompiledDocument {
         return this.type;
     }
 
-    public Map<String, ButtonDefinition> buttons() {
-        return this.buttons;
+    public boolean hasProperty(String name) {
+        return this.properties.containsKey(name);
     }
 
-    public List<RenderableDefinition> renderables(UiRenderLayer layer) {
-        return this.renderables.getOrDefault(Objects.requireNonNull(layer, "layer"), List.of());
+    public Object property(String name, DataContext context) {
+        Expression<Object> expression = this.properties.get(name);
+        if (expression == null) {
+            throw new IllegalArgumentException(
+                "UI DSL document does not declare property '" + name + "' in " + this.source
+            );
+        }
+        return expression.resolve(context);
     }
 
-    public ButtonDefinition requireButton(String id) {
-        ButtonDefinition definition = this.buttons.get(id);
+    public boolean hasBounds() {
+        return this.bounds != null;
+    }
+
+    public int boundsX(DataContext context) {
+        if (this.bounds == null) {
+            throw new IllegalStateException("UI DSL document does not declare bounds: " + this.source);
+        }
+        return this.bounds.x().resolve(context);
+    }
+
+    public int boundsY(DataContext context) {
+        if (this.bounds == null) {
+            throw new IllegalStateException("UI DSL document does not declare bounds: " + this.source);
+        }
+        return this.bounds.y().resolve(context);
+    }
+
+    public int boundsWidth(DataContext context) {
+        if (this.bounds == null) {
+            throw new IllegalStateException("UI DSL document does not declare bounds: " + this.source);
+        }
+        return this.bounds.width().resolve(context);
+    }
+
+    public int boundsHeight(DataContext context) {
+        if (this.bounds == null) {
+            throw new IllegalStateException("UI DSL document does not declare bounds: " + this.source);
+        }
+        return this.bounds.height().resolve(context);
+    }
+
+    public Map<String, DslNodeDefinition> elements() {
+        return this.elements;
+    }
+
+    public List<EntryDefinition> entries(UiRenderLayer layer) {
+        return this.layers.getOrDefault(Objects.requireNonNull(layer, "layer"), List.of());
+    }
+
+    public DslNodeDefinition requireElement(String id) {
+        DslNodeDefinition definition = this.elements.get(id);
         if (definition == null) {
-            throw new IllegalArgumentException("UI button '" + id + "' does not exist in " + this.source);
+            throw new IllegalArgumentException("UI DSL element '" + id + "' does not exist in " + this.source);
         }
         return definition;
     }
@@ -71,28 +124,62 @@ public final class UiCompiledDocument {
         Object resolve(List<String> path);
     }
 
-    public record ButtonDefinition(
-        String id,
-        Expression<Float> x,
-        Expression<Float> y,
-        Expression<Float> width,
-        Expression<Float> height,
-        Expression<Boolean> scissor,
-        List<RenderableDefinition> renderables
+    public interface EntryDefinition {
+        String id();
+    }
+
+    public record BoundsDefinition(
+        Expression<Integer> x,
+        Expression<Integer> y,
+        Expression<Integer> width,
+        Expression<Integer> height
     ) {
-        public ButtonDefinition {
-            Objects.requireNonNull(id, "id");
+        public BoundsDefinition {
             Objects.requireNonNull(x, "x");
             Objects.requireNonNull(y, "y");
             Objects.requireNonNull(width, "width");
             Objects.requireNonNull(height, "height");
-            Objects.requireNonNull(scissor, "scissor");
-            renderables = List.copyOf(renderables);
         }
     }
 
-    public interface RenderableDefinition {
-        String id();
+    public record DslNodeDefinition(
+        String type,
+        String id,
+        Map<String, Expression<Object>> properties,
+        Map<String, List<EntryDefinition>> renderBlocks,
+        List<DslBlockDefinition> children
+    ) implements EntryDefinition {
+        public DslNodeDefinition {
+            Objects.requireNonNull(type, "type");
+            Objects.requireNonNull(id, "id");
+            properties = Map.copyOf(properties);
+            Map<String, List<EntryDefinition>> copied = new LinkedHashMap<>();
+            renderBlocks.forEach((name, entries) -> copied.put(name, List.copyOf(entries)));
+            renderBlocks = Map.copyOf(copied);
+            children = List.copyOf(children);
+        }
+    }
+
+    public record DslBlockDefinition(
+        String type,
+        List<Expression<Object>> arguments,
+        String id,
+        Map<String, Expression<Object>> properties,
+        Map<String, List<EntryDefinition>> renderBlocks,
+        List<DslBlockDefinition> children
+    ) {
+        public DslBlockDefinition {
+            Objects.requireNonNull(type, "type");
+            arguments = List.copyOf(arguments);
+            properties = Map.copyOf(properties);
+            Map<String, List<EntryDefinition>> copied = new LinkedHashMap<>();
+            renderBlocks.forEach((name, entries) -> copied.put(name, List.copyOf(entries)));
+            renderBlocks = Map.copyOf(copied);
+            children = List.copyOf(children);
+        }
+    }
+
+    public interface RenderableDefinition extends EntryDefinition {
     }
 
     public record ConditionalRenderableDefinition(

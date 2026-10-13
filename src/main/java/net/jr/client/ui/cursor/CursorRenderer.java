@@ -5,6 +5,8 @@ import net.jr.api.client.ui.Viewport;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.input.CursorVisibility;
 import net.jr.client.runtime.input.GamepadInputHandler;
+import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
@@ -106,8 +108,12 @@ public final class CursorRenderer {
             return null;
         }
 
+        ViewportArea viewport = Viewport.current();
         return new CursorPosition(
-            Viewport.current().windowMouseToLocalGuiX(minecraft.mouseHandler.xpos()), Viewport.current().windowMouseToLocalGuiX(minecraft.mouseHandler.ypos())
+            viewport.windowMouseToLocalGuiX(minecraft.mouseHandler.xpos())
+                * ViewportGuiScale.screenLogicalWidth(viewport) / viewport.guiWidth(),
+            viewport.windowMouseToLocalGuiY(minecraft.mouseHandler.ypos())
+                * ViewportGuiScale.screenLogicalHeight(viewport) / viewport.guiHeight()
         );
     }
 

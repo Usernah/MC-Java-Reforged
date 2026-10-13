@@ -4,7 +4,7 @@ import java.util.function.BooleanSupplier;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.input.GamepadInputHandler;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
@@ -21,7 +21,7 @@ public final class GamepadTextInputFocus {
         }
         prepareFocus.run();
         if (screen instanceof AbstractContainerScreen<?> containerScreen) {
-            ContainerSlotFocusController.clearFocusedSlot(containerScreen);
+            ContainerItemSlotFocusController.clearFocusedItemSlot(containerScreen);
         }
         screen.setFocused(input);
         input.setFocused(true);

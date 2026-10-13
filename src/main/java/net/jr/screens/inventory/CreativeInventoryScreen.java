@@ -17,13 +17,13 @@ import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.sound.action.InputActionSounds;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
-import net.jr.client.ui.container.slots.SlotMaps;
-import net.jr.client.ui.container.slots.VanillaSlotLayer;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotMaps;
+import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
@@ -58,7 +58,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class CreativeInventoryScreen extends AbstractContainerScreen<InventoryMenu>
-        implements UiActionHandler, CustomSlotLayout, TabNavigationHost, CreativeCatalogActionHost,
+        implements UiActionHandler, CustomItemSlotLayout, TabNavigationHost, CreativeCatalogActionHost,
         FocusCursorVisibilityHost {
     private static final int TAB_WIDTH = 32;
     private static final int TAB_HEIGHT = 27;
@@ -124,8 +124,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private final List<List<CreativeTab>> tabPages = new ArrayList<>();
     private final LocalPlayer player;
 
-    private VanillaSlotLayer slotLayer;
-    private SlotGrid slotGrid;
+    private VanillaItemSlotLayer itemSlotLayer;
+    private ItemSlotGrid itemSlotGrid;
     private CreativeItemGridElement itemGrid;
     private boolean slotPointerActive;
     private TabBarElement tabs;
@@ -153,15 +153,13 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
         this.rebuildCreativeTabContents();
         this.rebuildTabPages();
-        this.slotLayer = new VanillaSlotLayer(this, this.menu, this.font, SLOT_FRAME_SIZE);
-        this.slotGrid = new SlotGrid(SlotMaps.SURVIVAL_INVENTORY)
+        this.itemSlotLayer = new VanillaItemSlotLayer(this, this.menu, this.font, SLOT_FRAME_SIZE);
+        this.itemSlotGrid = new ItemSlotGrid(ItemSlotMaps.SURVIVAL_INVENTORY)
                 .grid(
-                        SlotGroup.PLAYER_HOTBAR,
+                        ItemSlotGroup.PLAYER_HOTBAR,
                         this.leftPos + HOTBAR_X,
                         this.topPos + HOTBAR_Y,
                         9,
-                        SLOT_FRAME_SIZE,
-                        SLOT_FRAME_SIZE,
                         SLOT_FRAME_SIZE,
                         SLOT_FRAME_SIZE,
                         ITEM_RENDER_SIZE
@@ -676,33 +674,33 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     }
 
     private Slot focusedCreativeHotbarSlot() {
-        if (this.focusRegion != FocusRegion.HOTBAR || this.slotLayer == null) {
+        if (this.focusRegion != FocusRegion.HOTBAR || this.itemSlotLayer == null) {
             return null;
         }
-        Slot slot = this.slotLayer.getFocusedSlot();
-        return slot != null && this.slotGrid != null && this.slotGrid.has(slot.index) ? slot : null;
+        Slot slot = this.itemSlotLayer.getFocusedItemSlot();
+        return slot != null && this.itemSlotGrid != null && this.itemSlotGrid.has(slot.index) ? slot : null;
     }
 
     private Slot actionHotbarSlot() {
         if (UiInputModeController.isFocusNavigationActive()) {
             return this.focusedCreativeHotbarSlot();
         }
-        return this.slotLayer == null || this.slotGrid == null
+        return this.itemSlotLayer == null || this.itemSlotGrid == null
                 ? null
-                : this.slotLayer.getSlotAt(
-                        this.slotGrid,
+                : this.itemSlotLayer.getItemSlotAt(
+                        this.itemSlotGrid,
                         GamepadInputHandler.cursorX(),
                         GamepadInputHandler.cursorY()
                 );
     }
 
     private Slot firstEmptyCreativeHotbarSlot() {
-        if (this.slotGrid == null) {
+        if (this.itemSlotGrid == null) {
             return null;
         }
         for (int index = 0; index < 9; index++) {
             Slot slot = this.menu.slots.get(36 + index);
-            if (this.slotGrid.has(slot.index) && slot.isActive() && slot.getItem().isEmpty()) {
+            if (this.itemSlotGrid.has(slot.index) && slot.isActive() && slot.getItem().isEmpty()) {
                 return slot;
             }
         }
@@ -710,12 +708,12 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     }
 
     private Slot firstCreativeHotbarSlot() {
-        if (this.slotGrid == null) {
+        if (this.itemSlotGrid == null) {
             return null;
         }
         for (int index = 0; index < 9; index++) {
             Slot slot = this.menu.slots.get(36 + index);
-            if (this.slotGrid.has(slot.index) && slot.isActive()) {
+            if (this.itemSlotGrid.has(slot.index) && slot.isActive()) {
                 return slot;
             }
         }
@@ -723,7 +721,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     }
 
     private boolean isCreativeHotbarSlot(Slot slot) {
-        return slot != null && this.slotGrid != null && this.slotGrid.has(slot.index) && slot.isActive();
+        return slot != null && this.itemSlotGrid != null && this.itemSlotGrid.has(slot.index) && slot.isActive();
     }
 
     private void focusHotbarSlotAndMoveCursor(Slot slot) {
@@ -731,8 +729,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             return;
         }
         this.enterHotbarFocus();
-        this.slotLayer.setFocusedSlot(slot);
-        var position = this.slotGrid.get(slot.index);
+        this.itemSlotLayer.setFocusedItemSlot(slot);
+        var position = this.itemSlotGrid.get(slot.index);
         Cursor.moveTo(
                 position.x() + position.width() / 2.0D,
                 position.y() + position.height() / 2.0D
@@ -748,8 +746,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             return;
         }
         this.focusRegion = FocusRegion.CATALOG;
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
         this.setFocused(this.itemGrid);
         if (!this.itemGrid.focusEntry(returnIndex)) {
@@ -789,8 +787,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     }
 
     @Override
-    public SlotGrid slotGrid() {
-        return this.slotGrid;
+    public ItemSlotGrid itemSlotGrid() {
+        return this.itemSlotGrid;
     }
 
     @Override
@@ -800,16 +798,16 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 : this.itemGrid.cursorMagnetTargetAt(guiX, guiY);
         return catalogTarget != null
                 ? catalogTarget
-                : CustomSlotLayout.super.cursorMagnetTargetAt(guiX, guiY);
+                : CustomItemSlotLayout.super.cursorMagnetTargetAt(guiX, guiY);
     }
 
     @Override
-    public VanillaSlotLayer slotLayer() {
-        return this.slotLayer;
+    public VanillaItemSlotLayer itemSlotLayer() {
+        return this.itemSlotLayer;
     }
 
     @Override
-    public boolean allowsSlotFocusNavigation() {
+    public boolean allowsItemSlotFocusNavigation() {
         return this.focusRegion == FocusRegion.HOTBAR;
     }
 
@@ -820,23 +818,23 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 : this.itemGrid.previewedSlot(guiX, guiY, false);
         if (catalogItem != null) {
             this.focusRegion = FocusRegion.CATALOG;
-            if (this.slotLayer != null) {
-                this.slotLayer.clearFocusedSlot();
+            if (this.itemSlotLayer != null) {
+                this.itemSlotLayer.clearFocusedItemSlot();
             }
             this.setFocused(this.itemGrid);
             this.itemGrid.setFocused(catalogItem);
             return true;
         }
 
-        Slot hotbarSlot = this.slotLayer == null || this.slotGrid == null
+        Slot hotbarSlot = this.itemSlotLayer == null || this.itemSlotGrid == null
                 ? null
-                : this.slotLayer.getSlotAt(this.slotGrid, guiX, guiY);
+                : this.itemSlotLayer.getItemSlotAt(this.itemSlotGrid, guiX, guiY);
         if (hotbarSlot == null) {
             return this.assignFirstCatalogFocusAndMoveCursor();
         }
 
         this.enterHotbarFocus();
-        this.slotLayer.setFocusedSlot(hotbarSlot);
+        this.itemSlotLayer.setFocusedItemSlot(hotbarSlot);
         return true;
     }
 
@@ -846,8 +844,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         if (this.itemGrid != null) {
             this.itemGrid.clearEntryFocus();
         }
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
     }
 
@@ -857,7 +855,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     }
 
     @Override
-    public boolean handleSlotNavigationBoundary(int keyCode) {
+    public boolean handleItemSlotNavigationBoundary(int keyCode) {
         if (this.focusRegion == FocusRegion.HOTBAR && keyCode == GLFW.GLFW_KEY_UP) {
             this.enterCatalogFocus(true);
             return true;
@@ -906,11 +904,11 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             ).color(0xFFFFFFFF).draw(graphics);
         }
         this.searchEditBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        this.slotLayer.updateHovered(this.slotGrid, mouseX, mouseY);
-        this.slotLayer.renderSlotMap(graphics, this.slotGrid);
-        this.slotLayer.renderHoveredSlot(graphics, this.slotGrid);
-        this.slotLayer.renderCarriedItem(graphics, mouseX, mouseY);
-        this.slotLayer.renderTooltip(graphics, this.slotGrid, mouseX, mouseY);
+        this.itemSlotLayer.updateHovered(this.itemSlotGrid, mouseX, mouseY);
+        this.itemSlotLayer.renderItemSlotMap(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderHoveredItemSlot(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderCarriedItem(graphics, mouseX, mouseY);
+        this.itemSlotLayer.renderTooltip(graphics, this.itemSlotGrid, mouseX, mouseY);
 
         if (this.menu.getCarried().isEmpty()) {
             CreativeItemSlotElement slot = this.itemGrid.previewedSlot(
@@ -954,8 +952,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             this.enterCatalogFocus(false);
             return true;
         }
-        boolean handled = this.slotLayer.mouseClicked(
-                this.slotGrid,
+        boolean handled = this.itemSlotLayer.mouseClicked(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -983,8 +981,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     public boolean mouseReleased(MouseButtonEvent event) {
         if (this.slotPointerActive) {
             this.slotPointerActive = false;
-            return this.slotLayer.mouseReleased(
-                    this.slotGrid,
+            return this.itemSlotLayer.mouseReleased(
+                    this.itemSlotGrid,
                     event.x(),
                     event.y(),
                     event.button(),
@@ -1000,8 +998,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 || this.searchEditBox.mouseReleased(event)
                 || this.tabs.mouseReleased(event)
                 || this.itemGrid.mouseReleased(event)
-                || this.slotLayer.mouseReleased(
-                this.slotGrid,
+                || this.itemSlotLayer.mouseReleased(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -1016,8 +1014,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (this.slotPointerActive) {
-            return this.slotLayer.mouseDragged(
-                    this.slotGrid,
+            return this.itemSlotLayer.mouseDragged(
+                    this.itemSlotGrid,
                     event.x(),
                     event.y(),
                     event.button(),
@@ -1027,8 +1025,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         }
         return this.searchEditBox.mouseDragged(event, dragX, dragY)
                 || this.itemGrid.mouseDragged(event, dragX, dragY)
-                || this.slotLayer.mouseDragged(
-                this.slotGrid,
+                || this.itemSlotLayer.mouseDragged(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -1060,7 +1058,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 && this.handleUiAction(navigation)) {
             return true;
         }
-        return this.slotLayer.keyPressed(this.slotGrid, event.key(), event.scancode())
+        return this.itemSlotLayer.keyPressed(this.itemSlotGrid, event.key(), event.scancode())
                 || super.keyPressed(event);
     }
 
@@ -1093,7 +1091,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         }
         if (action == UiAction.MOVE_DOWN) {
             this.enterHotbarFocus();
-            return ContainerSlotFocusController.moveFocus(this, GLFW.GLFW_KEY_DOWN);
+            return ContainerItemSlotFocusController.moveFocus(this, GLFW.GLFW_KEY_DOWN);
         }
 
         return action.isDirectional();
@@ -1108,15 +1106,15 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         if (this.itemGrid != null) {
             this.itemGrid.clearEntryFocus();
         }
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
     }
 
     private void enterCatalogFocus(boolean focusLast) {
         this.focusRegion = FocusRegion.CATALOG;
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
         this.setFocused(this.itemGrid);
         if (this.itemGrid == null) {
@@ -1150,8 +1148,8 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             return false;
         }
         this.focusRegion = FocusRegion.CATALOG;
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
         this.setFocused(this.itemGrid);
         var rectangle = this.itemGrid.getFocused().getRectangle();

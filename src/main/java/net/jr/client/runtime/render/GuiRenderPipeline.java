@@ -12,12 +12,14 @@ import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.render.pass.HudRenderPass;
+import net.jr.client.runtime.render.pass.ControlHintRenderPass;
 import net.jr.client.runtime.render.pass.ScreenOverlayRenderPass;
 import net.jr.client.runtime.render.pass.ScreenRenderPass;
 import net.jr.client.runtime.render.pass.ToastRenderPass;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -131,14 +133,27 @@ public final class GuiRenderPipeline {
                 views,
                 frame -> {
                     GuiRenderContext context = frame.context();
-                    Screen screen = ScreenRenderPass.extract(
-                        minecraft,
-                        context.graphics(),
-                        context.deltaTracker().getGameTimeDeltaTicks()
-                    );
+                    float screenScale = ViewportGuiScale.screenScale(context.viewport());
+                    Screen screen;
+                    ViewportGuiScale.beginScreen();
+                    context.graphics().pose().pushMatrix();
+                    context.graphics().pose().scale(screenScale, screenScale);
+                    try {
+                        screen = ScreenRenderPass.extract(
+                            minecraft,
+                            context.graphics(),
+                            context.deltaTracker().getGameTimeDeltaTicks()
+                        );
+                        if (screen != null) {
+                            GuiRenderObjects.render(GuiRenderPhase.SCREEN, context);
+                            ScreenOverlayRenderPass.extract(minecraft, screen, context);
+                        }
+                    } finally {
+                        context.graphics().pose().popMatrix();
+                        ViewportGuiScale.endScreen();
+                    }
                     if (screen != null) {
-                        GuiRenderObjects.render(GuiRenderPhase.SCREEN, context);
-                        ScreenOverlayRenderPass.extract(minecraft, screen, context);
+                        ControlHintRenderPass.renderScreen(screen, context.graphics());
                     }
                 }
         );

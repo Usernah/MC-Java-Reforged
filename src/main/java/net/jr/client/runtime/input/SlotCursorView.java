@@ -43,7 +43,7 @@ public final class SlotCursorView {
         return GamepadInputHandler.visualCursorY(this.slotId);
     }
 
-    public void releaseFocusedSlot() {
-        GamepadInputHandler.releaseFocusedSlotCursor(this.slotId);
+    public void releaseFocusedItemSlot() {
+        GamepadInputHandler.releaseFocusedItemSlotCursor(this.slotId);
     }
 }

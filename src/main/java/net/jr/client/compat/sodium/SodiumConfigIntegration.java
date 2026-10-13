@@ -13,10 +13,7 @@ import net.jr.api.client.split.SplitOrientation;
 import net.jr.client.runtime.options.OptionsStateResolver;
 import net.jr.client.runtime.viewport.GuiScaleCalculator;
 import net.jr.client.ui.presentation.ExperimentalRenderOption;
-import net.jr.client.ui.presentation.InterfaceProfile;
-import net.jr.client.ui.presentation.InterfaceProfileOption;
 import net.jr.client.ui.presentation.SplitOrientationOption;
-import net.jr.client.ui.presentation.UiPresentation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -38,7 +35,6 @@ public final class SodiumConfigIntegration implements ConfigEntryPoint {
                 .addOptionGroup(
                     builder.createOptionGroup()
                         .setName(Component.translatable("menu.java_reforged.video.group.interface"))
-                        .addOption(this.interfaceProfileOption(builder))
                         .addOption(this.splitOrientationOption(builder))
                 )
                 .addOptionGroup(
@@ -65,22 +61,6 @@ public final class SodiumConfigIntegration implements ConfigEntryPoint {
             .setValueFormatter(value -> value == 0
                 ? Component.translatable("options.guiScale.auto")
                 : Component.literal(Integer.toString(value))
-            );
-    }
-
-    private net.caffeinemc.mods.sodium.api.config.structure.EnumOptionBuilder<InterfaceProfile>
-    interfaceProfileOption(ConfigBuilder builder) {
-        return builder.createEnumOption(id("video.interface_profile"), InterfaceProfile.class)
-            .setName(Component.translatable("menu.java_reforged.video.interface_profile"))
-            .setTooltip(Component.translatable("menu.java_reforged.video.interface_profile.description"))
-            .setStorageHandler(NO_OP_STORAGE)
-            .setDefaultValue(InterfaceProfile.STANDARD)
-            .setBinding(InterfaceProfileOption.INSTANCE::set, InterfaceProfileOption.INSTANCE::get)
-            .setAllowedValues(EnumSet.allOf(InterfaceProfile.class))
-            .setElementNameProvider(InterfaceProfile::caption)
-            .setEnabledProvider(
-                state -> !UiPresentation.isSplitScreen(),
-                ConfigState.UPDATE_ON_REBUILD
             );
     }
 

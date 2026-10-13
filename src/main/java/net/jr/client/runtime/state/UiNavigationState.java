@@ -13,7 +13,7 @@ public final class UiNavigationState {
     private boolean hasObservedRawMousePosition;
     private double lastObservedRawMouseX;
     private double lastObservedRawMouseY;
-    private final Map<AbstractContainerScreen<?>, Integer> containerSlotFocus = new WeakHashMap<>();
+    private final Map<AbstractContainerScreen<?>, Integer> containerItemSlotFocus = new WeakHashMap<>();
 
     public boolean focusNavigationActive() {
         return this.focusNavigationActive;
@@ -63,8 +63,8 @@ public final class UiNavigationState {
         this.lastObservedRawMouseY = lastObservedRawMouseY;
     }
 
-    public Map<AbstractContainerScreen<?>, Integer> containerSlotFocus() {
-        return this.containerSlotFocus;
+    public Map<AbstractContainerScreen<?>, Integer> containerItemSlotFocus() {
+        return this.containerItemSlotFocus;
     }
 
     public void clear() {
@@ -74,6 +74,6 @@ public final class UiNavigationState {
         this.hasObservedRawMousePosition = false;
         this.lastObservedRawMouseX = 0.0D;
         this.lastObservedRawMouseY = 0.0D;
-        this.containerSlotFocus.clear();
+        this.containerItemSlotFocus.clear();
     }
 }

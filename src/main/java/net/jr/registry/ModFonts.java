@@ -15,8 +15,7 @@ public class ModFonts implements IFontRegistryProvider {
     public static final FontHolder MC_FIVE = REGISTRY.register("minecraft_five");
     public static final FontHolder MC_FIVE_V3 = REGISTRY.register("minecraft_fivev3");
     public static final FontHolder MC_FIVE_BOLD = REGISTRY.register("minecraft_five_bold");
-    public static final FontHolder MC_SEVEN = REGISTRY.register("minecraft_seven");
-    public static final FontHolder MC_SEVEN_V4 = REGISTRY.register("minecraft_sevenv4");
+    public static final FontHolder MC_SEVEN = REGISTRY.register("minecraft_sevenv4");
     public static final FontHolder MC_TEN = REGISTRY.register("minecraft_ten");
     public static final FontHolder Montserrat_med = REGISTRY.register("montserrat_medium");
     public static final FontHolder Montserrat_bold = REGISTRY.register("montserrat_bold");

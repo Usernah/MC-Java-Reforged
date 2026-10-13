@@ -29,8 +29,8 @@ public final class SlotScreenManager {
         Integer activeSlotId = SlotScope.idOrNull();
         int slotId = activeSlotId != null ? activeSlotId : 0;
         ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
-        int width = viewport != null ? ViewportGuiScale.logicalWidth(viewport) : vanillaWidth;
-        int height = viewport != null ? ViewportGuiScale.logicalHeight(viewport) : vanillaHeight;
+        int width = viewport != null ? ViewportGuiScale.screenLogicalWidth(viewport) : vanillaWidth;
+        int height = viewport != null ? ViewportGuiScale.screenLogicalHeight(viewport) : vanillaHeight;
         screen.init(width, height);
     }
 
@@ -51,8 +51,8 @@ public final class SlotScreenManager {
             }
 
             ViewportArea viewport = runtime.viewports().viewport(slot.id());
-            int width = ViewportGuiScale.logicalWidth(viewport);
-            int height = ViewportGuiScale.logicalHeight(viewport);
+            int width = ViewportGuiScale.screenLogicalWidth(viewport);
+            int height = ViewportGuiScale.screenLogicalHeight(viewport);
             if (!layoutChanged && screen.width == width && screen.height == height) {
                 continue;
             }

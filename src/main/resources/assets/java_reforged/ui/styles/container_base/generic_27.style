@@ -1,0 +1,133 @@
+@@import asset.local("textures/gui/containers/container_panel.png") as container_panel
+@@import asset.local("textures/gui/containers/slot_gray.png") as slot_gray
+
+@@blueprint container_base() {
+    compatible_blocks: [
+        "minecraft:chest",
+        "minecraft:trapped_chest",
+        "minecraft:barrel"
+    ]
+}
+
+@@blueprint container_size(w, h) {
+    bounds {
+        w: &w
+        h: &h
+    }
+
+    image "background" {
+        texture: @container_panel
+        meta: true
+        config: "fhd"
+        x: 0
+        y: 0
+        w: &w
+        h: &h
+    }
+}
+
+@@blueprint container_bounds(x, y, w, h) {
+    bounds {
+        x: &x
+        y: &y
+        w: &w
+        h: &h
+    }
+
+    image "background" {
+        texture: @container_panel
+        meta: true
+        config: "fhd"
+        x: 0
+        y: 0
+        w: &w
+        h: &h
+    }
+}
+
+@@blueprint label_text(x, y, size) {
+    text "label" {
+        literal: ${container.title}
+        font: ${global.font}
+        x: &x
+        y: &y
+        scale: &size
+        color: #404040
+    }
+}
+
+@@blueprint inventory_text(x, y, size) {
+    text "inventory" {
+        literal: ${container.inventory_title}
+        font: ${global.font}
+        x: &x
+        y: &y
+        scale: &size
+        color: #404040
+    }
+}
+
+@@blueprint slot_container(x, y, slot_size, item_size) {
+    grid "container" {
+        group: "generic_x27"
+        x: &x
+        y: &y
+        columns: 9
+        size: &slot_size
+        item_size: &item_size
+
+        background {
+            image "slot" {
+                texture: @slot_gray
+                meta: true
+                x: 0
+                y: 0
+                w: &slot_size
+                h: &slot_size
+            }
+        }
+    }
+}
+
+@@blueprint slot_inventory(x, y, slot_size, item_size) {
+    grid "inventory" {
+        group: "player_inventory"
+        x: &x
+        y: &y
+        columns: 9
+        size: &slot_size
+        item_size: &item_size
+
+        background {
+            image "slot" {
+                texture: @slot_gray
+                meta: true
+                x: 0
+                y: 0
+                w: &slot_size
+                h: &slot_size
+            }
+        }
+    }
+}
+
+@@blueprint slot_hotbar(x, y, slot_size, item_size) {
+    line "hotbar" {
+        group: "player_hotbar"
+        x: &x
+        y: &y
+        size: &slot_size
+        item_size: &item_size
+
+        background {
+            image "slot" {
+                texture: @slot_gray
+                meta: true
+                x: 0
+                y: 0
+                w: &slot_size
+                h: &slot_size
+            }
+        }
+    }
+}

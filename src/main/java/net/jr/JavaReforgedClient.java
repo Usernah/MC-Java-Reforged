@@ -7,6 +7,8 @@ import net.jr.client.meta.MetaManager;
 import net.jr.client.render.pipeline.ModRenderPipelines;
 import net.jr.client.runtime.render.BuiltInGuiRenderObjects;
 import net.jr.client.ui.dsl.UiDocumentManager;
+import net.jr.client.ui.container.ContainerOriginClient;
+import net.jr.network.ContainerOriginNetwork;
 import net.jr.api.client.render.font.FontRegister;
 import net.jr.registry.ModFonts;
 import net.jr.registry.ModUi;
@@ -23,6 +25,7 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
+import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 
 @Mod(value = Java_reforged.MODID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
@@ -58,6 +61,11 @@ public class JavaReforgedClient {
     @SubscribeEvent
     static void onRegisterRenderPipelines(RegisterRenderPipelinesEvent event) {
         ModRenderPipelines.register(event);
+    }
+
+    @SubscribeEvent
+    static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
+        event.register(ContainerOriginNetwork.OpenOrigin.TYPE, ContainerOriginClient::handle);
     }
 
 }

@@ -1,8 +1,8 @@
 package net.jr.screens.crafting;
 
 import net.jr.api.client.resource.Asset;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.CraftingMenu;
@@ -17,37 +17,37 @@ public final class Crafting3x3Screen extends AbstractCraftingScreen<CraftingMenu
                 title,
                 slotId,
                 BACKGROUND,
-                288,
-                168,
+                354,
+                203,
                 3,
                 3,
                 new CraftingScreenLayout(
-                        SlotGroup.CRAFTING_GRID_3X3,
-                        SlotGroup.CRAFTING_RESULT,
-                        14,
-                        3,
-                        18,
-                        14,
-                        87,
-                        148,
-                        87,
-                        144,
-                        7
+                        ItemSlotGroup.CRAFTING_GRID_3X3,
+                        ItemSlotGroup.CRAFTING_RESULT,
+                        13,
+                        2,
+                        24,
+                        22,
+                        94,
+                        166,
+                        94,
+                        178,
+                        12
                 )
         );
     }
 
     @Override
-    protected SlotGrid createSlotGrid() {
+    protected ItemSlotGrid createItemSlotGrid() {
         return this.craftingTableSlotGrid(
-                this.leftPos + 14,
-                this.topPos + 104,
-                this.leftPos + 104,
-                this.topPos + 118,
-                this.leftPos + 148,
-                this.topPos + 98,
-                this.leftPos + 148,
-                this.topPos + 144
+                this.leftPos + 21,
+                this.topPos + 124,
+                this.leftPos + 103,
+                this.topPos + 135,
+                this.leftPos + 166,
+                this.topPos + 107,
+                this.leftPos + 166,
+                this.topPos + 167
         );
     }
 }

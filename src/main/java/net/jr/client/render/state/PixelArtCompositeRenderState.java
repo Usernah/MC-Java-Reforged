@@ -22,6 +22,8 @@ public record PixelArtCompositeRenderState(
     float v0,
     float v1,
     float pixelBias,
+    float sampleFootprintX,
+    float sampleFootprintY,
     int color,
     @Nullable ScreenRectangle scissorArea,
     @Nullable ScreenRectangle bounds
@@ -38,6 +40,8 @@ public record PixelArtCompositeRenderState(
         float v0,
         float v1,
         float pixelBias,
+        float sampleFootprintX,
+        float sampleFootprintY,
         int color,
         @Nullable ScreenRectangle scissorArea
     ) {
@@ -54,6 +58,8 @@ public record PixelArtCompositeRenderState(
             v0,
             v1,
             pixelBias,
+            sampleFootprintX,
+            sampleFootprintY,
             color,
             scissorArea,
             bounds(x0, y0, x1, y1, pose, scissorArea)
@@ -72,7 +78,13 @@ public record PixelArtCompositeRenderState(
         consumer.addVertexWith2DPose(this.pose, x, y)
             .setUv(u, v)
             .setColor(this.color)
+            .setUv1(encodeFootprint(this.sampleFootprintX), encodeFootprint(this.sampleFootprintY))
             .setLineWidth(this.pixelBias);
+    }
+
+    private static int encodeFootprint(float footprint) {
+        float safeFootprint = Float.isFinite(footprint) ? footprint : 1.0F;
+        return Math.round(Math.clamp(safeFootprint, 1.0F, 8.0F) * 256.0F);
     }
 
     @Nullable

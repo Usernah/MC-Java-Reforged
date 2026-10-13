@@ -6,8 +6,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 import net.jr.client.runtime.input.GamepadInputHandler;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.ui.cursor.MouseCoordinates;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
@@ -28,7 +28,7 @@ final class ScreenFocusController {
 
     static void completeFocusedContainerPath(@Nullable GuiEventListener listener) {
         if (listener instanceof AbstractContainerScreen<?> containerScreen
-                && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen)) {
+                && ContainerItemSlotFocusController.isVanillaItemSlotFocusActive(containerScreen)) {
             return;
         }
 
@@ -50,11 +50,12 @@ final class ScreenFocusController {
         if (screen == null) {
             return;
         }
-        if (screen instanceof CustomSlotLayout layout) {
+        CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
+        if (layout != null) {
             layout.clearFocusForPointer();
         }
         if (screen instanceof AbstractContainerScreen<?> containerScreen) {
-            ContainerSlotFocusController.clearFocusedSlot(containerScreen);
+            ContainerItemSlotFocusController.clearFocusedItemSlot(containerScreen);
         }
         clearNestedFocusState(screen);
         screen.clearFocus();
@@ -62,7 +63,7 @@ final class ScreenFocusController {
 
     static boolean hasNavigationFocus(Screen screen) {
         return screen instanceof AbstractContainerScreen<?> containerScreen
-                && ContainerSlotFocusController.isVanillaSlotFocusActive(containerScreen)
+                && ContainerItemSlotFocusController.isVanillaItemSlotFocusActive(containerScreen)
             || resolveFocusedListener(screen) != null;
     }
 
@@ -71,13 +72,13 @@ final class ScreenFocusController {
         double mouseGuiY = resolveFocusSeedGuiY(minecraft);
 
         if (screen instanceof AbstractContainerScreen<?> containerScreen
-            && !(screen instanceof CustomSlotLayout)
+            && CustomItemSlotLayout.active(screen) == null
             && initializeUnifiedContainerFocus(containerScreen, mouseGuiX, mouseGuiY)) {
             return;
         }
 
         if (screen instanceof AbstractContainerScreen<?> containerScreen
-            && ContainerSlotFocusController.initializeFocusFromPointer(
+            && ContainerItemSlotFocusController.initializeFocusFromPointer(
                 containerScreen,
                 mouseGuiX,
                 mouseGuiY
@@ -100,9 +101,9 @@ final class ScreenFocusController {
         // Custom layouts may own transitions between logical regions (recipes, catalog,
         // inventory, etc.). Preserve those transitions while a slot owns focus, then use
         // the unified target list when the slot navigator reaches a real boundary.
-        if (screen instanceof CustomSlotLayout
-            && ContainerSlotFocusController.hasFocusedSlot(containerScreen)
-            && ContainerSlotFocusController.moveFocus(containerScreen, keyCode)) {
+        if (CustomItemSlotLayout.active(screen) != null
+            && ContainerItemSlotFocusController.hasFocusedItemSlot(containerScreen)
+            && ContainerItemSlotFocusController.moveFocus(containerScreen, keyCode)) {
             return true;
         }
 
@@ -202,8 +203,8 @@ final class ScreenFocusController {
                 ));
             }
         }
-        for (ContainerSlotFocusController.SlotFocusTarget slotTarget
-                : ContainerSlotFocusController.focusTargets(screen)) {
+        for (ContainerItemSlotFocusController.ItemSlotFocusTarget slotTarget
+                : ContainerItemSlotFocusController.focusTargets(screen)) {
             targets.add(FocusTarget.slot(slotTarget.slot(), slotTarget.rectangle()));
         }
         return targets;
@@ -214,7 +215,7 @@ final class ScreenFocusController {
         AbstractContainerScreen<?> screen,
         List<FocusTarget> targets
     ) {
-        Integer focusedSlot = ContainerSlotFocusController.getFocusedSlotIndex(screen);
+        Integer focusedSlot = ContainerItemSlotFocusController.getFocusedItemSlotIndex(screen);
         if (focusedSlot != null) {
             return targets.stream()
                 .filter(target -> target.slot() != null && target.slot().index == focusedSlot)
@@ -280,9 +281,9 @@ final class ScreenFocusController {
         FocusTarget target
     ) {
         if (target.slot() != null) {
-            return ContainerSlotFocusController.focusSlot(screen, target.slot());
+            return ContainerItemSlotFocusController.focusItemSlot(screen, target.slot());
         }
-        ContainerSlotFocusController.clearFocusedSlot(screen);
+        ContainerItemSlotFocusController.clearFocusedItemSlot(screen);
         applyFocusPath(screen, target.path());
         return true;
     }

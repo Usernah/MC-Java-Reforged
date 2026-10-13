@@ -6,7 +6,7 @@ import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.compact.CompactGridEntry;
 import net.jr.client.components.widgets.compact.CompactSlotElement;
 import net.jr.client.render.item.ItemRenderOpacity;
-import net.jr.client.ui.container.slots.SlotHighlightRenderer;
+import net.jr.client.ui.container.slots.ItemSlotHighlightRenderer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -94,7 +94,7 @@ public class RecipeSlotElement extends CompactSlotElement<RecipeEntryView, Recip
             Draw.image(indicator, this.getX() + this.getWidth() - 6, this.getY() + this.getHeight() - 6, 5, 5).draw(graphics);
         }
         if (this.isFocused() || this.isHovered()) {
-            SlotHighlightRenderer.draw(graphics, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+            ItemSlotHighlightRenderer.draw(graphics, this.getX(), this.getY(), this.getWidth(), this.getHeight());
         }
     }
 
@@ -105,7 +105,7 @@ public class RecipeSlotElement extends CompactSlotElement<RecipeEntryView, Recip
     ) {
         if (recipe.icon().isEmpty()) return;
 
-        int size = Math.max(1, Math.min(16, Math.min(this.getWidth(), this.getHeight()) - 2));
+        int size = Math.max(1, Math.min(20, Math.min(this.getWidth(), this.getHeight()) - 2));
         float scale = size / 16.0F;
 
         graphics.pose().pushMatrix();

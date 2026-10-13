@@ -982,6 +982,7 @@ public final class UiRenderEngine {
         private float scale = 1.0F;
         private int color = 0xFFFFFFFF;
         private boolean shadow;
+        private boolean legacyShadow;
         private Integer shadowColor;
         private Integer outlineColor;
         private TextAlign align = TextAlign.LEFT;
@@ -1045,6 +1046,11 @@ public final class UiRenderEngine {
 
         public TextBuilder shadow(boolean shadow) {
             this.shadow = shadow;
+            return this;
+        }
+
+        public TextBuilder legacyShadow(boolean legacyShadow) {
+            this.legacyShadow = legacyShadow;
             return this;
         }
 
@@ -1116,7 +1122,13 @@ public final class UiRenderEngine {
                                 offsetY
                             );
                         } else {
-                            graphics.text(font, line, offsetX, offsetY, this.color, this.shadow);
+                            this.drawText(
+                                graphics,
+                                font,
+                                line,
+                                offsetX,
+                                offsetY
+                            );
                         }
                     }
                 } else {
@@ -1126,7 +1138,7 @@ public final class UiRenderEngine {
                     if (this.outlineColor != null) {
                         this.drawOutlinedText(graphics, font, sequence, offsetX, 0);
                     } else {
-                        graphics.text(font, sequence, offsetX, 0, this.color, this.shadow);
+                        this.drawText(graphics, font, sequence, offsetX, 0);
                     }
                 }
             } finally {
@@ -1163,14 +1175,14 @@ public final class UiRenderEngine {
             if (this.fontLocation != null) {
                 result = result.copy().withStyle(style -> style.withFont(this.fontLocation.asFontDescription()));
             }
-            if (this.shadowColor != null) {
+            if (this.shadowColor != null && !this.legacyShadow) {
                 result = result.copy().withStyle(style -> style.withShadowColor(this.shadowColor));
             }
             return result;
         }
 
         private FormattedCharSequence styledSequence() {
-            if (this.fontLocation == null && this.shadowColor == null) {
+            if (this.fontLocation == null && this.shadowColor == null && !this.legacyShadow) {
                 return this.charSequenceText;
             }
             return sink -> this.charSequenceText.accept((index, style, codePoint) -> {
@@ -1178,7 +1190,9 @@ public final class UiRenderEngine {
                 if (this.fontLocation != null) {
                     resolvedStyle = resolvedStyle.withFont(this.fontLocation.asFontDescription());
                 }
-                if (this.shadowColor != null) {
+                if (this.legacyShadow) {
+                    resolvedStyle = resolvedStyle.withoutShadow();
+                } else if (this.shadowColor != null) {
                     resolvedStyle = resolvedStyle.withShadowColor(this.shadowColor);
                 }
                 return sink.accept(index, resolvedStyle, codePoint);
@@ -1200,6 +1214,61 @@ public final class UiRenderEngine {
                 }
             }
             graphics.text(font, text, x, y, this.color, false);
+        }
+
+        private void drawText(
+            GuiGraphicsExtractor graphics,
+            Font font,
+            Component text,
+            int x,
+            int y
+        ) {
+            if (this.legacyShadow) {
+                FormattedCharSequence textWithoutShadow = this.withoutShadow(text.getVisualOrderText());
+                this.drawLegacyShadow(graphics, font, textWithoutShadow, x, y);
+                graphics.text(font, textWithoutShadow, x, y, this.color, false);
+                return;
+            }
+            graphics.text(font, text, x, y, this.color, this.shadow);
+        }
+
+        private void drawText(
+            GuiGraphicsExtractor graphics,
+            Font font,
+            FormattedCharSequence text,
+            int x,
+            int y
+        ) {
+            if (this.legacyShadow) {
+                this.drawLegacyShadow(graphics, font, text, x, y);
+            }
+            graphics.text(font, text, x, y, this.color, this.shadow && !this.legacyShadow);
+        }
+
+        private void drawLegacyShadow(
+            GuiGraphicsExtractor graphics,
+            Font font,
+            FormattedCharSequence text,
+            int x,
+            int y
+        ) {
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(0.4F, 0.4F);
+            graphics.text(font, text, x, y, this.resolvedShadowColor(), false);
+            graphics.pose().popMatrix();
+        }
+
+        private FormattedCharSequence withoutShadow(FormattedCharSequence text) {
+            return sink -> text.accept((index, style, codePoint) ->
+                sink.accept(index, style.withoutShadow(), codePoint)
+            );
+        }
+
+        private int resolvedShadowColor() {
+            if (this.shadowColor != null) {
+                return this.shadowColor;
+            }
+            return this.color & 0xFF000000 | (this.color & 0x00FCFCFC) >> 2;
         }
 
         private float offsetX(int lineWidth) {

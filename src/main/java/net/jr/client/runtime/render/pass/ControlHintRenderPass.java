@@ -2,34 +2,33 @@ package net.jr.client.runtime.render.pass;
 
 import com.mojang.blaze3d.textures.FilterMode;
 import java.util.List;
-import net.jr.api.client.split.SplitScreen;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
-import net.jr.client.runtime.viewport.GuiScaleCalculator;
 import net.jr.client.runtime.viewport.ViewportArea;
-import net.jr.client.runtime.viewport.ViewportLayout;
 import net.jr.client.ui.hint.ControlHintContext;
 import net.jr.client.ui.hint.ControlHintPipeline;
 import net.jr.client.ui.hint.model.ResolvedControlHint;
 import net.jr.client.ui.hint.render.ControlHintRenderer;
-import net.jr.client.ui.layout.render.UILayoutRenderTarget;
+import net.jr.client.ui.render.composition.GuiCompositionTarget;
+import net.jr.client.ui.presentation.UiPresentation;
+import net.jr.client.ui.presentation.UiResolution;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import org.jetbrains.annotations.Nullable;
 
 public final class ControlHintRenderPass {
-    private static final float FULL_HD_FRAMEBUFFER_SCALE = 0.25F;
-    private static final float HD_FRAMEBUFFER_SCALE = 0.5F;
     private static final int INTERNAL_RASTER_SCALE = 1;
     private static final int HINT_FRAMEBUFFER_HEIGHT = 100;
+    private static final float SPLIT_GUI_SCALE_REFERENCE = 2.0F;
+    private static final float FULL_HD_GUI_SCALE_REFERENCE = 3.0F;
     private static final float PIXEL_BIAS = 0.35F;
     private static final float HUD_BOTTOM_SAFE_GAP = 4.0F;
     private static final int HUD_TARGET = 0;
     private static final int MENU_TARGET = 1;
-    private static final UILayoutRenderTarget[][] TARGETS =
-        new UILayoutRenderTarget[ClientSlots.MAX_SLOTS][2];
+    private static final GuiCompositionTarget[][] TARGETS =
+        new GuiCompositionTarget[ClientSlots.MAX_SLOTS][2];
 
     private ControlHintRenderPass() {
     }
@@ -68,7 +67,7 @@ public final class ControlHintRenderPass {
     public static void closeAll() {
         for (int slot = 0; slot < TARGETS.length; slot++) {
             for (int kind = 0; kind < TARGETS[slot].length; kind++) {
-                UILayoutRenderTarget target = TARGETS[slot][kind];
+                GuiCompositionTarget target = TARGETS[slot][kind];
                 if (target != null) {
                     target.close();
                     TARGETS[slot][kind] = null;
@@ -86,7 +85,7 @@ public final class ControlHintRenderPass {
         }
         HintCompositionLayout layout = resolveLayout(graphics);
         if (layout == null) {
-            float framebufferScale = framebufferScale(null, null);
+            float framebufferScale = framebufferScale();
             graphics.pose().pushMatrix();
             graphics.pose().scale(framebufferScale, framebufferScale);
             try {
@@ -117,7 +116,6 @@ public final class ControlHintRenderPass {
         return resolveLayout(
             parentGraphics,
             ClientRuntime.INSTANCE.viewports().viewport(slotId),
-            slotId,
             HINT_FRAMEBUFFER_HEIGHT
         );
     }
@@ -130,7 +128,7 @@ public final class ControlHintRenderPass {
     ) {
         int slotId = SlotScope.requireId();
         int targetKind = context.isHud() ? HUD_TARGET : MENU_TARGET;
-        UILayoutRenderTarget target = target(slotId, targetKind);
+        GuiCompositionTarget target = target(slotId, targetKind);
         target.extractCompositionAndSubmit(
             parentGraphics,
             layout.targetWidth(),
@@ -140,8 +138,10 @@ public final class ControlHintRenderPass {
             layout.destinationY(),
             layout.scale(),
             layout.scale(),
-            FilterMode.LINEAR,
+            FilterMode.NEAREST,
             PIXEL_BIAS,
+            layout.sampleFootprint(),
+            layout.sampleFootprint(),
             compositionGraphics -> ControlHintRenderer.renderDirect(
                 context,
                 compositionGraphics,
@@ -152,10 +152,10 @@ public final class ControlHintRenderPass {
         );
     }
 
-    private static UILayoutRenderTarget target(int slotId, int kind) {
-        UILayoutRenderTarget target = TARGETS[slotId][kind];
+    private static GuiCompositionTarget target(int slotId, int kind) {
+        GuiCompositionTarget target = TARGETS[slotId][kind];
         if (target == null) {
-            target = new UILayoutRenderTarget();
+            target = new GuiCompositionTarget();
             TARGETS[slotId][kind] = target;
         }
         return target;
@@ -164,60 +164,53 @@ public final class ControlHintRenderPass {
     private static HintCompositionLayout resolveLayout(
         GuiGraphicsExtractor parentGraphics,
         ViewportArea viewport,
-        int slotId,
         int compositionHeight
     ) {
-        float scale = framebufferScale(viewport, slotId);
+        float scale = framebufferScale(viewport);
         float canvasWidth = parentGraphics.guiWidth() / scale;
         float canvasHeight = compositionHeight;
         int targetWidth = Math.max(1, (int)Math.ceil(canvasWidth));
         int targetHeight = Math.max(1, compositionHeight);
         float destinationY = parentGraphics.guiHeight() - canvasHeight * scale;
+        double effectiveGuiScale = viewport.effectiveGuiScale();
+        if (!Double.isFinite(effectiveGuiScale) || effectiveGuiScale <= 0.0D) {
+            effectiveGuiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        }
+        float physicalDestinationScale = scale * (float)effectiveGuiScale;
+        float sampleFootprint = physicalDestinationScale > 0.0F
+            ? Math.max(1.0F, INTERNAL_RASTER_SCALE / physicalDestinationScale)
+            : 1.0F;
         return new HintCompositionLayout(
             targetWidth,
             targetHeight,
             canvasWidth,
             canvasHeight,
             destinationY,
-            scale
+            scale,
+            sampleFootprint
         );
     }
 
-    private static float framebufferScale(
-        @Nullable ViewportArea viewport,
-        @Nullable Integer slotId
-    ) {
-        float scale = SplitScreen.isActive()
-            ? HD_FRAMEBUFFER_SCALE
-            : FULL_HD_FRAMEBUFFER_SCALE;
-        if (
-                viewport == null
-                        || slotId == null
-                        || (
-                        viewport.layout() != ViewportLayout.FOUR_GRID
-                                && viewport.layout() != ViewportLayout.TWO_HORIZONTAL
-                )
-                        || !ClientRuntime.INSTANCE.viewports().hasWindowMetrics()
-        ) {
+    private static float framebufferScale() {
+        return UiPresentation.glyphResolution().framebufferScale();
+    }
+
+    private static float framebufferScale(ViewportArea viewport) {
+        float scale = framebufferScale();
+        if (!UiPresentation.isSplitScreen()) {
             return scale;
         }
 
-        var window = ClientRuntime.INSTANCE.viewports().windowMetrics();
-        int requestedScale = ClientRuntime.INSTANCE.slots()
-            .slot(slotId)
-            .optionsState()
-            .requestedGuiScale();
-        int verticalGuiScale = GuiScaleCalculator.resolve(
-            Math.max(1, window.framebufferWidth() / 2),
-            window.framebufferHeight(),
-            requestedScale,
-            Minecraft.getInstance().isEnforceUnicode()
-        );
-        double activeGuiScale = viewport.effectiveGuiScale();
-        if (!Double.isFinite(activeGuiScale) || activeGuiScale <= 0.0D) {
+        double effectiveGuiScale = viewport.effectiveGuiScale();
+        if (!Double.isFinite(effectiveGuiScale) || effectiveGuiScale <= 0.0D) {
             return scale;
         }
-        return scale * (float)(verticalGuiScale / activeGuiScale);
+        var window = Minecraft.getInstance().getWindow();
+        float referenceScale = window.getWidth() >= UiResolution.FULL_HD.referenceWidth()
+                && window.getHeight() >= UiResolution.FULL_HD.referenceHeight()
+            ? FULL_HD_GUI_SCALE_REFERENCE
+            : SPLIT_GUI_SCALE_REFERENCE;
+        return scale * referenceScale / (float)effectiveGuiScale;
     }
 
     public record PreparedHud(
@@ -233,7 +226,8 @@ public final class ControlHintRenderPass {
         float canvasWidth,
         float canvasHeight,
         float destinationY,
-        float scale
+        float scale,
+        float sampleFootprint
     ) {
     }
 }

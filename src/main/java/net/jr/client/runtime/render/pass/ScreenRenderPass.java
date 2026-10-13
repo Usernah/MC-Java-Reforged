@@ -40,8 +40,8 @@ public final class ScreenRenderPass {
 
         if (screen == null && SecondaryWorldLoadingScreen.shouldPresent(slot)) {
             screen = SecondaryWorldLoadingScreen.forSlot(slotId);
-            int width = ViewportGuiScale.logicalWidth(viewport);
-            int height = ViewportGuiScale.logicalHeight(viewport);
+            int width = ViewportGuiScale.screenLogicalWidth(viewport);
+            int height = ViewportGuiScale.screenLogicalHeight(viewport);
             if (screen.width != width || screen.height != height) {
                 screen.init(width, height);
             }
@@ -68,7 +68,6 @@ public final class ScreenRenderPass {
         );
 
         GamepadInputHandler.trackFocusedCursorDuringScroll(renderScreen);
-        ControlHintRenderPass.renderScreen(renderScreen, graphics);
         return renderScreen;
     }
 
@@ -90,7 +89,7 @@ public final class ScreenRenderPass {
             slotId,
             (int)viewport.windowMouseToLocalGuiX(minecraft.mouseHandler.xpos())
         );
-        return ViewportGuiScale.logicalMouseX(viewport, localGuiX);
+        return ViewportGuiScale.screenLogicalMouseX(viewport, localGuiX);
     }
 
     private static int logicalMouseY(
@@ -111,6 +110,6 @@ public final class ScreenRenderPass {
             slotId,
             (int)viewport.windowMouseToLocalGuiY(minecraft.mouseHandler.ypos())
         );
-        return ViewportGuiScale.logicalMouseY(viewport, localGuiY);
+        return ViewportGuiScale.screenLogicalMouseY(viewport, localGuiY);
     }
 }

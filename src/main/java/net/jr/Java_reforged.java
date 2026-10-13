@@ -3,6 +3,7 @@ package net.jr;
 import com.mojang.logging.LogUtils;
 import net.jr.playerdata.PlayerProfileDataManager;
 import net.jr.experimental_features.minigame.network.BattleNetwork;
+import net.jr.network.ContainerOriginNetwork;
 import net.jr.registry.ModSounds;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -19,5 +20,6 @@ public class Java_reforged {
         ModSounds.REGISTRY.register(modEventBus);
         PlayerProfileDataManager.ATTACHMENTS.register(modEventBus);
         modEventBus.addListener(BattleNetwork::register);
+        modEventBus.addListener(ContainerOriginNetwork::register);
     }
 }

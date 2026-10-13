@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.jr.api.client.split.SplitScreen;
 import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.viewport.ViewportArea;
-import net.jr.client.ui.presentation.UiPresentation;
 import net.jr.mixin.accessors.FontAccessor;
 import net.jr.playerdata.PlayerProfileDataManager;
 import net.minecraft.client.Minecraft;
@@ -90,8 +89,7 @@ public final class LegacyNameTagRenderPass {
     }
 
     private static int readableDistance() {
-        return UiPresentation.isPortable() || SplitScreen.isActive()
-                ? READABLE_COMPACT : READABLE_FULLSCREEN;
+        return SplitScreen.isActive() ? READABLE_COMPACT : READABLE_FULLSCREEN;
     }
 
     private static float textOpacity(float distance, int readableDistance) {

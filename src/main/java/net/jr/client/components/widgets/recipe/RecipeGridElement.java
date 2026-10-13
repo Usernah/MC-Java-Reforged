@@ -5,6 +5,7 @@ import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.components.widgets.compact.CompactGridElement;
 import net.jr.client.components.widgets.compact.CompactGridEntry;
 import net.jr.client.components.widgets.compact.CompactSlotElement;
+import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -70,13 +71,16 @@ public class RecipeGridElement extends CompactGridElement<RecipeEntryView, Recip
     @Override
     protected List<Object> groupKey(RecipeEntryView group) {
         return group.variants().stream()
-                .map(variant -> (Object)variant.recipe().id())
+                .flatMap(variant -> variant.alternativeRecipes().stream())
+                .map(recipe -> (Object)recipe.id())
                 .toList();
     }
 
     @Override
     protected Object valueKey(RecipeVariantView value) {
-        return value.recipe().id();
+        return value.alternativeRecipes().stream()
+                .map(RecipeDisplayEntry::id)
+                .toList();
     }
 
     @Override

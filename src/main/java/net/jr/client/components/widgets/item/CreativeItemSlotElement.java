@@ -4,7 +4,7 @@ import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.JavaBaseWidget;
-import net.jr.client.ui.container.slots.SlotHighlightRenderer;
+import net.jr.client.ui.container.slots.ItemSlotHighlightRenderer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -39,7 +39,7 @@ public class CreativeItemSlotElement extends JavaBaseWidget {
         Draw.imageFromMeta(BACKGROUND, this.x(), this.y(), this.width(), this.height()).draw(graphics);
         drawItem(graphics, this.stack, this.x(), this.y(), this.width(), this.height());
         if (this.isFocused() || this.isHovered()) {
-            SlotHighlightRenderer.draw(graphics, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+            ItemSlotHighlightRenderer.draw(graphics, this.getX(), this.getY(), this.getWidth(), this.getHeight());
         }
     }
 

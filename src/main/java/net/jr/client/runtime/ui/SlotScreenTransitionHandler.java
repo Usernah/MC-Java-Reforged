@@ -38,7 +38,7 @@ public final class SlotScreenTransitionHandler {
         if (screen == null) {
             CursorVisibility.clearHiddenForSlot(slotId);
             CursorVisibility.clearReplacementHiddenForSlot(slotId);
-            GamepadInputHandler.releaseFocusedSlotCursor(slotId);
+            GamepadInputHandler.releaseFocusedItemSlotCursor(slotId);
         } else {
             if (shouldSeedControllerCursor(slotId)) {
                 GamepadInputHandler.centerControllerCursorForScreen(slotId);

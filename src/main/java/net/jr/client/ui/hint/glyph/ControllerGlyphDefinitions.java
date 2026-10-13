@@ -60,7 +60,7 @@ public final class ControllerGlyphDefinitions {
         if (base == null) {
             return null;
         }
-        String folder = UiPresentation.resourceVariantFolder();
+        String folder = activeVariantFolder();
         if (folder.isEmpty()) {
             return base;
         }
@@ -70,7 +70,7 @@ public final class ControllerGlyphDefinitions {
 
     static Asset controlTexture(ControllerGlyphTheme theme) {
         Asset base = theme.baseControlTexture();
-        String folder = UiPresentation.resourceVariantFolder();
+        String folder = activeVariantFolder();
         if (folder.isEmpty()) {
             return base;
         }
@@ -79,7 +79,7 @@ public final class ControllerGlyphDefinitions {
     }
 
     private static Definition activeDefinition(ControllerGlyphTheme theme) {
-        String folder = UiPresentation.resourceVariantFolder();
+        String folder = activeVariantFolder();
         if (!folder.isEmpty()) {
             Definition variant = variantDefinitions.getOrDefault(folder, Map.of()).get(theme);
             if (variant != null) {
@@ -87,6 +87,10 @@ public final class ControllerGlyphDefinitions {
             }
         }
         return definitions.get(theme);
+    }
+
+    private static String activeVariantFolder() {
+        return UiPresentation.glyphVariantFolder();
     }
 
     private static Definition loadDefinition(
@@ -231,7 +235,7 @@ public final class ControllerGlyphDefinitions {
             }
             Map<String, Map<ControllerGlyphTheme, Definition>> variants = new HashMap<>();
             Set<Asset> textures = new HashSet<>();
-            for (String folder : new String[]{"portable", "split_screen"}) {
+            for (String folder : new String[]{"split_screen"}) {
                 EnumMap<ControllerGlyphTheme, Definition> byTheme = new EnumMap<>(ControllerGlyphTheme.class);
                 for (ControllerGlyphTheme theme : ControllerGlyphTheme.values()) {
                     byTheme.put(theme, loadVariantDefinition(manager, theme, folder, loaded.get(theme)));

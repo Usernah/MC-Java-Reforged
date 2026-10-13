@@ -3,7 +3,7 @@ package net.jr.client.ui.hint.provider;
 import net.jr.client.ui.hint.ControlHintContext;
 import net.jr.client.ui.hint.model.ControlHintRequest;
 import net.jr.client.input.binding.ModKeyBindings;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.jr.client.ui.container.actions.CreativeContainerActions;
@@ -157,11 +157,11 @@ public final class ContainerControlHintProvider implements ControlHintProvider {
 
     private static Slot targetSlot(AbstractContainerScreen<?> screen) {
         if (UiInputModeController.isFocusNavigationActive()) {
-            Integer focusedIndex = ContainerSlotFocusController.getFocusedSlotIndex(screen);
+            Integer focusedIndex = ContainerItemSlotFocusController.getFocusedItemSlotIndex(screen);
             if (focusedIndex != null && focusedIndex >= 0 && focusedIndex < screen.getMenu().slots.size()) {
                 return screen.getMenu().slots.get(focusedIndex);
             }
         }
-        return ((AbstractContainerScreenAccessor) screen).javaReforged$getHoveredSlot();
+        return ((AbstractContainerScreenAccessor) screen).javaReforged$getHoveredItemSlot();
     }
 }

@@ -19,12 +19,12 @@ import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.sound.action.InputActionSounds;
-import net.jr.client.ui.container.actions.ContainerSlotFocusController;
-import net.jr.client.ui.container.slots.SlotGrid;
-import net.jr.client.ui.container.slots.SlotGroup;
-import net.jr.client.ui.container.slots.SlotMaps;
-import net.jr.client.ui.container.slots.VanillaSlotLayer;
-import net.jr.client.ui.container.slots.CustomSlotLayout;
+import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
+import net.jr.client.ui.container.slots.ItemSlotGrid;
+import net.jr.client.ui.container.slots.ItemSlotGroup;
+import net.jr.client.ui.container.slots.ItemSlotMaps;
+import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
+import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
@@ -75,7 +75,7 @@ import java.util.Set;
 
 public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         extends AbstractContainerScreen<M>
-        implements UiActionHandler, CustomSlotLayout, TabNavigationHost, FocusCursorVisibilityHost,
+        implements UiActionHandler, CustomItemSlotLayout, TabNavigationHost, FocusCursorVisibilityHost,
         RecipeControlHintHost, RecipeUpdateListener {
 
     private static final int CRAFTING_TAB_WIDTH = 32;
@@ -129,8 +129,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     private boolean pendingDirectCraft;
     private int pendingCraftStateId = -1;
 
-    protected VanillaSlotLayer slotLayer;
-    protected SlotGrid slotGrid;
+    protected VanillaItemSlotLayer itemSlotLayer;
+    protected ItemSlotGrid itemSlotGrid;
     protected RecipeGridElement recipeGrid;
     protected TabBarElement recipeTabs;
     private Button previousPageButton;
@@ -170,12 +170,12 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         super.init();
         this.topPos += 12;
         this.rebuildCreativeTabContents();
-        this.slotLayer = new VanillaSlotLayer(this, this.menu, this.font, 14);
-        this.slotGrid = this.createSlotGrid();
+        this.itemSlotLayer = new VanillaItemSlotLayer(this, this.menu, this.font, 16);
+        this.itemSlotGrid = this.createItemSlotGrid();
 
         this.recipeGrid = new RecipeGridElement(
-                this.leftPos + 8,
-                this.topPos + 23,
+                this.leftPos + 12,
+                this.topPos + 31,
                 this.layout.recipeColumns() * this.layout.recipeCellSize(),
                 this.layout.recipeRows() * this.layout.recipeCellSize(),
                 this.layout.recipeRows(),
@@ -401,16 +401,16 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         }
     }
 
-    protected abstract SlotGrid createSlotGrid();
+    protected abstract ItemSlotGrid createItemSlotGrid();
 
     @Override
-    public final SlotGrid slotGrid() {
-        return this.slotGrid;
+    public final ItemSlotGrid itemSlotGrid() {
+        return this.itemSlotGrid;
     }
 
     @Override
-    public final VanillaSlotLayer slotLayer() {
-        return this.slotLayer;
+    public final VanillaItemSlotLayer itemSlotLayer() {
+        return this.itemSlotLayer;
     }
 
     @Override
@@ -420,7 +420,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                 : this.recipeGrid.cursorMagnetTargetAt(guiX, guiY);
         return recipeTarget != null
                 ? recipeTarget
-                : CustomSlotLayout.super.cursorMagnetTargetAt(guiX, guiY);
+                : CustomItemSlotLayout.super.cursorMagnetTargetAt(guiX, guiY);
     }
 
     @Override
@@ -429,18 +429,18 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     }
 
     @Override
-    public final boolean allowsSlotFocusNavigation() {
+    public final boolean allowsItemSlotFocusNavigation() {
         return this.focusRegion == FocusRegion.INVENTORY;
     }
 
     @Override
     public final boolean seedFocusFromPointer(double guiX, double guiY) {
-        Slot inventorySlot = this.slotLayer == null || this.slotGrid == null
+        Slot inventorySlot = this.itemSlotLayer == null || this.itemSlotGrid == null
                 ? null
-                : this.slotLayer.getSlotAt(this.slotGrid, guiX, guiY);
+                : this.itemSlotLayer.getItemSlotAt(this.itemSlotGrid, guiX, guiY);
         if (inventorySlot != null) {
             this.enterInventoryFocus();
-            this.slotLayer.setFocusedSlot(inventorySlot);
+            this.itemSlotLayer.setFocusedItemSlot(inventorySlot);
             return true;
         }
 
@@ -454,8 +454,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         this.recipeGrid.setFocused(recipeSlot);
         this.returnCraftingGridItemsToInventory();
         this.focusRegion = FocusRegion.RECIPES;
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
         this.setFocused(this.recipeGrid);
         return true;
@@ -467,8 +467,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         if (this.recipeGrid != null) {
             this.recipeGrid.clearEntryFocus();
         }
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
     }
 
@@ -478,7 +478,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     }
 
     @Override
-    public final boolean handleSlotNavigationBoundary(int keyCode) {
+    public final boolean handleItemSlotNavigationBoundary(int keyCode) {
         if (this.focusRegion == FocusRegion.INVENTORY && keyCode == GLFW.GLFW_KEY_UP) {
             this.enterRecipeFocus(true);
             return true;
@@ -486,7 +486,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         return false;
     }
 
-    protected final SlotGrid craftingTableSlotGrid(
+    protected final ItemSlotGrid craftingTableSlotGrid(
             int craftingX,
             int craftingY,
             int resultX,
@@ -496,11 +496,11 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             int hotbarX,
             int hotbarY
     ) {
-        return new SlotGrid(SlotMaps.CRAFTING_TABLE)
-                .grid(SlotGroup.CRAFTING_GRID_3X3, craftingX, craftingY, 3, 18, 18, 18, 18)
-                .point(SlotGroup.CRAFTING_RESULT, 0, resultX, resultY, 26, 26, 24)
-                .grid(SlotGroup.PLAYER_INVENTORY, inventoryX, inventoryY, 9, 14, 14, 14, 14)
-                .grid(SlotGroup.PLAYER_HOTBAR, hotbarX, hotbarY, 9, 14, 14, 14, 14);
+        return new ItemSlotGrid(ItemSlotMaps.CRAFTING_TABLE)
+                .grid(ItemSlotGroup.CRAFTING_GRID_3X3, craftingX, craftingY, 3, 18, 18,16)
+                .point(ItemSlotGroup.CRAFTING_RESULT, 0, resultX, resultY, 30, 30, 28)
+                .grid(ItemSlotGroup.PLAYER_INVENTORY, inventoryX, inventoryY, 9, 18, 18,16)
+                .grid(ItemSlotGroup.PLAYER_HOTBAR, hotbarX, hotbarY, 9, 18, 18, 16);
     }
 
     @Override
@@ -549,9 +549,11 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                 continue;
             }
 
-            List<RecipeVariantView> variantViews = variants.stream()
-                    .map(entry -> this.createVariantView(collection, entry, displayContext))
-                    .toList();
+            List<RecipeVariantView> variantViews = this.createVariantViews(
+                    collection,
+                    variants,
+                    displayContext
+            );
 
             if (groupWalls) {
                 List<RecipeVariantView> wallVariants = variantViews.stream()
@@ -561,7 +563,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                     if (wallCollection == null) {
                         wallCollection = collection;
                     }
-                    groupedWallVariants.addAll(wallVariants);
+                    wallVariants.forEach(variant -> this.addDistinctResult(groupedWallVariants, variant));
                 }
 
                 List<RecipeVariantView> nonWallVariants = variantViews.stream()
@@ -725,6 +727,29 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         );
     }
 
+    private List<RecipeVariantView> createVariantViews(
+            RecipeCollection collection,
+            List<RecipeDisplayEntry> recipes,
+            ContextMap displayContext
+    ) {
+        List<RecipeVariantView> results = new ArrayList<>();
+        for (RecipeDisplayEntry recipe : recipes) {
+            this.addDistinctResult(results, this.createVariantView(collection, recipe, displayContext));
+        }
+        return List.copyOf(results);
+    }
+
+    private void addDistinctResult(List<RecipeVariantView> results, RecipeVariantView candidate) {
+        for (int index = 0; index < results.size(); index++) {
+            RecipeVariantView existing = results.get(index);
+            if (existing.hasSameResult(candidate.icon())) {
+                results.set(index, existing.withAlternativesFrom(candidate));
+                return;
+            }
+        }
+        results.add(candidate);
+    }
+
     public boolean isTargetedRecipeCraftable() {
         return this.recipeGrid != null
                 && this.recipeGrid.previewedRecipeIsCraftable(
@@ -842,12 +867,12 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         if (this.searchEditBox != null) {
             this.searchEditBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
         }
-        this.slotLayer.updateHovered(this.slotGrid, mouseX, mouseY);
-        this.slotLayer.renderSlotMap(graphics, this.slotGrid);
+        this.itemSlotLayer.updateHovered(this.itemSlotGrid, mouseX, mouseY);
+        this.itemSlotLayer.renderItemSlotMap(graphics, this.itemSlotGrid);
         this.renderRecipePreview(graphics, mouseX, mouseY);
-        this.slotLayer.renderHoveredSlot(graphics, this.slotGrid);
-        this.slotLayer.renderCarriedItem(graphics, mouseX, mouseY);
-        this.slotLayer.renderTooltip(graphics, this.slotGrid, mouseX, mouseY);
+        this.itemSlotLayer.renderHoveredItemSlot(graphics, this.itemSlotGrid);
+        this.itemSlotLayer.renderCarriedItem(graphics, mouseX, mouseY);
+        this.itemSlotLayer.renderTooltip(graphics, this.itemSlotGrid, mouseX, mouseY);
         this.renderRecipeTooltip(graphics, mouseX, mouseY);
     }
 
@@ -867,7 +892,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                 graphics,
                 preview.recipe().display(),
                 SlotDisplayContext.fromLevel(this.minecraft.player.level()),
-                this.slotGrid,
+                this.itemSlotGrid,
                 this.menu,
                 this.minecraft.player.getInventory(),
                 preview.craftable()
@@ -916,8 +941,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             );
             return true;
         }
-        boolean handled = this.slotLayer.mouseClicked(
-                this.slotGrid,
+        boolean handled = this.itemSlotLayer.mouseClicked(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -940,8 +965,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         boolean searchHandled = this.searchEditBox != null && this.searchEditBox.mouseReleased(event);
         boolean widgetHandled = this.recipeGrid.mouseReleased(event);
         widgetHandled = this.recipeTabs.mouseReleased(event) || widgetHandled;
-        boolean slotHandled = this.slotLayer.mouseReleased(
-                this.slotGrid,
+        boolean slotHandled = this.itemSlotLayer.mouseReleased(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -962,8 +987,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         if (this.recipeGrid.mouseDragged(event, dragX, dragY)) {
             return true;
         }
-        return this.slotLayer.mouseDragged(
-                this.slotGrid,
+        return this.itemSlotLayer.mouseDragged(
+                this.itemSlotGrid,
                 event.x(),
                 event.y(),
                 event.button(),
@@ -994,7 +1019,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                 && this.handleUiAction(navigation)) {
             return true;
         }
-        return this.slotLayer.keyPressed(this.slotGrid, event.key(), event.scancode()) || super.keyPressed(event);
+        return this.itemSlotLayer.keyPressed(this.itemSlotGrid, event.key(), event.scancode()) || super.keyPressed(event);
     }
 
     @Override
@@ -1027,7 +1052,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         }
         if (action == UiAction.MOVE_DOWN) {
             this.enterInventoryFocus();
-            return ContainerSlotFocusController.moveFocus(this, GLFW.GLFW_KEY_DOWN);
+            return ContainerItemSlotFocusController.moveFocus(this, GLFW.GLFW_KEY_DOWN);
         }
 
         return action.isDirectional();
@@ -1044,8 +1069,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         if (this.recipeGrid != null) {
             this.recipeGrid.clearEntryFocus();
         }
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
     }
 
@@ -1058,8 +1083,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             this.returnCraftingGridItemsToInventory();
         }
         this.focusRegion = FocusRegion.RECIPES;
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
         this.setFocused(this.recipeGrid);
         if (this.recipeGrid != null) {
@@ -1093,8 +1118,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             return false;
         }
         this.focusRegion = FocusRegion.RECIPES;
-        if (this.slotLayer != null) {
-            this.slotLayer.clearFocusedSlot();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
         this.setFocused(this.recipeGrid);
         var rectangle = this.recipeGrid.getFocused().getRectangle();
@@ -1522,8 +1547,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     }
 
     protected record CraftingScreenLayout(
-            SlotGroup craftingGridGroup,
-            SlotGroup craftingResultGroup,
+            ItemSlotGroup craftingGridGroup,
+            ItemSlotGroup craftingResultGroup,
             int recipeColumns,
             int recipeRows,
             int recipeCellSize,
