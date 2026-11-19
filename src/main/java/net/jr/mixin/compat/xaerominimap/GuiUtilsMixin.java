@@ -1,8 +1,7 @@
 package net.jr.mixin.compat.xaerominimap;
 
 import com.mojang.blaze3d.platform.Window;
-import net.jr.client.compat.xaero.XaeroViewport;
-import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.compat.CompatHudDimensions;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -18,8 +17,7 @@ abstract class GuiUtilsMixin {
         )
     )
     private static int javaReforged$viewportAutoScaleWidth(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getWidth() : viewport.width();
+        return CompatHudDimensions.framebufferWidth(window);
     }
 
     @Redirect(
@@ -30,8 +28,7 @@ abstract class GuiUtilsMixin {
         )
     )
     private static int javaReforged$viewportAutoScaleHeight(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getHeight() : viewport.height();
+        return CompatHudDimensions.framebufferHeight(window);
     }
 
     @Redirect(
@@ -42,7 +39,6 @@ abstract class GuiUtilsMixin {
         )
     )
     private static int javaReforged$viewportSystemScale(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getGuiScale() : viewport.guiScale();
+        return CompatHudDimensions.rasterScale(window);
     }
 }

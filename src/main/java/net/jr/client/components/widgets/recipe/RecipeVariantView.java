@@ -7,15 +7,7 @@ import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * One distinct recipe result shown by the recipe grid.
- *
- * <p>A vanilla {@link RecipeCollection} may contain either actual result
- * variants (for example, the different wooden stairs) or several recipes for
- * the same result (for example, torches made with coal or charcoal). Those
- * alternative recipes belong to this view, rather than becoming visual
- * variants of their own.</p>
- */
+
 public final class RecipeVariantView {
     private final List<Alternative> alternatives;
 

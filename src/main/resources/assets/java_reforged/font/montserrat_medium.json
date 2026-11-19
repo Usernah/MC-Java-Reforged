@@ -4,7 +4,7 @@
       "type": "ttf",
       "file": "java_reforged:montserrat_medium.ttf",
       "shift": [0, 0],
-      "size": 32.0,
+      "size": 64.0,
       "oversample": 1.0,
       "point_scale": true
     }

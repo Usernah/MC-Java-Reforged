@@ -1,0 +1,26 @@
+@@import asset.local("styles/container_base/generic_27") as base
+
+container {
+    @base.container_base()
+
+    background {
+        @base.container_size(186, 178)
+    }
+
+    content {
+        @base.label_text(8, 6, 1)
+        @base.inventory_text(8, 74, 1)
+
+        item_slots {
+            id: "menu"
+            map: "chest_27"
+
+            @base.slot_container(8, 18, 18, 16)
+            @base.slot_inventory(8, 85, 18, 16)
+            @base.slot_hotbar(8, 143, 18, 16)
+        }
+    }
+
+    foreground {
+    }
+}

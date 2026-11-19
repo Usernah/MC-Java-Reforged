@@ -1,20 +1,45 @@
 package net.jr.client.components.widgets.recipe;
 
 import net.jr.client.components.navigation.UiAction;
+import net.jr.client.components.interfaces.IWidgetSoundHandler;
 import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.components.widgets.compact.CompactGridElement;
 import net.jr.client.components.widgets.compact.CompactGridEntry;
 import net.jr.client.components.widgets.compact.CompactSlotElement;
+import net.jr.registry.ModSounds;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class RecipeGridElement extends CompactGridElement<RecipeEntryView, RecipeVariantView> {
-    private Consumer<RecipeVariantView> craft = ignored -> {};
+    private static final IWidgetSoundHandler SOUND_HANDLER = (handler, widget, event) -> {
+        if (event != IWidgetSoundHandler.Event.PRESS || !(widget instanceof RecipeSlotElement slot)) {
+            return;
+        }
+        switch (slot.consumeActivationFeedback()) {
+            case CLICK -> handler.play(SimpleSoundInstance.forUI(ModSounds.UI_CLICK.get(), 1.0F, 1.0F));
+            case CRAFT -> handler.play(SimpleSoundInstance.forUI(ModSounds.UI_CRAFT.get(), 1.0F, 1.0F));
+            case BLOCK -> handler.play(SimpleSoundInstance.forUI(ModSounds.UI_BLOCK.get(), 1.0F, 1.0F));
+        }
+    };
 
-    public RecipeGridElement(int x, int y, int width, int height, int visibleRows, int columns) {
+    private Consumer<RecipeVariantView> craft = ignored -> {};
+    private final RecipeSlotStyle slotStyle;
+
+    public RecipeGridElement(
+            int x,
+            int y,
+            int width,
+            int height,
+            int visibleRows,
+            int columns,
+            RecipeSlotStyle slotStyle
+    ) {
         super(x, y, width, height, visibleRows, columns);
+        this.slotStyle = slotStyle;
+        this.setSoundHandler(SOUND_HANDLER);
     }
     public void onCraft(Consumer<RecipeVariantView> craft) {
         this.craft = craft == null ? ignored -> {} : craft;
@@ -99,7 +124,8 @@ public class RecipeGridElement extends CompactGridElement<RecipeEntryView, Recip
                 () -> this.isExpanded(entry.group()),
                 primary,
                 alternate,
-                this::displayedValue
+                this::displayedValue,
+                this.slotStyle
         );
     }
 

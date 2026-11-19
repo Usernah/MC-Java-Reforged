@@ -12,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class RecipeToastMixin {
     @Inject(method = "addOrUpdate", at = @At("HEAD"), cancellable = true)
     private static void javaReforged$skipRecipeNotifications(ToastManager manager, RecipeDisplay recipe, CallbackInfo ci) {
-        // Also covers packets from servers without Java Reforged. Cancel before
-        // creating a toast or resolving recipe icons, not just during rendering.
+
+
         ci.cancel();
     }
 }

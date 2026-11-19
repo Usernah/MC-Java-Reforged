@@ -10,6 +10,8 @@ import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.slot.ClientSlots;
+import net.jr.screens.MessageScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
@@ -65,6 +67,33 @@ public final class SlotScreenTransitionHandler {
                 minecraft,
                 ClientRuntime.INSTANCE.slots().primary().screenState().screen()
         );
+    }
+
+    public static void closeCompletedSecondaryJoiningScreens(Minecraft minecraft) {
+        for (int slotId = 1; slotId < ClientSlots.MAX_SLOTS; slotId++) {
+            Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
+            if (screen instanceof MessageScreen messageScreen
+                    && messageScreen.closesWhenGameplayReady()
+                    && ReadinessPolicy.gameplayReady(slotId)) {
+                SlotExecution.runForSlot(
+                    minecraft,
+                    slotId,
+                    () -> minecraft.gui.setScreen(null)
+                );
+            }
+        }
+    }
+
+    public static void clearSecondaryJoiningScreen(Minecraft minecraft, int slotId) {
+        Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
+        if (screen instanceof MessageScreen messageScreen
+                && messageScreen.closesWhenGameplayReady()) {
+            SlotExecution.runForSlot(
+                minecraft,
+                slotId,
+                () -> minecraft.gui.setScreen(null)
+            );
+        }
     }
 
     private static boolean shouldSeedControllerCursor(int slotId) {

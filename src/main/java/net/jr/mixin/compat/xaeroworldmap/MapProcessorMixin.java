@@ -58,10 +58,7 @@ abstract class MapProcessorMixin {
 
         state.skipWorldRender(cir.getReturnValue());
 
-        /*
-         * Never let Xaero disable Minecraft's global renderFrame().
-         * Java Reforged applies the skip later, per viewport.
-         */
+
         cir.setReturnValue(false);
     }
 }

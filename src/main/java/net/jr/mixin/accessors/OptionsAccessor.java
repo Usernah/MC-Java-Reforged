@@ -1,10 +1,12 @@
 package net.jr.mixin.accessors;
 
 import net.minecraft.client.CameraType;
+import net.minecraft.client.AttackIndicatorStatus;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
+import net.minecraft.world.entity.HumanoidArm;
 
 @Mixin(Options.class)
 public interface OptionsAccessor {
@@ -61,4 +63,10 @@ public interface OptionsAccessor {
 
     @Accessor("operatorItemsTab")
     OptionInstance<Boolean> javaReforged$getOperatorItemsTab();
+
+    @Accessor("attackIndicator")
+    OptionInstance<AttackIndicatorStatus> javaReforged$getAttackIndicator();
+
+    @Accessor("mainHand")
+    OptionInstance<HumanoidArm> javaReforged$getMainHand();
 }

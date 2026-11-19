@@ -6,6 +6,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.viewport.ViewportArea;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.Connection;
@@ -18,6 +19,15 @@ public final class InstanceExecution {
         runResolved(
             Minecraft.getInstance(),
             InstanceResolver.requireClient(slotId),
+            action
+        );
+    }
+
+    public static void runForClient(int slotId, ViewportArea viewport, Runnable action) {
+        runResolved(
+            Minecraft.getInstance(),
+            InstanceResolver.requireClient(slotId),
+            viewport,
             action
         );
     }
@@ -172,6 +182,18 @@ public final class InstanceExecution {
         }
     }
 
+    private static void runResolved(
+        Minecraft minecraft,
+        ClientInstance client,
+        ViewportArea viewport,
+        Runnable action
+    ) {
+        Objects.requireNonNull(action, "action");
+        try (Scope ignored = enterResolved(minecraft, client, viewport)) {
+            action.run();
+        }
+    }
+
     private static <T> T callResolved(
         Minecraft minecraft,
         ClientInstance client,
@@ -196,6 +218,14 @@ public final class InstanceExecution {
 
     private static Scope enterResolved(Minecraft minecraft, ClientInstance client) {
         return new Scope(SlotExecution.enterForSlot(minecraft, client.slot()));
+    }
+
+    private static Scope enterResolved(
+        Minecraft minecraft,
+        ClientInstance client,
+        ViewportArea viewport
+    ) {
+        return new Scope(SlotExecution.enterForSlot(minecraft, client.slot(), viewport));
     }
 
     public static final class Scope implements AutoCloseable {

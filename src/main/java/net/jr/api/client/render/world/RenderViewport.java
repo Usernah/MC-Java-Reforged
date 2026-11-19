@@ -1,8 +1,6 @@
 package net.jr.api.client.render.world;
 
-/**
- * The framebuffer and GUI bounds assigned to one rendered world view.
- */
+
 public interface RenderViewport {
     int id();
 

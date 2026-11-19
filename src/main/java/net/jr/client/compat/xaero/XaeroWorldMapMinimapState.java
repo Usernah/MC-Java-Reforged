@@ -10,13 +10,7 @@ import xaero.map.mods.gui.Waypoint;
 import xaero.map.mods.gui.WaypointMenuRenderer;
 import xaero.map.mods.minimap.element.MinimapElementGraphicsWrapper;
 
-/**
- * Mutable state owned by Xaero's World Map -> Minimap compatibility bridge.
- *
- * <p>Xaero keeps one {@code SupportXaeroMinimap} singleton, even though Java
- * Reforged can display several independent {@code GuiMap} instances. These
- * values therefore have to travel with the active local-player slot.</p>
- */
+
 public final class XaeroWorldMapMinimapState {
     private boolean deathpoints = true;
     private boolean refreshWaypoints = true;

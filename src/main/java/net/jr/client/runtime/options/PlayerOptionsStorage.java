@@ -9,8 +9,13 @@ import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.util.JsonFileStore;
 import net.jr.client.runtime.state.OptionsState;
+import net.jr.client.runtime.state.CraftingMode;
+import net.jr.client.runtime.state.LegacyBehaviorMode;
+import net.jr.client.ui.presentation.UiSizeMode;
+import net.minecraft.client.AttackIndicatorStatus;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.HumanoidArm;
 
 public final class PlayerOptionsStorage {
     private static final String FILE_NAME = "player_options.json";
@@ -35,7 +40,7 @@ public final class PlayerOptionsStorage {
             for (Slots slot : this.slots.all()) {
                 JsonElement element = root.get(playerKey(slot.id()));
                 if (element != null && element.isJsonObject()) {
-                    this.read(slot.optionsState(), element.getAsJsonObject());
+                    this.read(slot, element.getAsJsonObject());
                 }
             }
         }
@@ -51,15 +56,44 @@ public final class PlayerOptionsStorage {
 
         JsonObject root = new JsonObject();
         for (Slots slot : this.slots.all()) {
-            root.add(playerKey(slot.id()), this.write(slot.optionsState()));
+            root.add(playerKey(slot.id()), this.write(slot));
         }
         JsonFileStore.write(this.filePath, root);
     }
 
-    private void read(OptionsState state, JsonObject player) {
+    private void read(Slots slot, JsonObject player) {
+        OptionsState state = slot.optionsState();
         state.setGuiScale(integer(player, "gui_scale", state.requestedGuiScale()));
+        if (slot.isPrimary()) {
+            state.setInterfaceMode(UiSizeMode.byName(string(
+                    player,
+                    "interface_mode",
+                    state.interfaceMode().get().serializedName()
+            )));
+        }
+        state.setBottomHudScale(integer(player, "bottom_hud_scale", state.bottomHudScale().get()));
+        state.setSplitBottomHudScale(integer(
+                player,
+                "split_bottom_hud_scale",
+                state.splitBottomHudScale().get()
+        ));
         state.setFov(integer(player, "fov", state.fov().get()));
         state.setBrightness(decimal(player, "brightness", state.brightness().get()));
+        if (slot.isPrimary()) {
+            state.setLegacyGamma(decimal(player, "legacy_gamma", state.legacyGamma().get()));
+        }
+        state.setHudTransparency(decimal(player, "hud_transparency", state.hudTransparency().get()));
+        state.setShowPlayerModelHud(bool(
+                player,
+                "show_player_model_hud",
+                state.showPlayerModelHud().get()
+        ));
+        if (slot.isPrimary()) {
+            state.setShowPlayerNameHud(bool(player, "show_player_name_hud", state.showPlayerNameHud().get()));
+            state.setShowWorldPlayerNames(bool(player, "show_world_player_names", state.showWorldPlayerNames().get()));
+        }
+        state.setShowControlHints(bool(player, "show_control_hints", state.showControlHints().get()));
+        state.setShowLocatorBar(bool(player, "show_locator_bar", state.showLocatorBar().get()));
         state.setCameraType(cameraType(string(player, "camera_type", cameraTypeId(state.cameraType()))));
         state.setSensitivity(decimal(player, "sensitivity", state.sensitivity().get()));
         state.setMouseWheelSensitivity(decimal(player, "mouse_wheel_sensitivity", state.mouseWheelSensitivity().get()));
@@ -75,6 +109,27 @@ public final class PlayerOptionsStorage {
         state.setSprintWindow(integer(player, "sprint_window", state.sprintWindow().get()));
         state.setAutoJump(bool(player, "auto_jump", state.autoJump().get()));
         state.setOperatorItemsTab(bool(player, "operator_items_tab", state.operatorItemsTab().get()));
+        state.setAttackIndicator(attackIndicator(string(
+                player,
+                "attack_indicator",
+                state.attackIndicator().get().name()
+        )));
+        state.setMainHand(mainHand(string(player, "main_hand", state.mainHand().get().name())));
+        state.setCraftingMode(CraftingMode.byName(string(
+                player,
+                "crafting_mode",
+                state.craftingMode().get().serializedName()
+        )));
+        state.setFlightMode(LegacyBehaviorMode.byName(string(
+                player,
+                "flight_mode",
+                state.flightMode().get().serializedName()
+        )));
+        state.setConstructionMode(LegacyBehaviorMode.byName(string(
+                player,
+                "construction_mode",
+                state.constructionMode().get().serializedName()
+        )));
         state.setControllerCursorSensitivity(decimal(
                 player,
                 "controller_cursor_sensitivity",
@@ -107,11 +162,28 @@ public final class PlayerOptionsStorage {
         ));
     }
 
-    private JsonObject write(OptionsState state) {
+    private JsonObject write(Slots slot) {
+        OptionsState state = slot.optionsState();
         JsonObject player = new JsonObject();
         player.addProperty("gui_scale", state.requestedGuiScale());
+        if (slot.isPrimary()) {
+            player.addProperty("interface_mode", state.interfaceMode().get().serializedName());
+        }
+        player.addProperty("bottom_hud_scale", state.bottomHudScale().get());
+        player.addProperty("split_bottom_hud_scale", state.splitBottomHudScale().get());
         player.addProperty("fov", state.fov().get());
         player.addProperty("brightness", state.brightness().get());
+        if (slot.isPrimary()) {
+            player.addProperty("legacy_gamma", state.legacyGamma().get());
+        }
+        player.addProperty("hud_transparency", state.hudTransparency().get());
+        player.addProperty("show_player_model_hud", state.showPlayerModelHud().get());
+        if (slot.isPrimary()) {
+            player.addProperty("show_player_name_hud", state.showPlayerNameHud().get());
+            player.addProperty("show_world_player_names", state.showWorldPlayerNames().get());
+        }
+        player.addProperty("show_control_hints", state.showControlHints().get());
+        player.addProperty("show_locator_bar", state.showLocatorBar().get());
         player.addProperty("camera_type", cameraTypeId(state.cameraType()));
         player.addProperty("sensitivity", state.sensitivity().get());
         player.addProperty("mouse_wheel_sensitivity", state.mouseWheelSensitivity().get());
@@ -127,6 +199,11 @@ public final class PlayerOptionsStorage {
         player.addProperty("sprint_window", state.sprintWindow().get());
         player.addProperty("auto_jump", state.autoJump().get());
         player.addProperty("operator_items_tab", state.operatorItemsTab().get());
+        player.addProperty("attack_indicator", state.attackIndicator().get().name());
+        player.addProperty("main_hand", state.mainHand().get().name());
+        player.addProperty("crafting_mode", state.craftingMode().get().serializedName());
+        player.addProperty("flight_mode", state.flightMode().get().serializedName());
+        player.addProperty("construction_mode", state.constructionMode().get().serializedName());
         player.addProperty("controller_cursor_sensitivity", state.controllerCursorSensitivity().get());
         player.addProperty("controller_camera_sensitivity", state.controllerCameraSensitivity().get());
         player.addProperty("controller_spyglass_sensitivity", state.controllerSpyglassSensitivity().get());
@@ -202,5 +279,21 @@ public final class PlayerOptionsStorage {
             case THIRD_PERSON_FRONT -> "third_person_front";
             default -> "first_person";
         };
+    }
+
+    private static AttackIndicatorStatus attackIndicator(String value) {
+        try {
+            return AttackIndicatorStatus.valueOf(value);
+        } catch (IllegalArgumentException exception) {
+            return AttackIndicatorStatus.CROSSHAIR;
+        }
+    }
+
+    private static HumanoidArm mainHand(String value) {
+        try {
+            return HumanoidArm.valueOf(value);
+        } catch (IllegalArgumentException exception) {
+            return HumanoidArm.RIGHT;
+        }
     }
 }

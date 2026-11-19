@@ -1,5 +1,7 @@
 package net.jr.client.components.elements;
 
+import net.jr.api.client.ui.Viewport;
+
 public interface VisualElementsInterface {
     VisualState visualState();
 
@@ -115,6 +117,55 @@ public interface VisualElementsInterface {
         this.visualState().setBaseVisible(visible);
     }
 
+    default VisualAnchor anchor() {
+        return this.visualState().anchor();
+    }
+
+    default void setAnchor(VisualAnchor anchor) {
+        this.visualState().setAnchor(anchor);
+    }
+
+    default VisualAnchor baseAnchor() {
+        return this.visualState().baseAnchor();
+    }
+
+    default void setBaseAnchor(VisualAnchor anchor) {
+        this.visualState().setBaseAnchor(anchor);
+    }
+
+    default VisualElementsInterface layoutParent() {
+        return this.visualState().layoutParent();
+    }
+
+    default void setLayoutParent(VisualElementsInterface parent) {
+        if (parent == this) {
+            throw new IllegalArgumentException("A visual element cannot be its own layout parent");
+        }
+        this.visualState().setLayoutParent(parent);
+    }
+
+    default float resolvedX() {
+        VisualAnchor anchor = this.anchor();
+        VisualElementsInterface parent = this.layoutParent();
+        if (!anchor.isExplicit()) {
+            return parent == null ? this.x() : parent.resolvedX() + this.x();
+        }
+        return parent == null
+            ? anchor.resolveX(this.x(), this.width(), 0.0F, Viewport.current().uiWidth())
+            : anchor.resolveX(this.x(), this.width(), parent.resolvedX(), parent.width());
+    }
+
+    default float resolvedY() {
+        VisualAnchor anchor = this.anchor();
+        VisualElementsInterface parent = this.layoutParent();
+        if (!anchor.isExplicit()) {
+            return parent == null ? this.y() : parent.resolvedY() + this.y();
+        }
+        return parent == null
+            ? anchor.resolveY(this.y(), this.height(), 0.0F, Viewport.current().uiHeight())
+            : anchor.resolveY(this.y(), this.height(), parent.resolvedY(), parent.height());
+    }
+
     default void setPosition(float x, float y) {
         this.visualState().setPosition(x, y);
     }
@@ -145,5 +196,23 @@ public interface VisualElementsInterface {
 
     default void captureBaseState() {
         this.visualState().captureBaseState();
+    }
+
+
+    default Object dslValue(String property) {
+        return switch (property) {
+            case "x" -> this.x();
+            case "y" -> this.y();
+            case "w", "width" -> this.width();
+            case "h", "height" -> this.height();
+            case "resolved_x" -> this.resolvedX();
+            case "resolved_y" -> this.resolvedY();
+            case "rotation" -> this.rotation();
+            case "alpha" -> this.alpha();
+            case "visible" -> this.visible();
+            default -> throw new IllegalArgumentException(
+                "Visual element does not expose '" + property + "'"
+            );
+        };
     }
 }

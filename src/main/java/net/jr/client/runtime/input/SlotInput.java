@@ -8,10 +8,11 @@ import net.jr.api.client.input.IKeyboardMouse;
 import net.jr.api.client.input.ISlotInput;
 import net.jr.api.client.input.IScreenInput;
 import net.jr.api.client.input.InputMode;
+import net.jr.api.client.systemui.SystemUI;
 import net.jr.client.input.simulation.InputSimulation;
 import net.jr.client.runtime.ClientRuntime;
 
-/** Resolves physical input for one stable local-client slot. */
+
 public final class SlotInput implements ISlotInput {
     private final int slotId;
     private final IScreenInput screen;
@@ -73,6 +74,9 @@ public final class SlotInput implements ISlotInput {
 
     @Override
     public float axis(GamepadAxis axis, float deadzone) {
+        if (SystemUI.blocksSlot(this.slotId)) {
+            return 0.0F;
+        }
         if (InputSimulation.isActive()) {
             return InputSimulation.axis(axis, deadzone);
         }
@@ -88,6 +92,9 @@ public final class SlotInput implements ISlotInput {
 
     @Override
     public float rawAxis(GamepadAxis axis) {
+        if (SystemUI.blocksSlot(this.slotId)) {
+            return 0.0F;
+        }
         if (InputSimulation.isActive()) {
             return InputSimulation.rawAxis(axis);
         }

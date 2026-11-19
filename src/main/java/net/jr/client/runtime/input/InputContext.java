@@ -61,8 +61,16 @@ public final class InputContext {
         return keyMappingState(keyMapping).isDown();
     }
 
+    public static boolean isPhysicallyDown(KeyMapping keyMapping) {
+        return keyMappingState(keyMapping).isPhysicallyDown();
+    }
+
     public static void setDown(KeyMapping keyMapping, boolean down) {
         keyMappingState(keyMapping).setDown(down);
+    }
+
+    public static void setPhysicallyDown(KeyMapping keyMapping, boolean down) {
+        keyMappingState(keyMapping).setPhysicallyDown(down);
     }
 
     public static void click(KeyMapping keyMapping) {

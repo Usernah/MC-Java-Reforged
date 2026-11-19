@@ -507,7 +507,7 @@ public final class BattleRuntime {
                         BattleChestLoot.refillRandom(server, level);
 
                 if (!refilledChests.isEmpty()) {
-                    long expiresAt = level.getGameTime() + 100L; // cinco segundos
+                    long expiresAt = level.getGameTime() + 100L;
 
                     for (BlockPos pos : refilledChests) {
                         REFILL_PARTICLES.put(pos.immutable(), expiresAt);
@@ -883,11 +883,11 @@ public final class BattleRuntime {
 
     @Nullable
     private static ServerLevel resolveBattleLevel(MinecraftServer server) {
-        // Sistema Viejo de dimension desactivado temporalmente
-        //ServerLevel minigameLevel = server.getLevel(MinigameDimension.MINIGAME_KEY);
-        //if (minigameLevel != null && !minigameLevel.players().isEmpty()) {
-        //    return minigameLevel;
-        //}
+
+
+
+
+
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!player.isSpectator()) {

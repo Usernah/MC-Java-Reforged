@@ -23,11 +23,7 @@ import net.jr.client.runtime.client.ClientInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 
-/**
- * Swaps Create's legacy static client state whenever Java Reforged changes the
- * active local client. Create's render engines remain global; only interaction,
- * animation and temporal render values are scoped.
- */
+
 public final class CreateRuntimeState {
     private static final Map<ClientInstance, State> STATES = new WeakHashMap<>();
     private static final ThreadLocal<State> ACTIVE_STATE = new ThreadLocal<>();
@@ -97,24 +93,22 @@ public final class CreateRuntimeState {
 
     private static volatile Schema schema;
     private static volatile Method contraptionTickMethod;
-    private static volatile Method soundScapesTickMethod;
-    private static volatile Method airCurrentSoundTickMethod;
     private static volatile boolean ready;
     private static volatile boolean failed;
 
     private CreateRuntimeState() {
     }
 
-    /** Called from Create's completed static initializer. */
+
     public static void markReady() {
         ready = true;
     }
 
     public static Scope activate(ClientInstance client) {
-        // Create owns mutable render collections that are also observed by map
-        // worker threads.  Those threads still need JR's Minecraft/session
-        // routing, but they must never exchange Create's render state: doing so
-        // races the render thread and can invalidate both snapshots.
+
+
+
+
         if (!ready || failed || client == null || !Minecraft.getInstance().isSameThread()) {
             return Scope.NOOP;
         }
@@ -146,11 +140,7 @@ public final class CreateRuntimeState {
         }
     }
 
-    /**
-     * Runs Create's collision pass after a secondary local world's entity
-     * update. The normal ClientTick.Post event is too early for secondary
-     * worlds because JR ticks those worlds after the primary client tick.
-     */
+
     public static void tickContraptionsAfterWorldTick(Level level) {
         if (!ready || failed || level == null
                 || !Minecraft.getInstance().isSameThread()) {
@@ -182,74 +172,6 @@ public final class CreateRuntimeState {
                     error
             );
         }
-    }
-
-    /**
-     * Restores the client-audio maintenance calls present in upstream Create.
-     * Create Adapted 0.996 no longer invokes these from ClientEvents.preTick,
-     * leaving ambient soundscapes alive after their sources disappear and
-     * preventing fan/player sounds from advancing.
-     */
-    public static void tickClientAudio() {
-        if (!ready || failed || !Minecraft.getInstance().isSameThread()) {
-            return;
-        }
-
-        try {
-            soundScapesTickMethod().invoke(null);
-            airCurrentSoundTickMethod().invoke(null);
-        } catch (IllegalAccessException error) {
-            throw new IllegalStateException("Unable to invoke Create's client audio tick", error);
-        } catch (InvocationTargetException error) {
-            Throwable cause = error.getCause();
-            if (cause instanceof RuntimeException runtime) {
-                throw runtime;
-            }
-            if (cause instanceof Error fatal) {
-                throw fatal;
-            }
-            throw new IllegalStateException("Create's client audio tick failed", cause);
-        } catch (ReflectiveOperationException error) {
-            throw new IllegalStateException("Create's client audio tick is unavailable", error);
-        }
-    }
-
-    private static Method soundScapesTickMethod() throws ReflectiveOperationException {
-        Method cached = soundScapesTickMethod;
-        if (cached == null) {
-            synchronized (CreateRuntimeState.class) {
-                cached = soundScapesTickMethod;
-                if (cached == null) {
-                    Class<?> type = Class.forName(
-                        "com.simibubi.create.foundation.sound.SoundScapes",
-                        false,
-                        CreateRuntimeState.class.getClassLoader()
-                    );
-                    cached = type.getMethod("tick");
-                    soundScapesTickMethod = cached;
-                }
-            }
-        }
-        return cached;
-    }
-
-    private static Method airCurrentSoundTickMethod() throws ReflectiveOperationException {
-        Method cached = airCurrentSoundTickMethod;
-        if (cached == null) {
-            synchronized (CreateRuntimeState.class) {
-                cached = airCurrentSoundTickMethod;
-                if (cached == null) {
-                    Class<?> type = Class.forName(
-                        "com.simibubi.create.content.kinetics.fan.AirCurrent$Client",
-                        false,
-                        CreateRuntimeState.class.getClassLoader()
-                    );
-                    cached = type.getMethod("tickClientPlayerSounds");
-                    airCurrentSoundTickMethod = cached;
-                }
-            }
-        }
-        return cached;
     }
 
     private static Method contraptionTickMethod()
@@ -511,7 +433,7 @@ public final class CreateRuntimeState {
                     rootCollection.addAll(valueCollection);
                 }
             } catch (UnsupportedOperationException ignored) {
-                // Immutable lookup tables are shared engine data, not client state.
+
             }
         }
 
@@ -662,7 +584,7 @@ public final class CreateRuntimeState {
                     }
                 }
             } catch (UnsupportedOperationException ignored) {
-                // Immutable lookup tables are shared engine data, not client state.
+
             }
         }
 

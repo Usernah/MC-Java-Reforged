@@ -4,7 +4,7 @@ import net.jr.client.runtime.ClientRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 
-/** Intercepts vanilla's common world-entry action before it starts loading. */
+
 public final class PreJoinWorldEntry {
     private static boolean continuingWorldOpen;
 

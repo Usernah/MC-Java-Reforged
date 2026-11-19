@@ -52,16 +52,19 @@ public final class WorldRenderViews {
         ClientRuntime runtime,
         Predicate<ClientInstance> readiness
     ) {
+        int readyFallbackSlotId = -1;
         for (Slots slot : runtime.viewports().drawableSlots()) {
             ClientInstance client = runtime.clients().clientOrNull(slot.id());
-            if (
-                    client != null
-                            && readiness.test(client)
-                            && client.player().isAlive()
-            ) {
+            if (client == null || !readiness.test(client)) {
+                continue;
+            }
+            if (readyFallbackSlotId < 0) {
+                readyFallbackSlotId = slot.id();
+            }
+            if (client.player().isAlive()) {
                 return slot.id();
             }
         }
-        return -1;
+        return readyFallbackSlotId;
     }
 }

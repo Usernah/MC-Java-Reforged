@@ -16,7 +16,7 @@ import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Util;
 
-/** Owns join-prompt eligibility and announces only meaningful state changes. */
+
 public final class JoinPromptAnnouncer {
     private static final long DISPLAY_TIME_MS = 3_000L;
     private static final AnnouncementPublisher<JoinPromptAnnouncement> ANNOUNCEMENTS =

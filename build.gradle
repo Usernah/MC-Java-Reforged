@@ -16,6 +16,19 @@ group = mod_group_id
 repositories {
     mavenCentral()
     maven { url = "https://maven.isxander.dev/releases" }
+    ivy {
+        name = "SdlGitHubReleases"
+        url = uri("https://github.com/libsdl-org/SDL/releases/download")
+        patternLayout {
+            artifact("release-[revision]/[artifact]-[revision]-[classifier].[ext]")
+        }
+        metadataSources {
+            artifact()
+        }
+        content {
+            includeModule("org.libsdl", "SDL3")
+        }
+    }
     exclusiveContent {
         forRepository {
             maven {
@@ -36,6 +49,8 @@ configurations {
     api.extendsFrom bundleShadow
     runtimeOnly.extendsFrom bundleShadow
 }
+
+def sdlNativeVersion = '3.4.18'
 
 def sodiumCompileJar = layout.buildDirectory.file('sodium-api/sodium-neoforge.jar')
 
@@ -73,6 +88,10 @@ sourceSets {
     main {
         runtimeClasspath += sourceSets.transformService.output
     }
+    test {
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
 }
 
 def transformServiceJar = tasks.register('transformServiceJar', Jar) {
@@ -100,7 +119,7 @@ neoForge {
     runs {
         client {
             client()
-            //programArguments.addAll '--width', '2560', '--height', '1080'
+            programArguments.addAll '--width', '1280', '--height', '720'
             if (project.hasProperty('devUsername')) {
                 programArguments.addAll '--username', project.property('devUsername').toString()
             }
@@ -193,6 +212,10 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 
 dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     // FML 11 replaced ModLauncher's launch plugins with class processors.
     // The loader is already supplied by NeoForge at runtime; this is API-only.
     transformServiceCompileOnly "net.neoforged.fancymodloader:loader:11.0.13"
@@ -234,15 +257,16 @@ dependencies {
 
     // SDL3 Java bindings and Windows native used by the old Java Reforged.
     def libsdl4j_ver = '3.2.18.release-3.2.18-82'
-    def libsdl4j_natives_ver = '3.2.18.release-3.2.18'
-
     bundleShadow "dev.isxander:libsdl4j:${libsdl4j_ver}"
     api "dev.isxander:libsdl4j:${libsdl4j_ver}"
 
     bundleShadow 'net.java.dev.jna:jna:5.14.0'
     api 'net.java.dev.jna:jna:5.14.0'
 
-    sdlNative "dev.isxander:libsdl4j-natives:${libsdl4j_natives_ver}:windows-x86_64@dll"
+    // libsdl4j currently publishes 3.2.18 bindings, but SDL keeps ABI
+    // compatibility within major version 3. Use the current native runtime so
+    // the GameInput/GIP drivers added after 3.2.18 are available.
+    sdlNative "org.libsdl:SDL3:${sdlNativeVersion}:win32-x64@zip"
     // Example mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
@@ -265,10 +289,15 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 }
 
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+}
+
 tasks.register('copySdlNatives', Copy) {
-    from(configurations.sdlNative)
+    from({ configurations.sdlNative.collect { archive -> zipTree(archive) } }) {
+        include 'SDL3.dll'
+    }
     into(layout.buildDirectory.dir('sdl-natives/windows-x86_64'))
-    rename { 'SDL3.dll' }
 }
 
 tasks.named('processResources', ProcessResources).configure {

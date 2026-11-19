@@ -6,38 +6,46 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.IdentityHashMap;
 import java.util.Map;
-import javax.annotation.Nullable;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.multiplayer.ClientLevel;
 
-/**
- * Keeps Sodium's worker pool global while selecting a build context for the
- * ClientLevel that submitted each job. Sodium normally creates one context per
- * worker because one renderer only has one level.
- */
 public final class SodiumChunkBuildContextRouter {
-    private static final Map<Object, ClientLevel> JOB_LEVELS =
-        java.util.Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Map<Object, JobRoute> JOB_ROUTES = new IdentityHashMap<>();
     private static final ThreadLocal<Map<ClientLevel, Object>> CONTEXTS =
         ThreadLocal.withInitial(IdentityHashMap::new);
     private static final ThreadLocal<Object> ACTIVE_CONTEXT = new ThreadLocal<>();
-    private static @Nullable Field buffersField;
-    private static @Nullable Field vertexTypeField;
-    private static @Nullable Constructor<?> contextConstructor;
-    private static @Nullable Method executeMethod;
-    private static @Nullable Method cleanupMethod;
+    private static final Map<Class<?>, Field> BUFFERS_FIELDS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Field> VERTEX_TYPE_FIELDS = new ConcurrentHashMap<>();
+    private static final Map<ConstructorKey, Constructor<?>> CONTEXT_CONSTRUCTORS =
+        new ConcurrentHashMap<>();
+    private static final Map<MethodKey, Method> EXECUTE_METHODS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Method> CLEANUP_METHODS = new ConcurrentHashMap<>();
 
     private SodiumChunkBuildContextRouter() {
     }
 
-    public static void register(Object job, ClientLevel level) {
-        JOB_LEVELS.put(job, level);
+    public static void register(Object builder, Object job, ClientLevel level) {
+        synchronized (JOB_ROUTES) {
+            JOB_ROUTES.put(job, new JobRoute(builder, level));
+        }
+    }
+
+    public static void discardBuilder(Object builder, ClientLevel level) {
+        synchronized (JOB_ROUTES) {
+            JOB_ROUTES.entrySet().removeIf(entry -> entry.getValue().builder == builder);
+        }
+        Map<ClientLevel, Object> contexts = CONTEXTS.get();
+        contexts.remove(level);
+        if (contexts.isEmpty()) {
+            CONTEXTS.remove();
+        }
     }
 
     public static void execute(Object job, Object fallbackContext) {
         Object context = contextFor(job, fallbackContext);
         ACTIVE_CONTEXT.set(context);
         try {
-            invoke(job, executeMethod(job), context);
+            invoke(job, executeMethod(job.getClass(), context.getClass()), context);
         } catch (RuntimeException exception) {
             ACTIVE_CONTEXT.remove();
             throw exception;
@@ -47,99 +55,98 @@ public final class SodiumChunkBuildContextRouter {
     public static void cleanup(Object fallbackContext) {
         Object context = ACTIVE_CONTEXT.get();
         ACTIVE_CONTEXT.remove();
-        invoke(context != null ? context : fallbackContext, cleanupMethod(context != null ? context : fallbackContext));
+        Object resolved = context != null ? context : fallbackContext;
+        invoke(resolved, cleanupMethod(resolved.getClass()));
     }
 
     private static Object contextFor(Object job, Object fallbackContext) {
-        ClientLevel level = JOB_LEVELS.remove(job);
-        if (level == null) {
+        JobRoute route;
+        synchronized (JOB_ROUTES) {
+            route = JOB_ROUTES.remove(job);
+        }
+        if (route == null) {
             return fallbackContext;
         }
 
         Map<ClientLevel, Object> contexts = CONTEXTS.get();
-        Object context = contexts.get(level);
-        if (context == null) {
-            context = createContext(level, fallbackContext);
-            contexts.put(level, context);
-        }
-        return context;
+        return contexts.computeIfAbsent(
+            route.level,
+            level -> createContext(level, fallbackContext)
+        );
     }
 
     private static Object createContext(ClientLevel level, Object fallbackContext) {
         try {
-            Object buffers = buffersField(fallbackContext).get(fallbackContext);
-            Object vertexType = vertexTypeField(buffers).get(buffers);
-            Constructor<?> constructor = contextConstructor(fallbackContext.getClass());
+            Object buffers = field(BUFFERS_FIELDS, fallbackContext.getClass(), "buffers")
+                .get(fallbackContext);
+            Object vertexType = field(VERTEX_TYPE_FIELDS, buffers.getClass(), "vertexType")
+                .get(buffers);
+            Constructor<?> constructor = contextConstructor(
+                fallbackContext.getClass(),
+                vertexType.getClass()
+            );
             return constructor.newInstance(level, vertexType);
         } catch (ReflectiveOperationException exception) {
             throw new IllegalStateException("Unsupported Sodium chunk build context", exception);
         }
     }
 
-    private static Field buffersField(Object context) throws NoSuchFieldException {
-        Field field = buffersField;
-        if (field == null) {
-            field = accessibleField(context.getClass(), "buffers");
-            buffersField = field;
-        }
-        return field;
+    private static Field field(Map<Class<?>, Field> cache, Class<?> type, String name) {
+        return cache.computeIfAbsent(type, ignored -> {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException exception) {
+                throw new IllegalStateException(
+                    "Unsupported Sodium field " + type.getName() + "." + name,
+                    exception
+                );
+            }
+        });
     }
 
-    private static Field vertexTypeField(Object buffers) throws NoSuchFieldException {
-        Field field = vertexTypeField;
-        if (field == null) {
-            field = accessibleField(buffers.getClass(), "vertexType");
-            vertexTypeField = field;
-        }
-        return field;
+    private static Constructor<?> contextConstructor(Class<?> contextType, Class<?> vertexType) {
+        return CONTEXT_CONSTRUCTORS.computeIfAbsent(
+            new ConstructorKey(contextType, vertexType),
+            ignored -> {
+                for (Constructor<?> constructor : contextType.getConstructors()) {
+                    Class<?>[] parameters = constructor.getParameterTypes();
+                    if (parameters.length == 2
+                            && parameters[0].isAssignableFrom(ClientLevel.class)
+                            && parameters[1].isAssignableFrom(vertexType)) {
+                        return constructor;
+                    }
+                }
+                throw new IllegalStateException(
+                    "Unsupported Sodium context constructor: " + contextType.getName()
+                );
+            }
+        );
     }
 
-    private static Constructor<?> contextConstructor(Class<?> contextType) throws ReflectiveOperationException {
-        Constructor<?> constructor = contextConstructor;
-        if (constructor == null) {
-            constructor = contextType.getConstructors()[0];
-            contextConstructor = constructor;
-        }
-        return constructor;
+    private static Method executeMethod(Class<?> jobType, Class<?> contextType) {
+        return EXECUTE_METHODS.computeIfAbsent(
+            new MethodKey(jobType, contextType),
+            ignored -> publicMethod(jobType, "execute", contextType)
+        );
     }
 
-    private static Method executeMethod(Object job) {
-        Method method = executeMethod;
-        if (method == null) {
-            method = publicMethod(job.getClass(), "execute", contextConstructorParameter());
-            executeMethod = method;
-        }
-        return method;
-    }
-
-    private static Class<?> contextConstructorParameter() {
-        Constructor<?> constructor = contextConstructor;
-        if (constructor == null) {
-            throw new IllegalStateException("Sodium chunk build context has not been initialized");
-        }
-        return constructor.getDeclaringClass();
-    }
-
-    private static Method cleanupMethod(Object context) {
-        Method method = cleanupMethod;
-        if (method == null) {
-            method = publicMethod(context.getClass(), "cleanup");
-            cleanupMethod = method;
-        }
-        return method;
-    }
-
-    private static Field accessibleField(Class<?> type, String name) throws NoSuchFieldException {
-        Field field = type.getDeclaredField(name);
-        field.setAccessible(true);
-        return field;
+    private static Method cleanupMethod(Class<?> contextType) {
+        return CLEANUP_METHODS.computeIfAbsent(
+            contextType,
+            ignored -> publicMethod(contextType, "cleanup")
+        );
     }
 
     private static Method publicMethod(Class<?> type, String name, Class<?>... parameterTypes) {
         try {
             return type.getMethod(name, parameterTypes);
         } catch (NoSuchMethodException exception) {
-            throw new IllegalStateException("Unsupported Sodium chunk builder", exception);
+            throw new IllegalStateException(
+                "Unsupported Sodium method " + type.getName() + "." + name,
+                exception
+            );
         }
     }
 
@@ -155,5 +162,14 @@ public final class SodiumChunkBuildContextRouter {
             }
             throw new IllegalStateException("Sodium chunk build failed", cause);
         }
+    }
+
+    private record JobRoute(Object builder, ClientLevel level) {
+    }
+
+    private record ConstructorKey(Class<?> contextType, Class<?> vertexType) {
+    }
+
+    private record MethodKey(Class<?> ownerType, Class<?> parameterType) {
     }
 }

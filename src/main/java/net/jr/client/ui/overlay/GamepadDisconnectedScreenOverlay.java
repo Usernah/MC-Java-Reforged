@@ -4,11 +4,7 @@ import net.jr.client.components.elements.TextElement;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
-/**
- * Passive, per-viewport warning shown while a secondary player's assigned
- * controller is temporarily unavailable. It deliberately does not consume
- * input, so a reconnect can resume the existing slot immediately.
- */
+
 public final class GamepadDisconnectedScreenOverlay implements VanillaScreenOverlay {
     private static final int PANEL_COLOR = 0xD92B0B0B;
     private static final int PANEL_BORDER_COLOR = 0xFFFF6B6B;

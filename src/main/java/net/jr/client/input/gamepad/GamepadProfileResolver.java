@@ -5,7 +5,7 @@ import javax.annotation.Nullable;
 import net.jr.api.client.input.ControllerGlyphSet;
 import net.jr.api.client.input.GamepadIdentity;
 
-/** Classifies controller identity without depending on GUI rendering. */
+
 public final class GamepadProfileResolver {
     private GamepadProfileResolver() {
     }

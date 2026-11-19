@@ -43,4 +43,27 @@ public final class GuiItemExtractionHandler {
             graphics.itemDecorations(decorationFont, stack, x, y, countText);
         }
     }
+
+    public static void renderCarriedStackAtSize(
+        GuiGraphicsExtractor graphics,
+        ItemStack stack,
+        int x,
+        int y,
+        int seed,
+        int size,
+        boolean fakeItem,
+        @Nullable Font decorationFont,
+        @Nullable String countText
+    ) {
+        ItemRenderResolution.drawCarriedAtSize(size, () -> {
+            if (fakeItem) {
+                graphics.fakeItem(stack, x, y, seed);
+            } else {
+                graphics.item(stack, x, y, seed);
+            }
+        });
+        if (decorationFont != null) {
+            graphics.itemDecorations(decorationFont, stack, x, y, countText);
+        }
+    }
 }

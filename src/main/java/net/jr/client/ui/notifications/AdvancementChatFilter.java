@@ -14,8 +14,8 @@ public final class AdvancementChatFilter {
 
     @SubscribeEvent
     public static void onSystemMessage(ClientChatReceivedEvent.System event) {
-        // Remote servers may still announce advancements. Match the structured
-        // announcement only, without filtering player messages or translated text.
+
+
         if (!event.isOverlay() && event.getMessage().getContents() instanceof TranslatableContents contents) {
             String key = contents.getKey();
             if (key.equals("chat.type.advancement.task")

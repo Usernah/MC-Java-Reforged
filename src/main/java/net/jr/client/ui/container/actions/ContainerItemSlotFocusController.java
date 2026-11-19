@@ -242,7 +242,7 @@ public final class ContainerItemSlotFocusController {
     }
 
     private static void setFocus(AbstractContainerScreen<?> screen, Slot slot) {
-        // A vanilla container slot and a screen widget must not both own controller focus.
+
         screen.clearFocus();
         state().containerItemSlotFocus().put(screen, slot.index);
         FocusedItemSlotCenter center = getFocusedItemSlotCenter(screen);

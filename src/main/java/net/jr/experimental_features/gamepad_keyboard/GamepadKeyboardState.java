@@ -10,17 +10,19 @@ import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.Button;
 import net.jr.client.input.InputApi;
 import net.jr.api.client.input.GamepadDigitalInput;
-import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.overlay.ScreenOverlayCloseReason;
 import net.jr.client.ui.overlay.ScreenOverlayContext;
 import net.jr.client.ui.overlay.VanillaScreenOverlay;
 import net.jr.registry.ModFonts;
+import net.jr.registry.ModSounds;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Util;
 
-/** Per-local-player editing session for the experimental controller keyboard. */
+
 public final class GamepadKeyboardState implements VanillaScreenOverlay {
     private static final long REPEAT_DELAY_MS = 300L;
     private static final long REPEAT_INTERVAL_MS = 85L;
@@ -126,7 +128,7 @@ public final class GamepadKeyboardState implements VanillaScreenOverlay {
             return;
         }
         if (!InputApi.isGamepadMode()) {
-            // Leave the original field focused so physical keyboard input can resume naturally.
+
             this.cancel();
             context.close(ScreenOverlayCloseReason.INPUT_MODE_CHANGED);
             return;
@@ -484,7 +486,7 @@ public final class GamepadKeyboardState implements VanillaScreenOverlay {
         this.value = this.value.substring(0, this.cursor) + insertion + this.value.substring(this.cursor);
         this.cursor += insertion.length();
         this.refreshKeyAvailabilityAndFocus();
-        InputActionSounds.playChar();
+        playCharacterSound();
     }
 
     private void backspace() {
@@ -495,7 +497,7 @@ public final class GamepadKeyboardState implements VanillaScreenOverlay {
         this.value = this.value.substring(0, previous) + this.value.substring(this.cursor);
         this.cursor = previous;
         this.refreshKeyAvailabilityAndFocus();
-        InputActionSounds.playChar();
+        playCharacterSound();
     }
 
     private void toggleSymbols() {
@@ -544,7 +546,7 @@ public final class GamepadKeyboardState implements VanillaScreenOverlay {
         }
         this.cursor = next;
         this.refreshKeyAvailabilityAndFocus();
-        InputActionSounds.playHotbarFocus();
+        playFocusSound();
     }
 
     private void cycleAccents() {
@@ -606,7 +608,7 @@ public final class GamepadKeyboardState implements VanillaScreenOverlay {
             if (this.isKeyAvailable(row.get(candidate))) {
                 this.selectedColumn = candidate;
                 this.refreshFocus();
-                InputActionSounds.playHotbarFocus();
+                playFocusSound();
                 return;
             }
         }
@@ -623,7 +625,7 @@ public final class GamepadKeyboardState implements VanillaScreenOverlay {
                 this.selectedRow = candidateRow;
                 this.selectedColumn = candidateColumn;
                 this.refreshFocus();
-                InputActionSounds.playHotbarFocus();
+                playFocusSound();
                 return;
             }
         }
@@ -824,6 +826,18 @@ public final class GamepadKeyboardState implements VanillaScreenOverlay {
         CURSOR_LEFT,
         CURSOR_RIGHT,
         DONE
+    }
+
+    private static void playCharacterSound() {
+        Minecraft.getInstance().getSoundManager().play(
+            SimpleSoundInstance.forUI(ModSounds.UI_CHAR.get(), 1.0F, 1.0F)
+        );
+    }
+
+    private static void playFocusSound() {
+        Minecraft.getInstance().getSoundManager().play(
+            SimpleSoundInstance.forUI(ModSounds.UI_HOTBAR_FOCUS.get(), 1.0F, 1.0F)
+        );
     }
 
     private record KeyWidget(

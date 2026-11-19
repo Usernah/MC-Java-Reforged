@@ -12,4 +12,7 @@ public interface ScreenAccesor {
     @Invoker("addRenderableWidget")
     <T extends GuiEventListener & Renderable & NarratableEntry>
     T javaReforged$addRenderableWidget(T widget);
+
+    @Invoker("rebuildWidgets")
+    void javaReforged$rebuildWidgets();
 }

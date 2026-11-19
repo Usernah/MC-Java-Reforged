@@ -36,8 +36,8 @@ public abstract class GuiRenderStateMixin implements ViewportBlurAccess {
                 viewport.id(), viewport.glX(), viewport.glY(), viewport.width(), viewport.height()
             ));
         }
-        // Keep the first GUI stratum boundary; later players add regions only.
-        // All HUDs are extracted before screens; requesting menus stay sharp.
+
+
         if (this.firstStratumAfterBlur != Integer.MAX_VALUE) {
             ci.cancel();
         }

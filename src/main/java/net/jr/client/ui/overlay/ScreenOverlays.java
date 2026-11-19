@@ -8,7 +8,7 @@ import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 
-/** Current-slot facade used by input and vanilla screen rendering. */
+
 public final class ScreenOverlays {
     private static final GamepadDisconnectedScreenOverlay GAMEPAD_DISCONNECTED =
         new GamepadDisconnectedScreenOverlay();
@@ -46,7 +46,7 @@ public final class ScreenOverlays {
         );
     }
 
-    /** Renders passive status overlays without replacing the slot's active screen overlay. */
+
     public static void renderGamepadDisconnectedNotice(GuiGraphicsExtractor graphics) {
         int slotId = InputApi.currentSlotId();
         renderGamepadDisconnectedNotice(

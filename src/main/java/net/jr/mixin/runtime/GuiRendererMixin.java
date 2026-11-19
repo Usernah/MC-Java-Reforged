@@ -5,6 +5,7 @@ import net.jr.client.runtime.bridge.ViewportBlurAccess;
 import net.jr.client.runtime.render.pass.ViewportBlurRenderer;
 import net.jr.client.runtime.viewport.GuiScissorBounds;
 import net.jr.client.runtime.viewport.ViewportPanoramaRenderer;
+import net.jr.client.ui.render.composition.GuiCompositionScope;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.GuiRenderer;
@@ -30,7 +31,9 @@ public abstract class GuiRendererMixin {
     @Inject(method = "render", at = @At("HEAD"))
     private void javaReforged$renderViewportPanoramas(CallbackInfo callback) {
         this.javaReforged$blurRenderer.prepareFrame(((ViewportBlurAccess)this.renderState).javaReforged$viewportBlurState());
-        ViewportPanoramaRenderer.renderPending(this.cubeMap);
+        if (GuiCompositionScope.activeRenderingOrNull() == null) {
+            ViewportPanoramaRenderer.renderPending(this.cubeMap);
+        }
     }
 
     @Redirect(method = "draw", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;processBlurEffect()V"))
@@ -59,14 +62,24 @@ public abstract class GuiRendererMixin {
                         .gameRenderState()
                         .windowRenderState;
 
-        GuiScissorBounds.PixelRectangle bounds = GuiScissorBounds.resolvePrecise(rectangle, window);
+        GuiCompositionScope.Rendering composition =
+                GuiCompositionScope.activeRenderingOrNull();
+        int targetWidth = composition == null
+                ? window.width
+                : composition.framebufferWidth();
+        int targetHeight = composition == null
+                ? window.height
+                : composition.framebufferHeight();
+
+        GuiScissorBounds.PixelRectangle bounds =
+                GuiScissorBounds.resolvePrecise(rectangle, targetWidth, targetHeight);
         if (bounds == null) {
             return;
         }
 
         renderPass.enableScissor(
                 bounds.left(),
-                window.height - bounds.bottom(),
+                targetHeight - bounds.bottom(),
                 bounds.right() - bounds.left(),
                 bounds.bottom() - bounds.top()
         );

@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.jr.client.ui.render.composition.GuiCompositionScope;
 
 public final class GuiViewportScope implements AutoCloseable {
     private static final ThreadLocal<Deque<CoordinateMapping>> COORDINATE_MAPPINGS =
@@ -50,6 +51,9 @@ public final class GuiViewportScope implements AutoCloseable {
     }
 
     public static int mapPictureInPictureX(int x) {
+        if (GuiCompositionScope.isExtracting()) {
+            return x;
+        }
         CoordinateMapping mapping = currentMappingOrNull();
         return mapping == null ? x : Math.round(
             mapping.x() + x * mapping.scaleX() * ViewportGuiScale.activeScreenScale()
@@ -57,6 +61,9 @@ public final class GuiViewportScope implements AutoCloseable {
     }
 
     public static int mapPictureInPictureY(int y) {
+        if (GuiCompositionScope.isExtracting()) {
+            return y;
+        }
         CoordinateMapping mapping = currentMappingOrNull();
         return mapping == null ? y : Math.round(
             mapping.y() + y * mapping.scaleY() * ViewportGuiScale.activeScreenScale()
@@ -64,6 +71,9 @@ public final class GuiViewportScope implements AutoCloseable {
     }
 
     public static float mapPictureInPictureScale(float scale) {
+        if (GuiCompositionScope.isExtracting()) {
+            return scale;
+        }
         CoordinateMapping mapping = currentMappingOrNull();
         return mapping == null
             ? scale
@@ -87,6 +97,9 @@ public final class GuiViewportScope implements AutoCloseable {
     }
 
     public static int mapScissorTestX(int x) {
+        if (GuiCompositionScope.isExtracting()) {
+            return x;
+        }
         CoordinateMapping mapping = currentMappingOrNull();
         return mapping == null ? x : Math.round(
             mapping.x() + x * mapping.scaleX() * ViewportGuiScale.activeScreenScale()
@@ -94,6 +107,9 @@ public final class GuiViewportScope implements AutoCloseable {
     }
 
     public static int mapScissorTestY(int y) {
+        if (GuiCompositionScope.isExtracting()) {
+            return y;
+        }
         CoordinateMapping mapping = currentMappingOrNull();
         return mapping == null ? y : Math.round(
             mapping.y() + y * mapping.scaleY() * ViewportGuiScale.activeScreenScale()

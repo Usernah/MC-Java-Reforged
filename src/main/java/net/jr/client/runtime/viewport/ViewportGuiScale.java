@@ -40,7 +40,7 @@ public final class ViewportGuiScale {
         return Math.max(1, (int)Math.ceil(viewport.glHeight() / effectiveGuiScale(viewport)));
     }
 
-    /** Scale applied only while extracting a screen. HUD rendering keeps the viewport scale. */
+
     public static float screenScale(ViewportArea viewport) {
         int viewportScale = Math.max(1, viewport.guiScale());
         int screenScale = usesReducedVerticalScreenScale(viewport)

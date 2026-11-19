@@ -1,15 +1,21 @@
 package net.jr.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.jr.client.render.item.GuiItemExtractionHandler;
 import net.jr.client.render.item.GuiItemRenderPass;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
 import net.jr.client.runtime.viewport.GuiScissorHandler;
 import net.jr.client.runtime.viewport.GuiScissorState;
+import net.jr.client.ui.tooltip.TooltipPresentation;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,6 +25,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.List;
 
 @Mixin(GuiGraphicsExtractor.class)
 public abstract class GuiGraphicsExtractorMixin implements GuiGraphicsExtractorBridge {
@@ -113,6 +121,73 @@ public abstract class GuiGraphicsExtractorMixin implements GuiGraphicsExtractorB
                 decorationFont,
                 countText
         );
+    }
+
+    @Override
+    public void javaReforged$renderCarriedItemStackAtSize(
+            ItemStack stack,
+            int x,
+            int y,
+            int seed,
+            int size,
+            boolean fakeItem,
+            @Nullable Font decorationFont,
+            @Nullable String countText
+    ) {
+        GuiItemExtractionHandler.renderCarriedStackAtSize(
+                this.javaReforged$graphics(),
+                stack,
+                x,
+                y,
+                seed,
+                size,
+                fakeItem,
+                decorationFont,
+                countText
+        );
+    }
+
+    @WrapMethod(method = "tooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;IILnet/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipPositioner;Lnet/minecraft/resources/Identifier;Lnet/minecraft/world/item/ItemStack;)V")
+    private void javaReforged$scaleTooltip(
+            Font font,
+            List<ClientTooltipComponent> lines,
+            int mouseX,
+            int mouseY,
+            ClientTooltipPositioner positioner,
+            @Nullable Identifier style,
+            ItemStack tooltipStack,
+            Operation<Void> original
+    ) {
+        float scale = TooltipPresentation.scale();
+        if (scale == 1.0F) {
+            original.call(font, lines, mouseX, mouseY, positioner, style, tooltipStack);
+            return;
+        }
+
+        GuiGraphicsExtractor graphics = this.javaReforged$graphics();
+        ClientTooltipPositioner scaledPositioner = (
+                screenWidth, screenHeight, x, y, tooltipWidth, tooltipHeight
+        ) -> positioner.positionTooltip(
+                Math.max(1, (int) Math.floor(screenWidth / scale)),
+                Math.max(1, (int) Math.floor(screenHeight / scale)),
+                x, y, tooltipWidth, tooltipHeight
+        );
+
+        graphics.pose().pushMatrix();
+        try {
+            graphics.pose().scale(scale, scale);
+            original.call(
+                    font,
+                    lines,
+                    Math.round(mouseX / scale),
+                    Math.round(mouseY / scale),
+                    scaledPositioner,
+                    style,
+                    tooltipStack
+            );
+        } finally {
+            graphics.pose().popMatrix();
+        }
     }
 
     @Unique

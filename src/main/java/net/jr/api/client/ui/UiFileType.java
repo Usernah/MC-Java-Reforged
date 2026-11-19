@@ -7,7 +7,8 @@ public enum UiFileType {
     SCREEN("screens", "screen"),
     CONTAINER("containers", "container"),
     OVERLAY("overlays", "overlay"),
-    STYLE("styles", "style");
+    STYLE("styles", "style"),
+    DATA("data", "data");
 
     private final String directory;
     private final String extension;

@@ -6,7 +6,7 @@ import net.jr.api.client.input.IMutableInputAssignment;
 import net.jr.client.input.simulation.InputSimulation;
 import net.minecraft.client.Minecraft;
 
-/** Composition root for physical devices, assignment and local joining. */
+
 public final class InputRuntime {
     private final InputDeviceRegistry devices = new InputDeviceRegistry();
     private final InputAssignment assignments = new InputAssignment(

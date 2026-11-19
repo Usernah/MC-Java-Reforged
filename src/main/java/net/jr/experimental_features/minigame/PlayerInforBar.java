@@ -40,7 +40,7 @@ public final class PlayerInforBar implements BottomHudRenderObject {
         }
 
         int totalWidth = playerCount * ICON_WIDTH + (playerCount - 1) * ICON_GAP;
-        int x = (context.viewport().guiWidth() - totalWidth) / 2;
+        int x = (context.graphics().guiWidth() - totalWidth) / 2;
         int y = context.availableHeight()
             - ContextualBar.MARGIN_BOTTOM
             - ContextualBar.HEIGHT;

@@ -12,6 +12,7 @@ import net.jr.client.runtime.audio.SlotSoundRouter;
 import net.jr.client.runtime.network.ConnectionSlotRegistry;
 import net.jr.client.runtime.player.PositionSync;
 import net.jr.client.runtime.player.SecondaryProfile;
+import com.mojang.authlib.GameProfile;
 import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.session.ClientSession;
 import net.jr.client.runtime.slot.ClientSlots;
@@ -96,11 +97,24 @@ public final class InstanceManager {
             this.session(0).ensureConnected(minecraft, this.connections);
             return;
         }
-
         LocalPlayer primaryPlayer = this.slots.primary().gameplayState().player();
         if (primaryPlayer == null) {
-            throw new IllegalStateException("Cannot create a secondary local client before slot 0 has a LocalPlayer");
+            throw new IllegalStateException("Cannot create a local client before slot 0 has a LocalPlayer");
         }
+        this.ensureClient(
+            minecraft,
+            slotId,
+            SecondaryProfile.create(primaryPlayer.getGameProfile(), slotId + 1)
+        );
+    }
+
+    public void ensureClient(Minecraft minecraft, int slotId, GameProfile profile) {
+        ClientSlots.requireSlotId(slotId);
+        if (slotId == 0) {
+            this.session(0).ensureConnected(minecraft, this.connections);
+            return;
+        }
+        Objects.requireNonNull(profile, "profile");
 
         boolean createdClient = false;
         boolean createdSession = false;
@@ -113,7 +127,7 @@ public final class InstanceManager {
         if (this.sessions[slotId] == null) {
             this.sessions[slotId] = new ClientSession(
                 slotId,
-                SecondaryProfile.create(primaryPlayer.getGameProfile(), slotId + 1)
+                profile
             );
             createdSession = true;
         }
@@ -155,6 +169,7 @@ public final class InstanceManager {
         this.slots.slot(slotId).clearWorldBinding();
         this.sessions[slotId] = null;
         this.clients[slotId] = null;
+        net.jr.client.user.UserManager.get().unbind(slotId);
     }
 
     public void disconnectAllSecondary() {

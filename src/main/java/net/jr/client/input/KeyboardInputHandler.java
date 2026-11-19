@@ -2,6 +2,7 @@ package net.jr.client.input;
 
 import net.jr.client.input.simulation.InputSimulation;
 import net.jr.client.runtime.input.InputActionHandler;
+import net.jr.api.client.systemui.SystemUI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -15,6 +16,10 @@ public final class KeyboardInputHandler {
         Minecraft minecraft = Minecraft.getInstance();
         if (windowPointer != minecraft.getWindow().handle()) {
             return false;
+        }
+
+        if (SystemUI.keyEvent(action, event)) {
+            return true;
         }
 
         int key = event.key();

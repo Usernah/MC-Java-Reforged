@@ -10,7 +10,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
-/** Shared focus-boundary behavior for controller-oriented search fields. */
+
 public final class GamepadTextInputFocus {
     private GamepadTextInputFocus() {
     }

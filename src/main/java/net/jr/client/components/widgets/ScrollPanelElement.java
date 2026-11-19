@@ -796,6 +796,11 @@ public class ScrollPanelElement
     }
 
     @Override
+    public boolean shouldTakeFocusAfterInteraction() {
+        return !this.scrollbar.isDraggingHandle();
+    }
+
+    @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         if (this.scrollbar.isDraggingHandle()) {
             return this.scrollbar.mouseReleased(event);

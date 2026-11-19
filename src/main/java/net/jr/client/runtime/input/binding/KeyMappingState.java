@@ -2,6 +2,7 @@ package net.jr.client.runtime.input.binding;
 
 public final class KeyMappingState {
     private boolean down;
+    private boolean physicallyDown;
     private int clickCount;
 
     public boolean isDown() {
@@ -10,6 +11,14 @@ public final class KeyMappingState {
 
     public void setDown(boolean down) {
         this.down = down;
+    }
+
+    public boolean isPhysicallyDown() {
+        return this.physicallyDown;
+    }
+
+    public void setPhysicallyDown(boolean physicallyDown) {
+        this.physicallyDown = physicallyDown;
     }
 
     public int clickCount() {
@@ -34,6 +43,7 @@ public final class KeyMappingState {
 
     public void release() {
         this.down = false;
+        this.physicallyDown = false;
         this.clickCount = 0;
     }
 }

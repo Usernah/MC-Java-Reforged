@@ -5,7 +5,7 @@ import net.jr.client.ui.dsl.UiCompiledDocument;
 import net.jr.client.ui.dsl.UiDataContext;
 import net.jr.client.ui.dsl.UiDocumentManager;
 
-/** Dimensions passed to AbstractContainerScreen before vanilla calculates its origin. */
+
 public record DslContainerSize(int width, int height) {
     public DslContainerSize {
         if (width <= 0 || height <= 0) {
@@ -25,9 +25,14 @@ public record DslContainerSize(int width, int height) {
             return new DslContainerSize(fallbackWidth, fallbackHeight);
         }
         UiDataContext data = UiDataContext.withGlobals();
-        return new DslContainerSize(
-            document.boundsWidth(data),
-            document.boundsHeight(data)
+        DslContainerSize fallback = new DslContainerSize(fallbackWidth, fallbackHeight);
+        return UiDocumentManager.getInstance().recoverRuntime(
+            document.location("$bounds"),
+            fallback,
+            () -> new DslContainerSize(
+                document.boundsWidth(data),
+                document.boundsHeight(data)
+            )
         );
     }
 }

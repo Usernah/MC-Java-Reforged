@@ -3,7 +3,7 @@ package net.jr.mixin.compat.rpgseries;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.platform.Window;
-import net.jr.api.client.ui.Viewport;
+import net.jr.client.compat.CompatHudDimensions;
 import net.jr.client.compat.rpgseries.SpellEngineRuntimeState;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -35,7 +35,7 @@ abstract class HudRenderHelperMixin {
         )
     )
     private static int javaReforged$viewportWidth(Window window) {
-        return Viewport.current().logicalGuiWidth();
+        return CompatHudDimensions.width(window);
     }
 
     @Redirect(
@@ -46,7 +46,7 @@ abstract class HudRenderHelperMixin {
         )
     )
     private static int javaReforged$viewportHeight(Window window) {
-        return Viewport.current().logicalGuiHeight();
+        return CompatHudDimensions.height(window);
     }
 
     @ModifyArg(

@@ -7,19 +7,24 @@ import net.jr.api.client.render.gui.GuiRenderContext;
 import net.jr.api.client.render.gui.GuiRenderObjects;
 import net.jr.api.client.render.gui.GuiRenderPhase;
 import net.jr.api.client.render.gui.HudRenderContext;
+import net.jr.api.client.ui.FramebufferScreen;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotExecution;
-import net.jr.client.runtime.render.pass.HudRenderPass;
-import net.jr.client.runtime.render.pass.ControlHintRenderPass;
+import net.jr.client.runtime.render.pass.HudPass;
+import net.jr.client.runtime.render.pass.ControlHintPass;
 import net.jr.client.runtime.render.pass.ScreenOverlayRenderPass;
-import net.jr.client.runtime.render.pass.ScreenRenderPass;
+import net.jr.client.runtime.render.pass.ScreenCompositionPass;
+import net.jr.client.ui.dsl.ScreenEditorHooks;
+import net.jr.client.runtime.render.pass.ScreenPass;
 import net.jr.client.runtime.render.pass.ToastRenderPass;
+import net.jr.client.runtime.render.pass.SystemUiRenderPass;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.api.client.systemui.SystemUI;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -55,12 +60,14 @@ public final class GuiRenderPipeline {
         profiler.push("gui");
 
         guiRenderState.reset();
+        guiRenderState.isHudHidden = gui.hud.isHidden();
 
+        boolean systemUiOwnsGlobalPointer = SystemUI.blocksAllSlots();
         GuiGraphicsExtractor graphics = new GuiGraphicsExtractor(
                 minecraft,
                 guiRenderState,
-                mouseX,
-                mouseY
+                systemUiOwnsGlobalPointer ? Integer.MIN_VALUE : mouseX,
+                systemUiOwnsGlobalPointer ? Integer.MIN_VALUE : mouseY
         );
         List<ViewFrame> views = collectViews(graphics, deltaTracker);
         GlobalRenderContext globalContext = new GlobalFrameContext(
@@ -100,6 +107,7 @@ public final class GuiRenderPipeline {
             extractHudTailPhase(minecraft, gui.hud, views);
 
             GuiRenderObjects.renderGlobal(GuiRenderPhase.GLOBAL, globalContext);
+            SystemUiRenderPass.extract(globalContext);
         } finally {
             profiler.pop();
         }
@@ -117,7 +125,7 @@ public final class GuiRenderPipeline {
                 views,
                 frame -> {
                     if (frame.hudContext() != null) {
-                        HudRenderPass.extractCurrent(hud, frame.hudContext());
+                        HudPass.extractCurrent(hud, frame.hudContext());
                     }
                     GuiRenderObjects.render(GuiRenderPhase.OVERLAY, frame.context());
                 }
@@ -131,15 +139,32 @@ public final class GuiRenderPipeline {
         forEachPresentedSlot(
                 minecraft,
                 views,
+                true,
                 frame -> {
                     GuiRenderContext context = frame.context();
+                    Screen configuredScreen = context.slot().screenState().screen();
+                    if (configuredScreen instanceof FramebufferScreen) {
+                        Screen screen = ScreenCompositionPass.extract(
+                            minecraft,
+                            configuredScreen,
+                            context,
+                            context.deltaTracker().getGameTimeDeltaTicks()
+                        );
+                        ControlHintPass.renderScreen(screen, context.graphics());
+                        return;
+                    }
                     float screenScale = ViewportGuiScale.screenScale(context.viewport());
                     Screen screen;
                     ViewportGuiScale.beginScreen();
                     context.graphics().pose().pushMatrix();
                     context.graphics().pose().scale(screenScale, screenScale);
                     try {
-                        screen = ScreenRenderPass.extract(
+                        // Non-FramebufferScreen menus share the same editor hooks.
+                        // Keep their native viewport transform; no editor scale/FBO.
+                        if (configuredScreen != null) {
+                            ScreenEditorHooks.before(configuredScreen, context.graphics());
+                        }
+                        screen = ScreenPass.extract(
                             minecraft,
                             context.graphics(),
                             context.deltaTracker().getGameTimeDeltaTicks()
@@ -147,13 +172,14 @@ public final class GuiRenderPipeline {
                         if (screen != null) {
                             GuiRenderObjects.render(GuiRenderPhase.SCREEN, context);
                             ScreenOverlayRenderPass.extract(minecraft, screen, context);
+                            ScreenEditorHooks.after(screen, context.graphics());
                         }
                     } finally {
                         context.graphics().pose().popMatrix();
                         ViewportGuiScale.endScreen();
                     }
                     if (screen != null) {
-                        ControlHintRenderPass.renderScreen(screen, context.graphics());
+                        ControlHintPass.renderScreen(screen, context.graphics());
                     }
                 }
         );
@@ -169,7 +195,7 @@ public final class GuiRenderPipeline {
                 views,
                 frame -> {
                     if (frame.hudContext() != null) {
-                        HudRenderPass.extractTail(hud, frame.hudContext());
+                        HudPass.extractTail(hud, frame.hudContext());
                     }
                 }
         );
@@ -180,12 +206,31 @@ public final class GuiRenderPipeline {
             List<ViewFrame> views,
             SlotPhase phase
     ) {
+        forEachPresentedSlot(minecraft, views, false, phase);
+    }
+
+    private static void forEachPresentedSlot(
+            Minecraft minecraft,
+            List<ViewFrame> views,
+            boolean screenPhase,
+            SlotPhase phase
+    ) {
+        boolean hasFullWindowEditor = screenPhase && views.stream().anyMatch(frame ->
+            ScreenEditorHooks.fullWindowFor(frame.context().slot().screenState().screen())
+        );
         for (ViewFrame frame : views) {
             GuiRenderContext context = frame.context();
+            Screen configuredScreen = context.slot().screenState().screen();
+            boolean fullWindowEditor = screenPhase
+                && ScreenEditorHooks.fullWindowFor(configuredScreen);
+            if (hasFullWindowEditor && !fullWindowEditor) {
+                continue;
+            }
             Runnable extraction = () -> {
                 try (
-                        GuiViewportScope ignoredViewport =
-                                GuiViewportScope.enter(context.graphics(), context.viewport())
+                        GuiViewportScope ignoredViewport = GuiViewportScope.enter(
+                            context.graphics(), context.viewport()
+                        )
                 ) {
                     phase.extract(frame);
                 }
@@ -194,12 +239,14 @@ public final class GuiRenderPipeline {
             if (frame.client() != null) {
                 InstanceExecution.runForClient(
                         context.slot().id(),
+                        context.viewport(),
                         extraction
                 );
             } else {
                 SlotExecution.runForSlot(
                         minecraft,
-                        context.slot().id(),
+                        context.slot(),
+                        context.viewport(),
                         extraction
                 );
             }
@@ -209,8 +256,9 @@ public final class GuiRenderPipeline {
     private static List<ViewFrame> collectViews(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         List<ViewFrame> views = new ArrayList<>();
-        for (Slots slot : runtime.viewports().drawableSlots()) {
-            ViewportArea viewport = runtime.viewports().viewport(slot.id());
+        for (var drawable : runtime.viewports().drawableViewports()) {
+            Slots slot = drawable.slot();
+            ViewportArea viewport = drawable.viewport();
             ClientInstance client = runtime.clients().clientOrNull(slot.id());
             GuiRenderContext context = new LocalFrameContext(slot, viewport, graphics, deltaTracker);
             HudRenderContext hudContext = client == null ? null

@@ -5,11 +5,7 @@ import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.render.world.WorldRenderView;
 import net.minecraft.client.multiplayer.ClientLevel;
 
-/**
- * Keeps Sodium's renderer global while making its deferred build candidates
- * per view. The terrain-driving view consumes the previous frame's queues in
- * round-robin order under Sodium's original worker and upload budgets.
- */
+
 final class SodiumTaskListScheduler {
     private Object manager;
     private State state;

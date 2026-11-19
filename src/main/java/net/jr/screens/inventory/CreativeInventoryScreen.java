@@ -3,25 +3,26 @@ package net.jr.screens.inventory;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
 import net.jr.api.client.ui.Cursor;
+import net.jr.api.client.ui.DslContainer;
+import net.jr.api.client.ui.UiContainerFile;
+import net.jr.api.client.ui.UiDataValues;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.components.navigation.TabNavigator;
-import net.jr.client.components.elements.TextElement;
 import net.jr.client.components.widgets.EditBoxElement;
 import net.jr.client.components.widgets.TabBarElement;
 import net.jr.client.components.widgets.TabElement;
 import net.jr.client.components.widgets.item.CreativeItemGridElement;
 import net.jr.client.components.widgets.item.CreativeItemSlotElement;
+import net.jr.client.components.widgets.item.CreativeItemSlotStyle;
 import net.jr.client.ui.navigation.UiInputBinding;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.client.runtime.input.GamepadInputHandler;
-import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.slots.CustomItemSlotLayout;
+import net.jr.client.ui.container.DslContainerSize;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
 import net.jr.client.ui.container.slots.ItemSlotGrid;
-import net.jr.client.ui.container.slots.ItemSlotGroup;
-import net.jr.client.ui.container.slots.ItemSlotMaps;
 import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
 import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
@@ -29,6 +30,9 @@ import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.navigation.tabs.TabNavigationController;
 import net.jr.client.ui.navigation.tabs.TabNavigationHost;
 import net.jr.experimental_features.gamepad_keyboard.GamepadTextInputFocus;
+import net.jr.registry.ModUi;
+import net.jr.registry.ModSounds;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -36,6 +40,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -58,56 +63,8 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class CreativeInventoryScreen extends AbstractContainerScreen<InventoryMenu>
-        implements UiActionHandler, CustomItemSlotLayout, TabNavigationHost, CreativeCatalogActionHost,
+        implements DslContainer, UiActionHandler, CustomItemSlotLayout, TabNavigationHost, CreativeCatalogActionHost,
         FocusCursorVisibilityHost {
-    private static final int TAB_WIDTH = 32;
-    private static final int TAB_HEIGHT = 27;
-    private static final int TAB_Y_OFFSET = -23;
-    private static final int TAB_ICON_SIZE = 18;
-    private static final int TAB_ICON_OFFSET_X = 7;
-    private static final int TAB_ICON_OFFSET_Y = 4;
-    private static final int TABS_PER_PAGE = CreativeCategory.values().length;
-    private static final int MOD_TABS_PER_PAGE = TABS_PER_PAGE - 1;
-    private static final int PAGE_BUTTON_SIZE = 20;
-    private static final int PAGE_BUTTON_Y_OFFSET = -49;
-
-    private static final int ITEM_GRID_X = 10;
-    private static final int ITEM_GRID_Y = 22;
-    private static final int ITEM_COLUMNS = 12;
-    private static final int ITEM_ROWS = 6;
-    private static final int SLOT_FRAME_SIZE = 18;
-    private static final int ITEM_RENDER_SIZE = 16;
-    private static final int HOTBAR_X = 37;
-    private static final int HOTBAR_Y = 137;
-    private static final float TAB_TITLE_X = 249.0F / 2.0F;
-    private static final int TAB_TITLE_Y = 7;
-    private static final int SEARCH_BOX_X = 68;
-    private static final int SEARCH_BOX_Y = 5;
-    private static final int SEARCH_BOX_WIDTH = 114;
-    private static final int SEARCH_BOX_HEIGHT = 13;
-
-    private static final Asset BACKGROUND =
-            Asset.MC("textures/gui/container/creative_inventory.png");
-    private static final Asset TAB_LEFT =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/tab_left.png");
-    private static final Asset TAB_LEFT_SELECTED =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/tab_left_selected.png");
-    private static final Asset TAB_CENTER =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/tab_center.png");
-    private static final Asset TAB_CENTER_SELECTED =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/tab_center_selected.png");
-    private static final Asset TAB_RIGHT =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/tab_right.png");
-    private static final Asset TAB_RIGHT_SELECTED =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/tab_right_selected.png");
-
-    private static final Asset SCROLLER =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/scroller.png");
-    private static final Asset SCROLLER_DISABLED =
-            Asset.MC("textures/gui/sprites/container/creative_inventory/scroller_disabled.png");
-    private static final Asset SEARCH_BOX =
-            Asset.MC("textures/gui/sprites/widgets/text_edit_box.png");
-
     private final TabNavigationController tabNavigation = new TabNavigationController();
     private final TabNavigator tabPageNavigation = new TabNavigator() {
         @Override
@@ -123,6 +80,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private final Map<TabElement, CreativeTab> creativeTabByWidget = new IdentityHashMap<>();
     private final List<List<CreativeTab>> tabPages = new ArrayList<>();
     private final LocalPlayer player;
+    private final UiDataValues screenData;
 
     private VanillaItemSlotLayer itemSlotLayer;
     private ItemSlotGrid itemSlotGrid;
@@ -131,7 +89,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private TabBarElement tabs;
     private Button previousPageButton;
     private Button nextPageButton;
-    private TextElement tabTitleText;
     private EditBoxElement searchEditBox;
     private CreativeTab selectedCreativeTab = CreativeTab.category(CreativeCategory.CONSTRUCTION_AND_COLORS);
     private int tabPageIndex;
@@ -139,10 +96,24 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private int pendingCatalogReturnIndex = -1;
 
     public CreativeInventoryScreen(LocalPlayer player, Component title) {
-        super(player.inventoryMenu, player.getInventory(), title, 249, 164);
+        this(player, title, DslContainerSize.resolve(ModUi.CREATIVE_INVENTORY, 249, 164));
+    }
+
+    private CreativeInventoryScreen(
+            LocalPlayer player,
+            Component title,
+            DslContainerSize dimensions
+    ) {
+        super(player.inventoryMenu, player.getInventory(), title, dimensions.width(), dimensions.height());
         this.player = player;
+        this.screenData = ModUi.CREATIVE_INVENTORY_DAT.readData();
 
         player.containerMenu = player.inventoryMenu;
+    }
+
+    @Override
+    public UiContainerFile dslFile() {
+        return ModUi.CREATIVE_INVENTORY;
     }
 
     @Override
@@ -153,27 +124,29 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
         this.rebuildCreativeTabContents();
         this.rebuildTabPages();
-        this.itemSlotLayer = new VanillaItemSlotLayer(this, this.menu, this.font, SLOT_FRAME_SIZE);
-        this.itemSlotGrid = new ItemSlotGrid(ItemSlotMaps.SURVIVAL_INVENTORY)
-                .grid(
-                        ItemSlotGroup.PLAYER_HOTBAR,
-                        this.leftPos + HOTBAR_X,
-                        this.topPos + HOTBAR_Y,
-                        9,
-                        SLOT_FRAME_SIZE,
-                        SLOT_FRAME_SIZE,
-                        ITEM_RENDER_SIZE
-                );
+        this.exposeDslData();
+        this.itemSlotGrid = this.dslItemSlotGrid("menu");
+        if (this.itemSlotGrid == null) {
+            throw new IllegalStateException("Creative inventory DSL must declare item_slots id 'menu'");
+        }
+        this.itemSlotLayer = this.itemSlotGrid.itemSlotLayer();
 
         this.itemGrid = new CreativeItemGridElement(
-                this.leftPos + ITEM_GRID_X,
-                this.topPos + ITEM_GRID_Y,
-                ITEM_COLUMNS * SLOT_FRAME_SIZE,
-                ITEM_ROWS * SLOT_FRAME_SIZE,
-                ITEM_ROWS,
-                ITEM_COLUMNS
+                this.leftPos + this.screenData.integer("item_grid_x"),
+                this.topPos + this.screenData.integer("item_grid_y"),
+                this.screenData.integer("item_columns") * this.screenData.integer("item_cell_size"),
+                this.screenData.integer("item_rows") * this.screenData.integer("item_cell_size"),
+                this.screenData.integer("item_rows"),
+                this.screenData.integer("item_columns"),
+                new CreativeItemSlotStyle(
+                        this.screenData.asset("item_slot_asset"),
+                        this.screenData.integer("item_padding")
+                )
         );
-        this.itemGrid.setCellSize(SLOT_FRAME_SIZE, SLOT_FRAME_SIZE);
+        this.itemGrid.setCellSize(
+                this.screenData.integer("item_cell_size"),
+                this.screenData.integer("item_cell_size")
+        );
         this.itemGrid.onSelection(this::selectCreativeItem);
         this.itemGrid.onFocusedPrimarySelection(stack -> this.moveCreativeItemToHotbar(stack, 1));
         this.itemGrid.onFocusedAlternateSelection(stack ->
@@ -182,7 +155,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
         this.tabs = this.createTabs();
         this.createPageButtons();
-        this.createTabTitle();
         this.createSearchBox();
         this.tabNavigation.clear();
         this.tabNavigation.bind(
@@ -190,14 +162,14 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 UiInputBinding.gamepad(GamepadDigitalInput.BUMPER_LEFT),
                 UiInputBinding.gamepad(GamepadDigitalInput.BUMPER_RIGHT),
                 Component.translatable("hint.container.java_reforged.change_tab"),
-                InputActionSounds::playFocus
+                CreativeInventoryScreen::playTabSelectionSound
         );
         this.tabNavigation.bind(
                 this.tabPageNavigation,
                 UiInputBinding.gamepad(GamepadDigitalInput.TRIGGER_LEFT),
                 UiInputBinding.gamepad(GamepadDigitalInput.TRIGGER_RIGHT),
                 Component.translatable("hint.container.java_reforged.change_tab_page"),
-                InputActionSounds::playFocus
+                CreativeInventoryScreen::playTabSelectionSound
         );
 
         this.addRenderableWidget(this.itemGrid);
@@ -207,6 +179,15 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         this.addRenderableWidget(this.searchEditBox);
         this.reloadItems();
         this.focusFirstCatalogEntryAndMoveCursor();
+    }
+
+    private void exposeDslData() {
+        this.dslData().exposeText("creative.tab_title", () -> this.selectedCreativeTab.title().getString());
+        this.dslData().exposeText("creative.page_label", () ->
+                (this.tabPageIndex + 1) + " / " + this.tabPages.size());
+        this.dslData().exposeNumber("creative.tab_color", () -> this.selectedCreativeTab.labelColor());
+        this.dslData().exposeBoolean("creative.show_tab_title", () -> !this.selectedCreativeTab.hasSearchBar());
+        this.dslData().exposeBoolean("creative.show_page_label", () -> this.tabPages.size() > 1);
     }
 
     private void rebuildCreativeTabContents() {
@@ -223,24 +204,21 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private TabBarElement createTabs() {
         TabBarElement bar = new TabBarElement(
                 this.leftPos,
-                this.topPos + TAB_Y_OFFSET,
-                TAB_WIDTH,
-                TAB_HEIGHT
+                this.topPos + this.screenData.integer("tab_y_offset"),
+                this.screenData.integer("tab_width"),
+                this.screenData.integer("tab_height")
         );
         bar.setOrientation(TabBarElement.Orientation.HORIZONTAL);
+        bar.setPositionRoleCapacity(Math.max(1, this.screenData.integer("tabs_per_page")));
 
-        bar.setPadding(-1.0F);
+        bar.setPadding(this.screenData.decimal("tab_padding"));
         bar.onSelectionChange(tab -> {
             CreativeTab creativeTab = this.creativeTabByWidget.get(tab);
             if (creativeTab != null) {
-                boolean refocusCatalog = this.shouldRefocusCatalogAfterTabChange();
+                this.prepareCreativeTabChange();
                 this.selectedCreativeTab = creativeTab;
                 this.reloadItems();
-                if (refocusCatalog) {
-                    this.focusFirstCatalogEntryAndMoveCursor();
-                } else if (this.getFocused() == this.itemGrid) {
-                    this.setFocused(null);
-                }
+                this.focusCatalogEntryUnderCursor();
                 this.setSearchBoxVisible(creativeTab.hasSearchBar());
             }
         });
@@ -263,8 +241,9 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 .filter(CreativeInventoryScreen::isModCreativeTab)
                 .map(CreativeTab::registered)
                 .toList();
-        for (int start = 0; start < modTabs.size(); start += MOD_TABS_PER_PAGE) {
-            int end = Math.min(start + MOD_TABS_PER_PAGE, modTabs.size());
+        int modTabsPerPage = Math.max(1, this.screenData.integer("tabs_per_page") - 1);
+        for (int start = 0; start < modTabs.size(); start += modTabsPerPage) {
+            int end = Math.min(start + modTabsPerPage, modTabs.size());
             List<CreativeTab> page = new ArrayList<>(modTabs.subList(start, end));
             page.add(CreativeTab.category(CreativeCategory.SEARCH));
             this.tabPages.add(List.copyOf(page));
@@ -302,7 +281,12 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 ? this.selectedCreativeTab
                 : page.getFirst();
         for (CreativeTab creativeTab : page) {
-            TabElement tab = new TabElement(0, 0, TAB_WIDTH, TAB_HEIGHT);
+            TabElement tab = new TabElement(
+                    0,
+                    0,
+                    this.screenData.integer("tab_width"),
+                    this.screenData.integer("tab_height")
+            );
             tab.setRenderer((graphics, widget, mouseX, mouseY, partialTick) ->
                     this.renderTab(graphics, (TabElement)widget, creativeTab.icon())
             );
@@ -313,14 +297,15 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     }
 
     private void createPageButtons() {
-        int y = this.topPos + PAGE_BUTTON_Y_OFFSET;
+        int buttonSize = this.screenData.integer("page_button_size");
+        int y = this.topPos + this.screenData.integer("page_button_y_offset");
         this.previousPageButton = Button.builder(Component.literal("<"), ignored -> this.changeTabPage(-1))
                 .pos(this.leftPos, y)
-                .size(PAGE_BUTTON_SIZE, PAGE_BUTTON_SIZE)
+                .size(buttonSize, buttonSize)
                 .build();
         this.nextPageButton = Button.builder(Component.literal(">"), ignored -> this.changeTabPage(1))
-                .pos(this.leftPos + this.imageWidth - PAGE_BUTTON_SIZE, y)
-                .size(PAGE_BUTTON_SIZE, PAGE_BUTTON_SIZE)
+                .pos(this.leftPos + this.imageWidth - buttonSize, y)
+                .size(buttonSize, buttonSize)
                 .build();
         this.updatePageButtons();
     }
@@ -347,15 +332,27 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
     private void renderTab(GuiGraphicsExtractor graphics, TabElement tab, ItemStack icon) {
         boolean selected = tab.isSelected();
         Asset background = switch (tab.positionRole()) {
-            case SINGLE, FIRST -> selected ? TAB_LEFT_SELECTED : TAB_LEFT;
-            case MIDDLE -> selected ? TAB_CENTER_SELECTED : TAB_CENTER;
-            case LAST -> selected ? TAB_RIGHT_SELECTED : TAB_RIGHT;
+            case SINGLE, FIRST -> this.screenData.asset(
+                    selected ? "tab_left_selected_asset" : "tab_left_asset");
+            case MIDDLE -> this.screenData.asset(
+                    selected ? "tab_center_selected_asset" : "tab_center_asset");
+            case LAST -> this.screenData.asset(
+                    selected ? "tab_right_selected_asset" : "tab_right_asset");
         };
-        Draw.imageFromMeta(background, tab.x(), tab.y(), TAB_WIDTH, TAB_HEIGHT).draw(graphics);
+        Draw.imageFromMeta(
+                background,
+                tab.x(),
+                tab.y(),
+                this.screenData.integer("tab_width"),
+                this.screenData.integer("tab_height")
+        ).draw(graphics);
 
         graphics.pose().pushMatrix();
-        graphics.pose().translate(tab.x() + TAB_ICON_OFFSET_X, tab.y() + TAB_ICON_OFFSET_Y);
-        float iconScale = TAB_ICON_SIZE / 16.0F;
+        graphics.pose().translate(
+                tab.x() + this.screenData.integer("tab_icon_x"),
+                tab.y() + this.screenData.integer("tab_icon_y")
+        );
+        float iconScale = this.screenData.integer("tab_icon_size") / 16.0F;
         graphics.pose().scale(iconScale, iconScale);
         graphics.item(icon, 0, 0);
         graphics.pose().popMatrix();
@@ -363,48 +360,39 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
 
     private void configureItemScrollbar() {
         this.itemGrid.setAutoPlaceScrollbar(false);
-        this.itemGrid.setFixedScrollbarHandleSize(15.0F);
-        this.itemGrid.scrollbar().setX(this.leftPos + 231);
-        this.itemGrid.scrollbar().setY(this.topPos + 22);
-        this.itemGrid.scrollbar().setSize(9, 110);
+        this.itemGrid.setFixedScrollbarHandleSize(this.screenData.decimal("scrollbar_handle_size"));
+        this.itemGrid.scrollbar().setX(this.leftPos + this.screenData.integer("scrollbar_x"));
+        this.itemGrid.scrollbar().setY(this.topPos + this.screenData.integer("scrollbar_y"));
+        this.itemGrid.scrollbar().setSize(
+                this.screenData.integer("scrollbar_width"),
+                this.screenData.integer("scrollbar_height")
+        );
         this.itemGrid.scrollbar().setRenderer((graphics, ignored, mouseX, mouseY, partialTick) -> {
             boolean scrollable = this.itemGrid.hasScrollableOverflow();
             this.itemGrid.scrollbar().setActive(scrollable);
             Draw.image(
-                    scrollable ? SCROLLER : SCROLLER_DISABLED,
+                    this.screenData.asset(scrollable ? "scrollbar_asset" : "scrollbar_disabled_asset"),
                     Math.round(this.itemGrid.scrollbar().handleX()),
                     Math.round(this.itemGrid.scrollbar().handleY()),
-                    9,
-                    15
+                    this.screenData.integer("scrollbar_handle_width"),
+                    this.screenData.integer("scrollbar_handle_height")
             ).draw(graphics);
         });
     }
 
-    private void createTabTitle() {
-        this.tabTitleText = new TextElement(
-                this.selectedCreativeTab.title(),
-                this.leftPos + TAB_TITLE_X,
-                this.topPos + TAB_TITLE_Y,
-                null
-        );
-        this.tabTitleText.setAlign(Draw.TextAlign.CENTER);
-        this.tabTitleText.setScale(1.0F);
-        this.tabTitleText.setColor(0xFF404040);
-    }
-
     private void createSearchBox() {
         this.searchEditBox = new EditBoxElement(
-                this.leftPos + SEARCH_BOX_X,
-                this.topPos + SEARCH_BOX_Y,
-                SEARCH_BOX_WIDTH,
-                SEARCH_BOX_HEIGHT,
+                this.leftPos + this.screenData.integer("search_x"),
+                this.topPos + this.screenData.integer("search_y"),
+                this.screenData.integer("search_width"),
+                this.screenData.integer("search_height"),
                 Component.translatable("creative_tab.java_reforged.search_placeholder")
         );
         this.searchEditBox.setFont(this.font);
         this.searchEditBox.setHint(
                 Component.translatable("creative_tab.java_reforged.search_placeholder")
         );
-        this.searchEditBox.setMaxLength(64);
+        this.searchEditBox.setMaxLength(this.screenData.integer("search_max_length"));
         this.searchEditBox.setRenderer(this::renderSearchBox);
         this.searchEditBox.setResponder(ignored -> {
             if (this.selectedCreativeTab.hasSearchBar()) {
@@ -422,21 +410,41 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             float partialTick
     ) {
         EditBoxElement box = (EditBoxElement)widget;
-        Draw.image(SEARCH_BOX, box.getX(), box.getY(), box.getWidth(), box.getHeight()).draw(graphics);
+        Draw.image(
+                this.screenData.asset("search_asset"),
+                box.getX(),
+                box.getY(),
+                box.getWidth(),
+                box.getHeight()
+        ).draw(graphics);
 
         boolean empty = box.value().isEmpty();
-        String text = empty ? box.hint().getString() : box.visibleText(132);
-        Draw.text(Component.literal(text), box.getX() + 4, box.getY() + 3)
-                .scale(0.8F)
-                .color(empty ? 0xFF808080 : 0xFFE0E0E0)
+        int textX = this.screenData.integer("search_text_x");
+        int textY = this.screenData.integer("search_text_y");
+        float textScale = this.screenData.decimal("search_text_scale");
+        String text = empty
+                ? box.hint().getString()
+                : box.visibleText(this.screenData.integer("search_visible_text_width"));
+        Draw.text(Component.literal(text), box.getX() + textX, box.getY() + textY)
+                .scale(textScale)
+                .color(empty
+                        ? this.screenData.color("search_empty_color")
+                        : this.screenData.color("search_text_color"))
                 .draw(graphics);
 
         if (box.isCursorVisible()) {
             int cursorWidth = this.font.width(box.value().substring(0, box.cursorPosition()));
-            int cursorX = box.getX() + 4 + Math.min(105, Math.round(cursorWidth * 0.8F));
-            Draw.text(Component.literal("|"), cursorX, box.getY() + 3)
-                    .scale(0.8F)
-                    .color(0xFFFFFFFF)
+            int cursorX = box.getX() + textX + Math.min(
+                    this.screenData.integer("search_cursor_max_x"),
+                    Math.round(cursorWidth * textScale)
+            );
+            Draw.text(
+                    Component.literal(this.screenData.string("search_cursor_text")),
+                    cursorX,
+                    box.getY() + textY
+            )
+                    .scale(textScale)
+                    .color(this.screenData.color("search_cursor_color"))
                     .draw(graphics);
         }
     }
@@ -875,8 +883,7 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             int mouseY,
             float partialTick
     ) {
-        Draw.imageFromMeta(BACKGROUND, this.leftPos, this.topPos, this.imageWidth, this.imageHeight)
-                .draw(graphics);
+        this.extractDslBackground(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
@@ -886,23 +893,11 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             int mouseY,
             float partialTick
     ) {
-        this.tabTitleText.setText(this.selectedCreativeTab.title());
-        this.tabTitleText.setColor(this.selectedCreativeTab.labelColor());
-        if (!this.selectedCreativeTab.hasSearchBar()) {
-            this.tabTitleText.draw(graphics);
-        }
+        this.extractDslContent(graphics, mouseX, mouseY, partialTick);
         this.itemGrid.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.tabs.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.previousPageButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.nextPageButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        if (this.tabPages.size() > 1) {
-            Component page = Component.literal((this.tabPageIndex + 1) + " / " + this.tabPages.size());
-            Draw.text(
-                    page,
-                    this.leftPos + (this.imageWidth - this.font.width(page)) / 2,
-                    this.topPos + PAGE_BUTTON_Y_OFFSET + 6
-            ).color(0xFFFFFFFF).draw(graphics);
-        }
         this.searchEditBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.itemSlotLayer.updateHovered(this.itemSlotGrid, mouseX, mouseY);
         this.itemSlotLayer.renderItemSlotMap(graphics, this.itemSlotGrid);
@@ -949,7 +944,9 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
             }
         }
         if (this.itemGrid.mouseClicked(event, doubleClick)) {
-            this.enterCatalogFocus(false);
+            if (this.itemGrid.shouldTakeFocusAfterInteraction()) {
+                this.enterCatalogFocus(false);
+            }
             return true;
         }
         boolean handled = this.itemSlotLayer.mouseClicked(
@@ -1160,19 +1157,33 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         return true;
     }
 
-    private boolean shouldRefocusCatalogAfterTabChange() {
+    private void prepareCreativeTabChange() {
         if (this.itemGrid == null) {
-            return false;
+            return;
         }
-        if (this.itemGrid.getFocused() != null) {
-            return true;
+        this.itemGrid.clearEntryFocus();
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
         }
-        double cursorX = Cursor.x();
-        double cursorY = Cursor.y();
-        return cursorX >= this.itemGrid.getX()
-            && cursorY >= this.itemGrid.getY()
-            && cursorX < this.itemGrid.getX() + this.itemGrid.getWidth()
-            && cursorY < this.itemGrid.getY() + this.itemGrid.getHeight();
+        this.setFocused(null);
+        this.focusRegion = FocusRegion.NONE;
+    }
+
+    private void focusCatalogEntryUnderCursor() {
+        if (this.itemGrid == null) {
+            return;
+        }
+        CreativeItemSlotElement slot = this.itemGrid.previewedSlot(
+                Cursor.x(),
+                Cursor.y(),
+                false
+        );
+        if (slot == null) {
+            return;
+        }
+        this.focusRegion = FocusRegion.CATALOG;
+        this.itemGrid.setFocused(slot);
+        this.setFocused(this.itemGrid);
     }
 
     private void enterHotbarFocus() {
@@ -1188,7 +1199,6 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         DECORATION_AND_FUNCTIONAL(Items.ITEM_FRAME),
         REDSTONE_AND_TRANSPORT(Items.REDSTONE),
         EQUIPMENT_AND_COMBAT(Items.DIAMOND_SWORD),
-        FOOD_AND_DRINKS(Items.COOKED_BEEF),
         INGREDIENTS_AND_RESOURCES(Items.IRON_INGOT),
         SPAWN_EGGS(Items.PIG_SPAWN_EGG),
         SEARCH(Items.COMPASS);
@@ -1221,9 +1231,10 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
                 case REDSTONE_AND_TRANSPORT -> tabPath.equals("redstone_blocks");
                 case EQUIPMENT_AND_COMBAT ->
                         tabPath.equals("tools_and_utilities") || tabPath.equals("combat");
-                case FOOD_AND_DRINKS -> tabPath.equals("food_and_drinks");
                 case INGREDIENTS_AND_RESOURCES ->
-                        tabPath.equals("ingredients") || isUnmappedCreativeCategory(tabPath);
+                        tabPath.equals("food_and_drinks")
+                                || tabPath.equals("ingredients")
+                                || isUnmappedCreativeCategory(tabPath);
                 case SPAWN_EGGS -> tabPath.equals("spawn_eggs");
                 case SEARCH -> false;
             };
@@ -1284,5 +1295,11 @@ public final class CreativeInventoryScreen extends AbstractContainerScreen<Inven
         SEARCH,
         CATALOG,
         HOTBAR
+    }
+
+    private static void playTabSelectionSound() {
+        Minecraft.getInstance().getSoundManager().play(
+            SimpleSoundInstance.forUI(ModSounds.UI_HOVER.get(), 1.0F, 1.0F)
+        );
     }
 }

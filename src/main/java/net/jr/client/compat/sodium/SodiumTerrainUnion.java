@@ -12,11 +12,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
-/**
- * Union of the independently loaded chunks owned by all local clients. Sodium
- * still owns one physical RenderSection per coordinate; this class decides
- * when it exists and which ClientLevel supplies its build snapshot.
- */
+
 final class SodiumTerrainUnion {
     private final Map<ChunkKey, ChunkOwner> desiredChunks = new LinkedHashMap<>();
     private final Map<ChunkKey, ChunkOwner> appliedChunks = new HashMap<>();
@@ -25,9 +21,9 @@ final class SodiumTerrainUnion {
 
     void beginFrame(List<WorldRenderView> views) {
         Map<ChunkKey, ChunkOwner> next = new LinkedHashMap<>();
-        // The terrain-driving view must own overlapping chunks. Otherwise the
-        // slot-ordered view list permanently leaves slot 0 as their snapshot
-        // source, even after terrain driving moves to another living player.
+
+
+
         for (WorldRenderView view : views) {
             if (view.updatesTerrain()) {
                 collectReadyChunks(next, view);

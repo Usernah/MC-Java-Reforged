@@ -13,7 +13,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.equipment.Equippable;
 
-/** Server-side battle variant of TAKE_ALL, including the four armor slots. */
+
 public final class BattleTakeAllAction {
     private static final EquipmentSlot[] ARMOR_ORDER = {
         EquipmentSlot.HEAD,

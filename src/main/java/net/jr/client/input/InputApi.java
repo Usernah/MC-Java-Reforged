@@ -225,8 +225,16 @@ public final class InputApi {
         return InputContext.isDown(keyMapping);
     }
 
+    public static boolean isPhysicallyDown(KeyMapping keyMapping) {
+        return InputContext.isPhysicallyDown(keyMapping);
+    }
+
     public static void setDown(KeyMapping keyMapping, boolean down) {
         InputContext.setDown(keyMapping, down);
+    }
+
+    public static void setPhysicallyDown(KeyMapping keyMapping, boolean down) {
+        InputContext.setPhysicallyDown(keyMapping, down);
     }
 
     public static void click(KeyMapping keyMapping) {

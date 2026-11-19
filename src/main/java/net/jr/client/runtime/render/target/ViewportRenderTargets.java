@@ -120,14 +120,15 @@ public final class ViewportRenderTargets {
 
         public void present() {
             RenderPass.RenderArea area = ViewportRenderScope.areaFor(this.viewport, this.globalTarget.width, this.globalTarget.height);
-            int width = Math.min(Objects.requireNonNull(this.targets.main).width, area.width());
-            int height = Math.min(this.targets.main.height, area.height());
+            RenderTarget source = Objects.requireNonNull(this.targets.main);
+            int width = Math.min(source.width, area.width());
+            int height = Math.min(source.height, area.height());
             PRESENTING.set(true);
             try {
                 RenderSystem.getDevice()
                     .createCommandEncoder()
                     .copyTextureToTexture(
-                        Objects.requireNonNull(this.targets.main.getColorTexture()),
+                        Objects.requireNonNull(source.getColorTexture()),
                         Objects.requireNonNull(this.globalTarget.getColorTexture()),
                         0,
                         area.x(),

@@ -14,7 +14,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Temporarily keeps losing local players in a third-person view of the winner. */
+
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class BattleWinnerCamera {
     private static final Map<Integer, CameraType> PREVIOUS_VIEWS = new HashMap<>();

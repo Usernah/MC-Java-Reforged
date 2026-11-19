@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ServerPlayerRecipeMixin {
     @Inject(method = "awardRecipesByKey", at = @At("HEAD"), cancellable = true)
     private void javaReforged$skipRedundantRecipeAwards(List<ResourceKey<Recipe<?>>> recipes, CallbackInfo ci) {
-        // Recipe rewards no longer need lookups, temporary lists or unlock work.
+
         ci.cancel();
     }
 }

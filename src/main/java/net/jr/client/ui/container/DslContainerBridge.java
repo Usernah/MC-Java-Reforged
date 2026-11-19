@@ -6,4 +6,7 @@ public interface DslContainerBridge {
     DslContainerContext javaReforged$dslContainerContext(UiContainerFile file);
 
     void javaReforged$closeDslContainerContext();
+
+    /** Peek without instantiating a container context. */
+    DslContainerContext javaReforged$peekDslContainerContext();
 }

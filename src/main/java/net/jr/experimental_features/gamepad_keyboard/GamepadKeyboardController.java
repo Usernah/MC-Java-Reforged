@@ -1,8 +1,10 @@
 package net.jr.experimental_features.gamepad_keyboard;
 
 import net.jr.client.input.InputApi;
+import net.jr.api.client.input.IGamepad;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.ui.overlay.ScreenOverlayManager;
+import net.jr.client.systemui.keyboard.QwertyMenu;
+import net.jr.api.client.systemui.SystemUI;
 import net.jr.client.ui.overlay.ScreenOverlays;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -29,19 +31,21 @@ public final class GamepadKeyboardController {
     }
 
     private static boolean activate(Screen screen, GuiEventListener listener) {
-        ScreenOverlayManager overlays = ScreenOverlays.current();
-        if (overlays.hasOverlay() || !InputApi.hasGamepad() || !InputApi.isGamepadMode()
+        if (ScreenOverlays.current().hasOverlay()
+                || SystemUI.blocksSlot(InputApi.currentSlotId())
+                || !InputApi.hasGamepad() || !InputApi.isGamepadMode()
                 || !(listener instanceof GamepadTextInput input)
                 || !input.gamepadKeyboardCanConsumeInput()) {
             return false;
         }
-        GamepadKeyboardState state = state();
-        state.open(input);
-        if (overlays.open(screen, state)) {
-            return true;
+        IGamepad gamepad = InputApi.currentGamepad();
+        if (gamepad == null) {
+            return false;
         }
-        state.clear();
-        return false;
+        QwertyMenu.builder(screen.getTitle(), input)
+            .activator(gamepad)
+            .show();
+        return true;
     }
 
     public static GamepadKeyboardState state() {

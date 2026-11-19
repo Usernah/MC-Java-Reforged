@@ -21,6 +21,11 @@ final class NativeWorldRenderBackend implements WorldRenderBackend {
     }
 
     @Override
+    public void resourcesReloaded() {
+        TerrainCoordinator.requestGlobalGeometryRebuild();
+    }
+
+    @Override
     public Scope enterRenderView(WorldRenderView view) {
         TerrainWorkPhase.Scope scope = view.updatesTerrain()
             ? TerrainWorkPhase.update()

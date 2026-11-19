@@ -20,6 +20,11 @@ public final class ModSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_BACK = register("ui.back");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_HOTBAR_FOCUS = register("ui.hotbar_focus");
     public static final DeferredHolder<SoundEvent, SoundEvent> UI_TOAST_NOTIFY = register("ui.toast_new");
+    public static final DeferredHolder<SoundEvent, SoundEvent> SYSTEM_UI_OVERLAY_OPEN = register("system_ui.overlay_open");
+    public static final DeferredHolder<SoundEvent, SoundEvent> SYSTEM_UI_OVERLAY_CLOSE = register("system_ui.overlay_close");
+    public static final DeferredHolder<SoundEvent, SoundEvent> SYSTEM_UI_FOCUS = register("system_ui.focus");
+    public static final DeferredHolder<SoundEvent, SoundEvent> SYSTEM_UI_SELECT_BUTTON = register("system_ui.select_btn");
+    public static final DeferredHolder<SoundEvent, SoundEvent> SYSTEM_UI_SELECT_CHARACTER = register("system_ui.select_char");
     public static final DeferredHolder<SoundEvent, SoundEvent> GAMEPLAY_ITEM_POP = register("gameplay.item_pop");
     public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_CELEBRATION = register("minigames.battle.celebration");
     public static final DeferredHolder<SoundEvent, SoundEvent> MINIGAMES_BATTLE_CELEBRATION2 = register("minigames.battle.celebration2");

@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
-/** Identifies the block behind a vanilla menu opening without changing its menu type. */
+
 public final class ContainerOriginNetwork {
     private ContainerOriginNetwork() {
     }

@@ -38,4 +38,15 @@ public interface GuiGraphicsExtractorBridge {
             @Nullable Font decorationFont,
             @Nullable String countText
     );
+
+    void javaReforged$renderCarriedItemStackAtSize(
+            ItemStack stack,
+            int x,
+            int y,
+            int seed,
+            int size,
+            boolean fakeItem,
+            @Nullable Font decorationFont,
+            @Nullable String countText
+    );
 }

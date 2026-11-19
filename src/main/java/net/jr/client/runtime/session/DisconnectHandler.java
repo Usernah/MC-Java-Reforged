@@ -2,10 +2,12 @@ package net.jr.client.runtime.session;
 
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.input.InputApi;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.Component;
 
 public final class DisconnectHandler {
     private DisconnectHandler() {
@@ -24,6 +26,12 @@ public final class DisconnectHandler {
         return true;
     }
 
+    public static void disconnectCurrentOrWorld(Minecraft minecraft, Component message) {
+        if (!disconnectCurrentSecondary(minecraft)) {
+            minecraft.disconnectFromWorld(message);
+        }
+    }
+
     public static void disconnectSecondary(Minecraft minecraft, int slotId) {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         InputApi.resetSlotInputState(slotId);
@@ -34,6 +42,7 @@ public final class DisconnectHandler {
         }
         runtime.inputFocus().clampToSlots(runtime.viewports().presentedSlotIds());
         runtime.viewportResize().applyLayoutTransition(minecraft);
+        SlotExecution.runForSlot(minecraft, 0, minecraft::updateTitle);
     }
 
     public static void disconnectSecondaryConnection(
@@ -58,13 +67,14 @@ public final class DisconnectHandler {
                 runtime.clients().disconnectSecondary(slotId);
             }
         }
-        // Keep controllers that made it out of the world connected. Pre-join
-        // can then recreate their same split slots in the next world. A device
-        // that remained disconnected is deliberately forgotten at this
-        // session boundary instead.
+
+
+
+
         runtime.input().mutableAssignments().clearDisconnectedAssignments();
         runtime.viewports().presentPrimaryOnly();
         runtime.inputFocus().clampToSlots(runtime.viewports().presentedSlotIds());
         runtime.viewportResize().applyLayoutTransition(minecraft);
+        SlotExecution.runForSlot(minecraft, 0, minecraft::updateTitle);
     }
 }

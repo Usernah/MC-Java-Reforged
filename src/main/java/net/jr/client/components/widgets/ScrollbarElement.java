@@ -82,6 +82,36 @@ public class ScrollbarElement extends JavaBaseWidget {
         }
     }
 
+    @Override
+    public void setWidth(float width) {
+        super.setWidth(width);
+        this.refreshDefaultTrack();
+    }
+
+    @Override
+    public void setHeight(float height) {
+        super.setHeight(height);
+        this.refreshDefaultTrack();
+    }
+
+    @Override
+    public void setWidth(int width) {
+        super.setWidth(width);
+        this.refreshDefaultTrack();
+    }
+
+    @Override
+    public void setHeight(int height) {
+        super.setHeight(height);
+        this.refreshDefaultTrack();
+    }
+
+    private void refreshDefaultTrack() {
+        if (!this.customTrack) {
+            this.resetTrack();
+        }
+    }
+
     public float trackX() {
         return this.x() + this.trackOffsetX;
     }

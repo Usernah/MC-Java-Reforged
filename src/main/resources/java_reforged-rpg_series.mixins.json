@@ -11,6 +11,7 @@
     "HudRenderHelperMixin",
     "MinecraftMixin",
     "MultiPlayerGameModeMixin",
+    "NeoForgeClientModMixin",
     "WrappedKeybindingMixin"
   ],
   "injectors": {

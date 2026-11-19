@@ -5,7 +5,7 @@ import net.jr.client.runtime.viewport.ViewportArea;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** A local HUD viewport whose available height excludes reserved bottom content. */
+
 public record BottomHudRenderContext(
     Slots slot,
     ViewportArea viewport,
@@ -14,8 +14,8 @@ public record BottomHudRenderContext(
     int availableHeight
 ) implements HudRenderContext {
     public BottomHudRenderContext {
-        if (availableHeight < 0 || availableHeight > viewport.guiHeight()) {
-            throw new IllegalArgumentException("availableHeight is outside the viewport");
+        if (availableHeight < 0 || availableHeight > graphics.guiHeight()) {
+            throw new IllegalArgumentException("availableHeight is outside the active GUI space");
         }
     }
 

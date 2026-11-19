@@ -31,4 +31,12 @@ public abstract class VideoSettingsScreenMixin extends OptionsSubScreen {
     ) {
         cir.setReturnValue(RenderOptimizationOptionsHandler.extendQuality(options, cir.getReturnValue()));
     }
+
+    @Inject(method = "preferenceOptions", at = @At("RETURN"), cancellable = true)
+    private static void javaReforged$separateInterfacePreferences(
+            net.minecraft.client.Options options,
+            CallbackInfoReturnable<OptionInstance<?>[]> cir
+    ) {
+        cir.setReturnValue(VideoOptionsHandler.filterPreferences(options, cir.getReturnValue()));
+    }
 }

@@ -14,10 +14,7 @@ abstract class WorldMapSessionMixin {
     private static void javaReforged$getSessionForActivePlayer(
         CallbackInfoReturnable<WorldMapSession> cir
     ) {
-        /*
-         * Do not let a scoped secondary player fall back to Xaero's global
-         * session (normally the primary or most recently joined player).
-         */
+
         if (SlotScope.idOrNull() != null) {
             cir.setReturnValue(XaeroWorldMapRuntime.currentSessionOrNull());
         }

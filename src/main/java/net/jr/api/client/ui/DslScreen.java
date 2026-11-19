@@ -9,7 +9,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
-public interface DslScreen {
+public interface DslScreen extends FramebufferScreen {
     UiScreenFile dslFile();
 
     default DslScreenContext dslContext() {

@@ -108,8 +108,8 @@ public final class HudState {
     }
 
     private static Pair<?, ContextualBar> emptyContextualInfoBar() {
-        // A null discriminator forces vanilla to resolve and construct the
-        // correct contextual bar under the currently bound local client.
+
+
         return Pair.of(null, ContextualBar.EMPTY);
     }
 }

@@ -19,7 +19,10 @@ public final class GuiScreenAccess {
 
     public static void setScreen(Gui gui, @Nullable Screen screen) {
         int slotId = slotId();
-        ClientRuntime.INSTANCE.slots().slot(slotId).screenState().setScreen(screen);
+        var slot = ClientRuntime.INSTANCE.slots().slot(slotId);
+        Screen previous = slot.screenState().screen();
+        slot.screenState().setScreen(screen);
+        slot.playerModelHudState().onScreenChanged(previous, screen);
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft != null) {
             SlotScreenTransitionHandler.onSlotScreenChanged(minecraft, slotId, screen);

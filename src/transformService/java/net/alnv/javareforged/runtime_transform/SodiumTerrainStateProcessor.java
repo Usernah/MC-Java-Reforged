@@ -13,10 +13,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
-/**
- * Lets each ClientLevel retain its own Sodium section manager while all of
- * them share the first manager's chunk-build worker pool.
- */
+
 public final class SodiumTerrainStateProcessor implements ClassProcessor {
     private static final String TARGET_CLASS =
         "net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionManager";

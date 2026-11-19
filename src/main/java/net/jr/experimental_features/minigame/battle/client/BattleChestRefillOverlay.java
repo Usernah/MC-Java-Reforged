@@ -8,7 +8,7 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.experimental_features.minigame.client.BattleClientState;
 
-/** One window-wide animation, regardless of how many local viewports are active. */
+
 public final class BattleChestRefillOverlay implements IGlobalRenderObject {
     private static final int SIZE = 32 * 2;
     private static final int MARGIN = 10;

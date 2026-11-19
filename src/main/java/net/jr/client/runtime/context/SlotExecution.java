@@ -7,6 +7,8 @@ import net.jr.client.compat.create.CreateRuntimeState;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.slot.Slots;
+import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.runtime.viewport.ViewportScope;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 
@@ -44,6 +46,15 @@ public final class SlotExecution {
         runResolved(Minecraft.getInstance(), SlotResolver.requireSlot(slot), action);
     }
 
+    public static void runForSlot(
+        Minecraft minecraft,
+        Slots slot,
+        ViewportArea viewport,
+        Runnable action
+    ) {
+        runResolved(minecraft, SlotResolver.requireSlot(slot), viewport, action);
+    }
+
     public static <T> T callForSlot(int slotId, Supplier<T> action) {
         return callResolved(Minecraft.getInstance(), SlotResolver.requireSlot(slotId), action);
     }
@@ -66,6 +77,14 @@ public final class SlotExecution {
 
     public static Scope enterForSlot(Minecraft minecraft, Slots slot) {
         return enterResolved(minecraft, SlotResolver.requireSlot(slot));
+    }
+
+    public static Scope enterForSlot(
+        Minecraft minecraft,
+        Slots slot,
+        ViewportArea viewport
+    ) {
+        return enterResolved(minecraft, SlotResolver.requireSlot(slot), viewport);
     }
 
     public static void runActive(Runnable action) {
@@ -91,6 +110,18 @@ public final class SlotExecution {
         }
     }
 
+    private static void runResolved(
+        Minecraft minecraft,
+        Slots slot,
+        ViewportArea viewport,
+        Runnable action
+    ) {
+        Objects.requireNonNull(action, "action");
+        try (Scope ignored = enterResolved(minecraft, slot, viewport)) {
+            action.run();
+        }
+    }
+
     private static <T> T callResolved(Minecraft minecraft, Slots slot, Supplier<T> action) {
         Objects.requireNonNull(action, "action");
         try (Scope ignored = enterResolved(minecraft, slot)) {
@@ -99,8 +130,18 @@ public final class SlotExecution {
     }
 
     private static Scope enterResolved(Minecraft minecraft, Slots slot) {
+        ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slot.id());
+        return enterResolved(minecraft, slot, viewport);
+    }
+
+    private static Scope enterResolved(
+        Minecraft minecraft,
+        Slots slot,
+        @Nullable ViewportArea viewport
+    ) {
         Objects.requireNonNull(minecraft, "minecraft");
         SlotScope.Scope slotScope = SlotScope.enter(slot.id());
+        ViewportScope.Scope viewportScope = ViewportScope.enter(viewport);
         try {
             MinecraftClientStateScope stateScope = MinecraftClientStateScope.bind(minecraft, slot);
             ClientInstance clientInstance = ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
@@ -110,19 +151,25 @@ public final class SlotExecution {
             ACTIVE_EXECUTION.set(execution);
             return new Scope(
                 slotScope,
+                viewportScope,
                 stateScope,
                 createStateScope,
                 execution,
                 previousExecution
             );
         } catch (RuntimeException | Error error) {
-            slotScope.close();
+            try {
+                viewportScope.close();
+            } finally {
+                slotScope.close();
+            }
             throw error;
         }
     }
 
     public static final class Scope implements AutoCloseable {
         private final SlotScope.Scope slotScope;
+        private final ViewportScope.Scope viewportScope;
         private final MinecraftClientStateScope stateScope;
         private final CreateRuntimeState.Scope createStateScope;
         private final ExecutionFrame execution;
@@ -131,12 +178,14 @@ public final class SlotExecution {
 
         private Scope(
             SlotScope.Scope slotScope,
+            ViewportScope.Scope viewportScope,
             MinecraftClientStateScope stateScope,
             CreateRuntimeState.Scope createStateScope,
             ExecutionFrame execution,
             @Nullable ExecutionFrame previousExecution
         ) {
             this.slotScope = slotScope;
+            this.viewportScope = viewportScope;
             this.stateScope = stateScope;
             this.createStateScope = createStateScope;
             this.execution = execution;
@@ -174,6 +223,15 @@ public final class SlotExecution {
                     ACTIVE_EXECUTION.set(this.previousExecution);
                 }
             } finally {
+                try {
+                    this.viewportScope.close();
+                } catch (RuntimeException closeError) {
+                    if (error == null) {
+                        error = closeError;
+                    } else {
+                        error.addSuppressed(closeError);
+                    }
+                }
                 try {
                     this.slotScope.close();
                 } catch (RuntimeException closeError) {

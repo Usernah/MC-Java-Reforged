@@ -13,9 +13,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
 
-/**
- * Reflection boundary for state whose concrete types only exist when Sodium is installed.
- */
+
 final class SodiumRendererBridge {
     private static final String SECTION_MANAGER_FIELD = "renderSectionManager";
     private static final String RENDERER_LEVEL_FIELD = "level";
@@ -148,6 +146,20 @@ final class SodiumRendererBridge {
         }
     }
 
+    static void shutdownBuilder(Object builder) {
+        try {
+            if (chunkBuilderRunning(builder)) {
+                invoke(builder, publicMethod(builder.getClass(), "shutdown"));
+            }
+        } catch (ReflectiveOperationException exception) {
+            throw incompatibleSodium(exception);
+        }
+    }
+
+    static void reloadRenderer(Object renderer) {
+        invoke(renderer, publicMethod(renderer.getClass(), "reload"));
+    }
+
     static Object createManagerLike(Object reference, ClientLevel level) {
         try {
             int renderDistance = renderDistanceField(reference).getInt(reference);
@@ -266,6 +278,14 @@ final class SodiumRendererBridge {
 
     static void onChunkRemoved(Object manager, int x, int z) {
         invoke(manager, onChunkRemovedMethod(manager), x, z);
+    }
+
+    static void populateReadyChunks(Object manager, ClientLevel level) {
+        activateTerrainSource(manager, level);
+        for (long position : readyChunks(level)) {
+            onChunkAdded(manager, net.minecraft.world.level.ChunkPos.getX(position),
+                net.minecraft.world.level.ChunkPos.getZ(position));
+        }
     }
 
     static SectionPos sectionPosition(Object section) {

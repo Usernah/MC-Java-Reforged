@@ -2,7 +2,7 @@ package net.jr.client.ui.dsl;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Runtime element constructed and owned by Java from one declared DSL node. */
+
 public interface DslElement {
     void extractRenderState(
         GuiGraphicsExtractor graphics,
@@ -12,5 +12,11 @@ public interface DslElement {
     );
 
     default void closeDsl() {
+    }
+
+    default Object dslValue(String property) {
+        throw new IllegalArgumentException(
+            "DSL element does not expose '" + property + "'"
+        );
     }
 }

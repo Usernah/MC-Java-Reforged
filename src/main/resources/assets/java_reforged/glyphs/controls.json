@@ -1,0 +1,573 @@
+{
+  "_defaults": {
+    "advance": [8, 2]
+  },
+  "BUTTON_DOWN": {
+    "asset": "button_down.png",
+    "h": 15,
+    "press_asset": "button_down_press.png"
+  },
+  "BUTTON_RIGHT": {
+    "asset": "button_right.png",
+    "h": 15,
+    "press_asset": "button_right_press.png"
+  },
+  "BUTTON_LEFT": {
+    "asset": "button_left.png",
+    "h": 15,
+    "press_asset": "button_left_press.png"
+  },
+  "BUTTON_UP": {
+    "asset": "button_up.png",
+    "h": 15,
+    "press_asset": "button_up_press.png"
+  },
+  "BUMPER_LEFT": {
+    "asset": "bumper_left.png",
+    "h": 12,
+    "press_asset": "bumper_left_press.png"
+  },
+  "BUMPER_RIGHT": {
+    "asset": "bumper_right.png",
+    "h": 12,
+    "press_asset": "bumper_right_press.png"
+  },
+  "TRIGGER_LEFT": {
+    "asset": "trigger_left.png",
+    "h": 15,
+    "press_asset": "trigger_left_press.png"
+  },
+  "TRIGGER_RIGHT": {
+    "asset": "trigger_right.png",
+    "h": 15,
+    "press_asset": "trigger_right_press.png"
+  },
+  "BUTTON_SELECT": {
+    "asset": "button_select.png",
+    "h": 15
+  },
+  "BUTTON_START": {
+    "asset": "button_start.png",
+    "h": 15
+  },
+  "BUTTON_GUIDE": {
+    "asset": "button_guide.png",
+    "h": 15
+  },
+  "DPAD": {
+    "asset": "dpad.png",
+    "h": 15
+  },
+  "DPAD_UP": {
+    "asset": "dpad_up.png",
+    "h": 13.5
+  },
+  "DPAD_DOWN": {
+    "asset": "dpad_down.png",
+    "h": 13.5
+  },
+  "DPAD_LEFT": {
+    "asset": "dpad_left.png",
+    "h": 13.5
+  },
+  "DPAD_RIGHT": {
+    "asset": "dpad_right.png",
+    "h": 13.5
+  },
+  "STICK_LEFT": {
+    "asset": "stick_left.png",
+    "h": 15
+  },
+  "STICK_RIGHT": {
+    "asset": "stick_right.png",
+    "h": 15
+  },
+  "STICK_LEFT_BUTTON": {
+    "asset": "stick_left_button.png",
+    "h": 15
+  },
+  "STICK_RIGHT_BUTTON": {
+    "asset": "stick_right_button.png",
+    "h": 15
+  },
+  "STICK_LEFT_MOVE_UP": {
+    "asset": "stick_left_move_up.png",
+    "h": 15
+  },
+  "STICK_LEFT_MOVE_DOWN": {
+    "asset": "stick_left_move_down.png",
+    "h": 15
+  },
+  "STICK_LEFT_MOVE_LEFT": {
+    "asset": "stick_left_move_left.png",
+    "h": 15
+  },
+  "STICK_LEFT_MOVE_RIGHT": {
+    "asset": "stick_left_move_right.png",
+    "h": 15
+  },
+  "STICK_RIGHT_MOVE_UP": {
+    "asset": "stick_right_move_up.png",
+    "h": 15
+  },
+  "STICK_RIGHT_MOVE_DOWN": {
+    "asset": "stick_right_move_down.png",
+    "h": 15
+  },
+  "STICK_RIGHT_MOVE_LEFT": {
+    "asset": "stick_right_move_left.png",
+    "h": 15
+  },
+  "STICK_RIGHT_MOVE_RIGHT": {
+    "asset": "stick_right_move_right.png",
+    "h": 15
+  },
+  "TOUCHPAD": {
+    "asset": "touchpad.png",
+    "h": 13.5
+  },
+  "TOUCHPAD_BUTTON": {
+    "asset": "touchpad_button.png",
+    "h": 13.5
+  },
+  "TOUCHPAD_LEFT_BUTTON": {
+    "asset": "touchpad_left_button.png",
+    "h": 13.5
+  },
+  "TOUCHPAD_RIGHT_BUTTON": {
+    "asset": "touchpad_right_button.png",
+    "h": 13.5
+  },
+  "MISC_1": {
+    "asset": "misc_1.png",
+    "h": 15
+  },
+  "MISC_2": {
+    "asset": "misc_2.png",
+    "h": 15
+  },
+  "MISC_3": {
+    "asset": "misc_3.png",
+    "h": 15
+  },
+  "MISC_4": {
+    "asset": "misc_4.png",
+    "h": 15
+  },
+  "MISC_5": {
+    "asset": "misc_5.png",
+    "h": 15
+  },
+  "MISC_6": {
+    "asset": "misc_6.png",
+    "h": 15
+  },
+  "PADDLE_RIGHT_1": {
+    "asset": "paddle_right_1.png",
+    "h": 15
+  },
+  "PADDLE_LEFT_1": {
+    "asset": "paddle_left_1.png",
+    "h": 15
+  },
+  "PADDLE_RIGHT_2": {
+    "asset": "paddle_right_2.png",
+    "h": 15
+  },
+  "PADDLE_LEFT_2": {
+    "asset": "paddle_left_2.png",
+    "h": 15
+  },
+  "KEY": {
+    "asset": "key.png",
+    "h": 15
+  },
+  "KEY_0": {
+    "asset": "key_0.png",
+    "h": 15
+  },
+  "KEY_1": {
+    "asset": "key_1.png",
+    "h": 15
+  },
+  "KEY_2": {
+    "asset": "key_2.png",
+    "h": 15
+  },
+  "KEY_3": {
+    "asset": "key_3.png",
+    "h": 15
+  },
+  "KEY_4": {
+    "asset": "key_4.png",
+    "h": 15
+  },
+  "KEY_5": {
+    "asset": "key_5.png",
+    "h": 15
+  },
+  "KEY_6": {
+    "asset": "key_6.png",
+    "h": 15
+  },
+  "KEY_7": {
+    "asset": "key_7.png",
+    "h": 15
+  },
+  "KEY_8": {
+    "asset": "key_8.png",
+    "h": 15
+  },
+  "KEY_9": {
+    "asset": "key_9.png",
+    "h": 15
+  },
+  "KEY_A": {
+    "asset": "key_a.png",
+    "h": 15
+  },
+  "KEY_B": {
+    "asset": "key_b.png",
+    "h": 15
+  },
+  "KEY_C": {
+    "asset": "key_c.png",
+    "h": 15
+  },
+  "KEY_D": {
+    "asset": "key_d.png",
+    "h": 15
+  },
+  "KEY_E": {
+    "asset": "key_e.png",
+    "h": 15
+  },
+  "KEY_F": {
+    "asset": "key_f.png",
+    "h": 15
+  },
+  "KEY_G": {
+    "asset": "key_g.png",
+    "h": 15
+  },
+  "KEY_H": {
+    "asset": "key_h.png",
+    "h": 15
+  },
+  "KEY_I": {
+    "asset": "key_i.png",
+    "h": 15
+  },
+  "KEY_J": {
+    "asset": "key_j.png",
+    "h": 15
+  },
+  "KEY_K": {
+    "asset": "key_k.png",
+    "h": 15
+  },
+  "KEY_L": {
+    "asset": "key_l.png",
+    "h": 15
+  },
+  "KEY_M": {
+    "asset": "key_m.png",
+    "h": 15
+  },
+  "KEY_N": {
+    "asset": "key_n.png",
+    "h": 15
+  },
+  "KEY_O": {
+    "asset": "key_o.png",
+    "h": 15
+  },
+  "KEY_P": {
+    "asset": "key_p.png",
+    "h": 15
+  },
+  "KEY_Q": {
+    "asset": "key_q.png",
+    "h": 15
+  },
+  "KEY_R": {
+    "asset": "key_r.png",
+    "h": 15
+  },
+  "KEY_S": {
+    "asset": "key_s.png",
+    "h": 15
+  },
+  "KEY_T": {
+    "asset": "key_t.png",
+    "h": 15
+  },
+  "KEY_U": {
+    "asset": "key_u.png",
+    "h": 15
+  },
+  "KEY_V": {
+    "asset": "key_v.png",
+    "h": 15
+  },
+  "KEY_W": {
+    "asset": "key_w.png",
+    "h": 15
+  },
+  "KEY_X": {
+    "asset": "key_x.png",
+    "h": 15
+  },
+  "KEY_Y": {
+    "asset": "key_y.png",
+    "h": 15
+  },
+  "KEY_Z": {
+    "asset": "key_z.png",
+    "h": 15
+  },
+  "CHAR_APOSTROPHE": {
+    "asset": "char_apostrophe.png",
+    "h": 15
+  },
+  "CHAR_ASTERISK": {
+    "asset": "char_asterisk.png",
+    "h": 15
+  },
+  "CHAR_BACKSLASH": {
+    "asset": "char_backslash.png",
+    "h": 15
+  },
+  "CHAR_COMMA": {
+    "asset": "char_comma.png",
+    "h": 15
+  },
+  "CHAR_EQUAL": {
+    "asset": "char_equal.png",
+    "h": 15
+  },
+  "CHAR_GRAVE_ACCENT": {
+    "asset": "char_grave_accent.png",
+    "h": 15
+  },
+  "CHAR_LEFT_BRACKET": {
+    "asset": "char_left_bracket.png",
+    "h": 15
+  },
+  "CHAR_MINUS": {
+    "asset": "char_minus.png",
+    "h": 15
+  },
+  "CHAR_PERIOD": {
+    "asset": "char_period.png",
+    "h": 15
+  },
+  "CHAR_PLUS": {
+    "asset": "char_plus.png",
+    "h": 15
+  },
+  "CHAR_RIGHT_BRACKET": {
+    "asset": "char_right_bracket.png",
+    "h": 15
+  },
+  "CHAR_SEMICOLON": {
+    "asset": "char_semicolon.png",
+    "h": 15
+  },
+  "CHAR_SLASH": {
+    "asset": "char_slash.png",
+    "h": 15
+  },
+  "SPECIAL_ALT_LEFT": {
+    "asset": "special_alt_left.png",
+    "h": 15
+  },
+  "SPECIAL_ALT_RIGHT": {
+    "asset": "special_alt_right.png",
+    "h": 15
+  },
+  "SPECIAL_ARROW_DOWN": {
+    "asset": "special_arrow_down.png",
+    "h": 15
+  },
+  "SPECIAL_ARROW_LEFT": {
+    "asset": "special_arrow_left.png",
+    "h": 15
+  },
+  "SPECIAL_ARROW_RIGHT": {
+    "asset": "special_arrow_right.png",
+    "h": 15
+  },
+  "SPECIAL_ARROW_UP": {
+    "asset": "special_arrow_up.png",
+    "h": 15
+  },
+  "SPECIAL_CAPS_LOCK": {
+    "asset": "special_caps_lock.png",
+    "h": 15
+  },
+  "SPECIAL_CTRL_LEFT": {
+    "asset": "special_ctrl_left.png",
+    "h": 15
+  },
+  "SPECIAL_CTRL_RIGHT": {
+    "asset": "special_ctrl_right.png",
+    "h": 15
+  },
+  "SPECIAL_DELETE": {
+    "asset": "special_delete.png",
+    "h": 15
+  },
+  "SPECIAL_END": {
+    "asset": "special_end.png",
+    "h": 15
+  },
+  "SPECIAL_ENTER": {
+    "asset": "special_enter.png",
+    "h": 15
+  },
+  "SPECIAL_ESCAPE": {
+    "asset": "special_escape.png",
+    "h": 15
+  },
+  "SPECIAL_F1": {
+    "asset": "special_f1.png",
+    "h": 15
+  },
+  "SPECIAL_F2": {
+    "asset": "special_f2.png",
+    "h": 15
+  },
+  "SPECIAL_F3": {
+    "asset": "special_f3.png",
+    "h": 15
+  },
+  "SPECIAL_F4": {
+    "asset": "special_f4.png",
+    "h": 15
+  },
+  "SPECIAL_F5": {
+    "asset": "special_f5.png",
+    "h": 15
+  },
+  "SPECIAL_F6": {
+    "asset": "special_f6.png",
+    "h": 15
+  },
+  "SPECIAL_F7": {
+    "asset": "special_f7.png",
+    "h": 15
+  },
+  "SPECIAL_F8": {
+    "asset": "special_f8.png",
+    "h": 15
+  },
+  "SPECIAL_F9": {
+    "asset": "special_f9.png",
+    "h": 15
+  },
+  "SPECIAL_F10": {
+    "asset": "special_f10.png",
+    "h": 15
+  },
+  "SPECIAL_F11": {
+    "asset": "special_f11.png",
+    "h": 15
+  },
+  "SPECIAL_F12": {
+    "asset": "special_f12.png",
+    "h": 15
+  },
+  "SPECIAL_HOME": {
+    "asset": "special_home.png",
+    "h": 15
+  },
+  "SPECIAL_MENU": {
+    "asset": "special_menu.png",
+    "h": 15
+  },
+  "SPECIAL_NUM_LOCK": {
+    "asset": "special_num_lock.png",
+    "h": 15
+  },
+  "SPECIAL_PAGE_DOWN": {
+    "asset": "special_page_down.png",
+    "h": 15
+  },
+  "SPECIAL_PAGE_UP": {
+    "asset": "special_page_up.png",
+    "h": 15
+  },
+  "SPECIAL_PAUSE": {
+    "asset": "special_pause.png",
+    "h": 15
+  },
+  "SPECIAL_PRINT_SCREEN": {
+    "asset": "special_print_screen.png",
+    "h": 15
+  },
+  "SPECIAL_SCROLL_LOCK": {
+    "asset": "special_scroll_lock.png",
+    "h": 15
+  },
+  "SPECIAL_SHIFT_LEFT": {
+    "asset": "special_shift_left.png",
+    "h": 15
+  },
+  "SPECIAL_SHIFT_RIGHT": {
+    "asset": "special_shift_right.png",
+    "h": 15
+  },
+  "SPECIAL_SPACE": {
+    "asset": "special_space.png",
+    "h": 15
+  },
+  "SPECIAL_SUPER": {
+    "asset": "special_super.png",
+    "h": 15
+  },
+  "SPECIAL_TAB": {
+    "asset": "special_tab.png",
+    "h": 15
+  },
+  "SPECIAL_WORLD_1": {
+    "asset": "special_world_1.png",
+    "h": 15
+  },
+  "SPECIAL_WORLD_2": {
+    "asset": "special_world_2.png",
+    "h": 15
+  },
+  "MOUSE": {
+    "asset": "mouse.png",
+    "h": 15
+  },
+  "MOUSE_LEFT_CLICK": {
+    "asset": "mouse_left_click.png",
+    "h": 15
+  },
+  "MOUSE_MOVE_ALL": {
+    "asset": "mouse_move_all.png",
+    "h": 15
+  },
+  "MOUSE_RIGHT_CLICK": {
+    "asset": "mouse_right_click.png",
+    "h": 15
+  },
+  "MOUSE_SCROLL_ALL": {
+    "asset": "mouse_scroll_all.png",
+    "h": 15
+  },
+  "MOUSE_SCROLL_CLICK": {
+    "asset": "mouse_scroll_click.png",
+    "h": 15
+  },
+  "MOUSE_SCROLL_DOWN": {
+    "asset": "mouse_scroll_down.png",
+    "h": 15
+  },
+  "MOUSE_SCROLL_UP": {
+    "asset": "mouse_scroll_up.png",
+    "h": 15
+  }
+}

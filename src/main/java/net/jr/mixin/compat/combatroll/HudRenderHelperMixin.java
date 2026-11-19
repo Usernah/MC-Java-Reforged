@@ -2,7 +2,7 @@ package net.jr.mixin.compat.combatroll;
 
 import com.mojang.blaze3d.platform.Window;
 import net.combat_roll.client.gui.HudRenderHelper;
-import net.jr.api.client.ui.Viewport;
+import net.jr.client.compat.CompatHudDimensions;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,7 +19,7 @@ abstract class HudRenderHelperMixin {
         )
     )
     private static int javaReforged$viewportWidth(Window window) {
-        return Viewport.current().logicalGuiWidth();
+        return CompatHudDimensions.width(window);
     }
 
     @Redirect(
@@ -30,7 +30,7 @@ abstract class HudRenderHelperMixin {
         )
     )
     private static int javaReforged$viewportHeight(Window window) {
-        return Viewport.current().logicalGuiHeight();
+        return CompatHudDimensions.height(window);
     }
 
     @ModifyArg(

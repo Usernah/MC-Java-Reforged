@@ -9,10 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Sodium owns one asynchronous culling task globally. Split views instead finalize their
- * visibility lists serially so one camera cannot invalidate another camera's pending tree.
- */
+
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionManager", remap = false)
 abstract class SodiumRenderSectionManagerMixin {

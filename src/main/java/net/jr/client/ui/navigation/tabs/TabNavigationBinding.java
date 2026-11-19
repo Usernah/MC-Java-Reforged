@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Objects;
 import net.jr.client.components.navigation.TabNavigator;
 import net.jr.client.ui.navigation.UiInputBinding;
-import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.hint.model.ControlHintRequest;
 import net.jr.client.ui.hint.model.HintPlacement;
 import net.minecraft.network.chat.Component;
@@ -27,39 +26,6 @@ public record TabNavigationBinding(
         if (previous.equals(next)) {
             throw new IllegalArgumentException("previous and next inputs must be different");
         }
-    }
-
-    public TabNavigationBinding(
-            TabNavigator navigator,
-            UiInputBinding previous,
-            UiInputBinding next,
-            Component hintLabel
-    ) {
-        this(
-                navigator,
-                previous,
-                next,
-                hintLabel,
-                HintPlacement.RIGHT,
-                InputActionSounds::playClick
-        );
-    }
-
-    public TabNavigationBinding(
-            TabNavigator navigator,
-            UiInputBinding previous,
-            UiInputBinding next,
-            Component hintLabel,
-            HintPlacement hintPlacement
-    ) {
-        this(
-                navigator,
-                previous,
-                next,
-                hintLabel,
-                hintPlacement,
-                InputActionSounds::playClick
-        );
     }
 
     public TabNavigationBinding(

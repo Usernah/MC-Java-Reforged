@@ -15,11 +15,13 @@ public final class UiDocument {
     private final Asset source;
     private final UiFileType type;
     private final List<Statement> statements;
+    private final String sourceText;
 
-    public UiDocument(Asset source, UiFileType type, List<Statement> statements) {
+    public UiDocument(Asset source, UiFileType type, List<Statement> statements, String sourceText) {
         this.source = Objects.requireNonNull(source, "source");
         this.type = Objects.requireNonNull(type, "type");
         this.statements = List.copyOf(statements);
+        this.sourceText = Objects.requireNonNull(sourceText, "sourceText");
     }
 
     public Asset source() {
@@ -32,6 +34,18 @@ public final class UiDocument {
 
     public List<Statement> statements() {
         return this.statements;
+    }
+
+    public String sourceText() {
+        return this.sourceText;
+    }
+
+    public String lineText(int line) {
+        if (line < 1) {
+            return "";
+        }
+        String[] lines = this.sourceText.split("\\R", -1);
+        return line <= lines.length ? lines[line - 1] : "";
     }
 
     public List<ImportDirective> imports() {
@@ -78,7 +92,8 @@ public final class UiDocument {
     }
 
     public sealed interface Statement permits ImportDirective, DefinitionDirective, BlueprintDirective,
-        BlueprintUse, ConditionalStatement, Node, Property {
+        VariableDirective, AssignmentDirective, BlueprintUse, BlueprintContent,
+        ContentInsertion, ConditionalStatement, Node, Property {
         Position position();
     }
 
@@ -121,16 +136,64 @@ public final class UiDocument {
         }
     }
 
+    public record VariableDirective(String name, Value value, Position position) implements Statement {
+        public VariableDirective {
+            Objects.requireNonNull(name, "name");
+            Objects.requireNonNull(value, "value");
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
+    public record AssignmentDirective(String name, Value value, Position position) implements Statement {
+        public AssignmentDirective {
+            Objects.requireNonNull(name, "name");
+            Objects.requireNonNull(value, "value");
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
+    public record BlueprintMemberUse(String name, List<Value> arguments, Position position) {
+        public BlueprintMemberUse {
+            Objects.requireNonNull(name, "name");
+            arguments = List.copyOf(arguments);
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
     public record BlueprintUse(
         List<String> path,
-        String instanceId,
         List<Value> arguments,
+        List<BlueprintMemberUse> members,
+        List<Statement> content,
+        boolean contentProvided,
+        boolean registeredStyle,
         Position position
     ) implements Statement {
         public BlueprintUse {
             path = immutablePath(path);
-            Objects.requireNonNull(instanceId, "instanceId");
             arguments = List.copyOf(arguments);
+            members = List.copyOf(members);
+            content = List.copyOf(content);
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
+
+    public record BlueprintContent(Position position) implements Statement {
+        public BlueprintContent {
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
+
+    public record ContentInsertion(
+        Asset source,
+        List<Statement> body,
+        Position position
+    ) implements Statement {
+        public ContentInsertion {
+            Objects.requireNonNull(source, "source");
+            body = List.copyOf(body);
             Objects.requireNonNull(position, "position");
         }
     }
@@ -163,8 +226,9 @@ public final class UiDocument {
     }
 
     public sealed interface Value permits StringValue, NumberValue, BooleanValue, NullValue,
-        ColorValue, BareValue, ReferenceValue, BlueprintParameterValue, ExposedDataValue, ListValue, TupleValue,
-        ObjectValue, CallValue, ConditionalValue, LogicalValue, NegatedValue, ComparisonValue,
+        ColorValue, BareValue, ReferenceValue, RegisteredStyleValue, BlueprintParameterValue,
+        ExposedDataValue, GlyphValue, ListValue, TupleValue,
+        ObjectValue, CallValue, ElementValue, ConditionalValue, LogicalValue, NegatedValue, ComparisonValue,
         ArithmeticValue, ArithmeticNegationValue {
         Position position();
     }
@@ -216,6 +280,13 @@ public final class UiDocument {
         }
     }
 
+    public record RegisteredStyleValue(List<String> path, Position position) implements Value {
+        public RegisteredStyleValue {
+            path = immutablePath(path);
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
     public record BlueprintParameterValue(List<String> path, Position position) implements Value {
         public BlueprintParameterValue {
             path = immutablePath(path);
@@ -226,6 +297,18 @@ public final class UiDocument {
     public record ExposedDataValue(List<String> path, Position position) implements Value {
         public ExposedDataValue {
             path = immutablePath(path);
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
+    public record GlyphValue(
+        String namespace,
+        String provider,
+        String id,
+        Position position
+    ) implements Value {
+        public GlyphValue {
+            Objects.requireNonNull(id, "id");
             Objects.requireNonNull(position, "position");
         }
     }
@@ -255,6 +338,14 @@ public final class UiDocument {
         public CallValue {
             Objects.requireNonNull(name, "name");
             arguments = List.copyOf(arguments);
+            Objects.requireNonNull(position, "position");
+        }
+    }
+
+    public record ElementValue(String id, String property, Position position) implements Value {
+        public ElementValue {
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(property, "property");
             Objects.requireNonNull(position, "position");
         }
     }

@@ -1,8 +1,11 @@
 package net.jr.api.client.local;
 
+import java.util.List;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.context.SlotExecution;
+import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.player.LocalPlayer;
 
@@ -15,14 +18,24 @@ public final class Client {
     @Nullable
     public static ClientInstance currentOrNull() {
         Slots slot = SlotExecution.currentSlotOrNull();
-        return slot == null
-                ? null
-                : ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
+        if (slot != null) {
+            return ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
+        }
+        Integer slotId = SlotScope.idOrNull();
+        return slotId != null
+                ? ClientRuntime.INSTANCE.clients().clientOrNull(slotId)
+                : null;
     }
 
 
     public static ClientInstance current() {
-        return get(SlotExecution.currentSlot().id());
+        ClientInstance client = currentOrNull();
+        if (client == null) {
+            throw new IllegalStateException(
+                    "No local client is active on this execution path"
+            );
+        }
+        return client;
     }
 
     public static ClientInstance get(int slotId) {
@@ -31,6 +44,14 @@ public final class Client {
 
     public static int count() {
         return ClientRuntime.INSTANCE.clients().count();
+    }
+
+    public static int capacity() {
+        return ClientSlots.MAX_SLOTS;
+    }
+
+    public static List<ClientInstance> all() {
+        return ClientRuntime.INSTANCE.clients().all();
     }
 
     public static int slotId() {

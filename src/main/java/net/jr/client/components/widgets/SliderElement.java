@@ -2,12 +2,14 @@ package net.jr.client.components.widgets;
 
 import net.jr.client.components.interfaces.IWidgetRenderer;
 import net.jr.client.components.navigation.UiAction;
-import net.jr.client.components.navigation.UiActionFeedback;
-import net.jr.client.sound.action.WidgetInputSounds;
+import net.jr.registry.ModSounds;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
@@ -41,8 +43,6 @@ public class SliderElement extends JavaBaseWidget {
     private int selectedIndex;
 
     private boolean editing;
-
-    private UiActionFeedback lastUiActionFeedback = UiActionFeedback.NONE;
 
     private Consumer<SliderElement> onChange =
             ignored -> {};
@@ -340,12 +340,8 @@ public class SliderElement extends JavaBaseWidget {
                 event,
                 doubleClick
         );
-        if (handled) {
-            WidgetInputSounds.reportPointerClickFeedback(
-                    this.valueChangedSince(previous)
-                            ? UiActionFeedback.CHAR
-                            : UiActionFeedback.NONE
-            );
+        if (handled && this.valueChangedSince(previous)) {
+            playFeedback(Minecraft.getInstance().getSoundManager(), SoundFeedback.CHAR);
         }
         return handled;
     }
@@ -380,7 +376,7 @@ public class SliderElement extends JavaBaseWidget {
                 dragY
         );
         if (handled && this.valueChangedSince(previous)) {
-            WidgetInputSounds.playPointerDragFeedback(UiActionFeedback.CHAR);
+            playFeedback(Minecraft.getInstance().getSoundManager(), SoundFeedback.CHAR);
         }
         return handled;
     }
@@ -403,7 +399,6 @@ public class SliderElement extends JavaBaseWidget {
 
     @Override
     public boolean handleUiAction(UiAction action) {
-        this.lastUiActionFeedback = UiActionFeedback.NONE;
         if (!this.active || !this.visible()) {
             return false;
         }
@@ -411,7 +406,7 @@ public class SliderElement extends JavaBaseWidget {
         if (!this.editing) {
             if (action == UiAction.ACCEPT) {
                 this.editing = true;
-                this.lastUiActionFeedback = UiActionFeedback.CLICK;
+                this.playFeedback(SoundFeedback.CLICK);
                 return true;
             }
 
@@ -422,7 +417,7 @@ public class SliderElement extends JavaBaseWidget {
                 || action == UiAction.CANCEL
                 || action == UiAction.BACK) {
             this.editing = false;
-            this.lastUiActionFeedback = UiActionFeedback.CLICK;
+            this.playFeedback(SoundFeedback.CLICK);
             return true;
         }
 
@@ -432,16 +427,16 @@ public class SliderElement extends JavaBaseWidget {
 
         if (horizontal) {
             if (action == UiAction.MOVE_LEFT) {
-                this.lastUiActionFeedback = this.adjustFromFocus(-1)
-                        ? UiActionFeedback.CHAR
-                        : UiActionFeedback.NONE;
+                if (this.adjustFromFocus(-1)) {
+                    this.playFeedback(SoundFeedback.CHAR);
+                }
                 return true;
             }
 
             if (action == UiAction.MOVE_RIGHT) {
-                this.lastUiActionFeedback = this.adjustFromFocus(1)
-                        ? UiActionFeedback.CHAR
-                        : UiActionFeedback.NONE;
+                if (this.adjustFromFocus(1)) {
+                    this.playFeedback(SoundFeedback.CHAR);
+                }
                 return true;
             }
 
@@ -452,16 +447,16 @@ public class SliderElement extends JavaBaseWidget {
             }
         } else {
             if (action == UiAction.MOVE_UP) {
-                this.lastUiActionFeedback = this.adjustFromFocus(-1)
-                        ? UiActionFeedback.CHAR
-                        : UiActionFeedback.NONE;
+                if (this.adjustFromFocus(-1)) {
+                    this.playFeedback(SoundFeedback.CHAR);
+                }
                 return true;
             }
 
             if (action == UiAction.MOVE_DOWN) {
-                this.lastUiActionFeedback = this.adjustFromFocus(1)
-                        ? UiActionFeedback.CHAR
-                        : UiActionFeedback.NONE;
+                if (this.adjustFromFocus(1)) {
+                    this.playFeedback(SoundFeedback.CHAR);
+                }
                 return true;
             }
 
@@ -475,9 +470,22 @@ public class SliderElement extends JavaBaseWidget {
         return false;
     }
 
-    @Override
-    public UiActionFeedback uiActionFeedback(UiAction action) {
-        return this.lastUiActionFeedback;
+    private void playFeedback(SoundFeedback feedback) {
+        playFeedback(Minecraft.getInstance().getSoundManager(), feedback);
+    }
+
+    private static void playFeedback(SoundManager soundManager, SoundFeedback feedback) {
+        if (feedback == SoundFeedback.CLICK) {
+            soundManager.play(SimpleSoundInstance.forUI(ModSounds.UI_CLICK.get(), 1.0F, 1.0F));
+        } else if (feedback == SoundFeedback.CHAR) {
+            soundManager.play(SimpleSoundInstance.forUI(ModSounds.UI_CHAR.get(), 1.0F, 1.0F));
+        }
+    }
+
+    private enum SoundFeedback {
+        NONE,
+        CLICK,
+        CHAR
     }
 
     private boolean adjustFromFocus(int delta) {

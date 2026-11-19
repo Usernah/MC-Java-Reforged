@@ -244,7 +244,7 @@ public class TextElement implements VisualElementsInterface {
             return;
         }
 
-        Draw.TextBuilder builder = this.builder();
+        Draw.TextBuilder builder = this.drawBuilder();
         this.applyStyle(builder);
         this.updateMeasurements(builder);
 
@@ -256,15 +256,16 @@ public class TextElement implements VisualElementsInterface {
 
         float clipX = this.scrollClipX();
         float offset = this.scrollOffset(Util.getMillis(), overflow);
-        Draw.TextBuilder scrollingBuilder = this.builder(clipX - offset, this.y());
+        float drawY = this.resolvedY();
+        Draw.TextBuilder scrollingBuilder = this.builder(clipX - offset, drawY);
         this.applyStyle(scrollingBuilder, Draw.TextAlign.LEFT);
 
         ((GuiGraphicsExtractorBridge)(Object)guiGraphics)
             .javaReforged$enablePreciseScissor(
                 clipX,
-                this.y() - 1.0F,
+                drawY - 1.0F,
                 clipX + this.scrollWidth,
-                this.y() + this.height() + 1.0F
+                drawY + this.height() + 1.0F
             );
         try {
             scrollingBuilder.draw(guiGraphics);
@@ -277,6 +278,18 @@ public class TextElement implements VisualElementsInterface {
         return this.builder(this.x(), this.y());
     }
 
+    private Draw.TextBuilder drawBuilder() {
+        float drawX = this.resolvedX();
+        if (this.anchor().isExplicit()) {
+            drawX += switch (this.align) {
+                case LEFT -> 0.0F;
+                case CENTER -> this.width() / 2.0F;
+                case RIGHT -> this.width();
+            };
+        }
+        return this.builder(drawX, this.resolvedY());
+    }
+
     private Draw.TextBuilder builder(float x, float y) {
         int drawX = Math.round(x);
         int drawY = Math.round(y);
@@ -286,12 +299,20 @@ public class TextElement implements VisualElementsInterface {
     }
 
     private void applyStyle(Draw.TextBuilder builder) {
-        this.applyStyle(builder, this.align);
+        this.applyStyle(builder, this.align, 1.0F);
     }
 
     private void applyStyle(Draw.TextBuilder builder, Draw.TextAlign alignment) {
+        this.applyStyle(builder, alignment, 1.0F);
+    }
+
+    private void applyStyle(
+            Draw.TextBuilder builder,
+            Draw.TextAlign alignment,
+            float parentAlpha
+    ) {
         builder.scale(this.scale)
-            .color(this.colorWithElementAlpha())
+            .color(this.colorWithElementAlpha(parentAlpha))
             .shadow(this.shadow)
             .legacyShadow(this.legacyShadow)
             .align(alignment);
@@ -304,6 +325,12 @@ public class TextElement implements VisualElementsInterface {
         if (this.font != null) {
             builder.font(this.font);
         }
+    }
+
+    Draw.TextBuilder styledBuilder(float x, float y, float parentAlpha) {
+        Draw.TextBuilder builder = this.builder(x, y);
+        this.applyStyle(builder, this.align, parentAlpha);
+        return builder;
     }
 
     private void updateMeasurements() {
@@ -320,16 +347,34 @@ public class TextElement implements VisualElementsInterface {
     }
 
     private int colorWithElementAlpha() {
+        return this.colorWithElementAlpha(1.0F);
+    }
+
+    private int colorWithElementAlpha(float parentAlpha) {
         int colorAlpha = this.color >>> 24;
-        int finalAlpha = Math.round(colorAlpha * this.alpha());
+        float effectiveAlpha = Math.max(0.0F, Math.min(1.0F, parentAlpha));
+        int finalAlpha = Math.round(colorAlpha * this.alpha() * effectiveAlpha);
         return (finalAlpha << 24) | (this.color & 0xFFFFFF);
     }
 
     private float scrollClipX() {
+        float drawX = this.drawX();
         return switch (this.align) {
-            case LEFT -> this.x();
-            case CENTER -> this.x() - this.scrollWidth / 2.0F;
-            case RIGHT -> this.x() - this.scrollWidth;
+            case LEFT -> drawX;
+            case CENTER -> drawX - this.scrollWidth / 2.0F;
+            case RIGHT -> drawX - this.scrollWidth;
+        };
+    }
+
+    private float drawX() {
+        float drawX = this.resolvedX();
+        if (!this.anchor().isExplicit()) {
+            return drawX;
+        }
+        return drawX + switch (this.align) {
+            case LEFT -> 0.0F;
+            case CENTER -> this.width() / 2.0F;
+            case RIGHT -> this.width();
         };
     }
 

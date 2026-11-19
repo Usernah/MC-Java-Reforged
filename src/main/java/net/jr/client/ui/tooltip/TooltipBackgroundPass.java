@@ -1,6 +1,7 @@
 package net.jr.client.ui.tooltip;
 
 import net.jr.api.client.resource.Asset;
+import net.jr.client.ui.presentation.UiPresentation;
 import net.jr.client.components.elements.ImageElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -13,6 +14,7 @@ public final class TooltipBackgroundPass {
     private TooltipBackgroundPass() {
     }
 
+
     public static boolean extractWithPadding(
             GuiGraphicsExtractor graphics,
             int x,
@@ -22,8 +24,19 @@ public final class TooltipBackgroundPass {
             int padding,
             @Nullable Identifier style
     ) {
+        boolean small = UiPresentation.isSmall();
 
-        return extract(graphics, x - padding, y - padding, width + (padding * 2), height + (padding * 2), style);
+        int extraSize = small ? 6 : 2;
+        int extraPadding = small ? 4 : 1;
+
+        return extract(
+                graphics,
+                x - padding - extraPadding,
+                y - padding - extraPadding,
+                width + (padding * 2) + extraSize,
+                height + (padding * 2) + extraSize,
+                style
+        );
     }
     public static boolean extract(
             GuiGraphicsExtractor graphics,

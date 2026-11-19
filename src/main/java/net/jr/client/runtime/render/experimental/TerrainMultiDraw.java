@@ -48,10 +48,7 @@ import net.minecraft.util.Util;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 
-/**
- * Experimental terrain multi-draw path. The CPU builds backend-neutral indexed indirect
- * commands; Blaze3D translates the single submission to OpenGL or Vulkan.
- */
+
 public final class TerrainMultiDraw {
     private static final int INSTANCE_STRIDE = 16;
     private static final int INDIRECT_COMMAND_STRIDE = 20;
@@ -167,8 +164,8 @@ public final class TerrainMultiDraw {
             float visibility = entry.section.getVisibility(now);
             visibilities[index] = visibility;
         }
-        // Opaque draws use TerrainBatch and sectionInstances. Only the vanilla
-        // translucent draws need a per-section matrix/uniform allocation.
+
+
         for (int index = 0; index < topology.translucentSectionCount; index++) {
             int sectionIndex = topology.translucentSections[index];
             SectionEntry entry = topology.sections[sectionIndex];

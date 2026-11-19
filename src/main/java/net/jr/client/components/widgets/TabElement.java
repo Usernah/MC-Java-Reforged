@@ -105,6 +105,11 @@ public class TabElement extends JavaBaseWidget {
     }
 
     @Override
+    public boolean participatesInFocusNavigation() {
+        return false;
+    }
+
+    @Override
     public ComponentPath nextFocusPath(
             FocusNavigationEvent event
     ) {

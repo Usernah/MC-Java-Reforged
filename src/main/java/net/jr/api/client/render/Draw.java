@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
+import java.util.List;
 import java.util.Map;
 
 public final class Draw {
@@ -55,6 +56,10 @@ public final class Draw {
         return new ImageBuilder(UiRenderEngine.imageFromMeta(texture, x, y, width, height));
     }
 
+    public static RectangleBuilder rectangle(float x, float y, float width, float height) {
+        return new RectangleBuilder(UiRenderEngine.rectangle(x, y, width, height));
+    }
+
     public static TextBuilder text(Component text) {
         return new TextBuilder(UiRenderEngine.text(text));
     }
@@ -79,6 +84,33 @@ public final class Draw {
         UiRenderEngine.closeVideos();
     }
 
+    public static class RectangleBuilder {
+        private final UiRenderEngine.RectangleBuilder delegate;
+
+        private RectangleBuilder(UiRenderEngine.RectangleBuilder delegate) {
+            this.delegate = delegate;
+        }
+
+        public RectangleBuilder color(int color) {
+            this.delegate.color(color);
+            return this;
+        }
+
+        public RectangleBuilder color(int topColor, int bottomColor) {
+            this.delegate.color(topColor, bottomColor);
+            return this;
+        }
+
+        public RectangleBuilder rotation(float degrees) {
+            this.delegate.rotation(degrees);
+            return this;
+        }
+
+        public void draw(GuiGraphicsExtractor graphics) {
+            this.delegate.draw(graphics);
+        }
+    }
+
     public static class ImageBuilder {
         private final UiRenderEngine.ImageBuilder delegate;
 
@@ -92,6 +124,16 @@ public final class Draw {
 
         public ImageBuilder config(String configId) {
             this.delegate.config(configId);
+            return this;
+        }
+
+        public ImageBuilder configs(List<String> configIds) {
+            this.delegate.configs(configIds);
+            return this;
+        }
+
+        public ImageBuilder meta(Asset metaResource) {
+            this.delegate.meta(metaResource);
             return this;
         }
 
@@ -355,6 +397,26 @@ public final class Draw {
             return this;
         }
 
+        public TextBuilder wrap(float width) {
+            this.delegate.wrap(width);
+            return this;
+        }
+
+        public TextBuilder maxHeight(float height) {
+            this.delegate.maxHeight(height);
+            return this;
+        }
+
+        public TextBuilder maxLines(int maxLines) {
+            this.delegate.maxLines(maxLines);
+            return this;
+        }
+
+        public TextBuilder lineSpacing(float lineSpacing) {
+            this.delegate.lineSpacing(lineSpacing);
+            return this;
+        }
+
         public int width() {
             return this.delegate.width();
         }
@@ -365,6 +427,10 @@ public final class Draw {
 
         public int height() {
             return this.delegate.height();
+        }
+
+        public int lineCount() {
+            return this.delegate.lineCount();
         }
 
         public void draw(GuiGraphicsExtractor graphics) {

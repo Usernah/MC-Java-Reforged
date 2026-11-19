@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 import net.jr.api.client.split.SplitOrientation;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
+import net.jr.client.ui.dsl.ScreenEditorHooks;
 import net.minecraft.client.Minecraft;
 
 public final class ViewportManager {
@@ -16,6 +17,8 @@ public final class ViewportManager {
     private SplitOrientation twoPlayerOrientation = SplitOrientation.VERTICAL;
     @Nullable
     private ViewportTable viewportTable;
+    @Nullable
+    private ViewportTable fullWindowViewportTable;
     @Nullable
     private WindowMetrics windowMetrics;
 
@@ -84,10 +87,22 @@ public final class ViewportManager {
     }
 
     public List<Slots> drawableSlots() {
+        return this.drawableViewports().stream().map(SlotViewport::slot).toList();
+    }
+
+
+    public List<SlotViewport> drawableViewports() {
         if (this.viewportTable == null) {
             return List.of();
         }
-        return this.presentedSlots().stream().filter(slot -> this.hasViewport(slot.id())).toList();
+        ArrayList<SlotViewport> result = new ArrayList<>();
+        for (Slots slot : this.presentedSlots()) {
+            ViewportArea viewport = this.viewportOrNull(slot.id());
+            if (viewport != null) {
+                result.add(new SlotViewport(slot, viewport));
+            }
+        }
+        return List.copyOf(result);
     }
 
     public int viewportId(int slotId) {
@@ -100,16 +115,18 @@ public final class ViewportManager {
 
     public boolean hasViewport(int slotId) {
         ClientSlots.requireSlotId(slotId);
+        ViewportLayout effectiveLayout = this.effectiveLayout();
         return this.presented[slotId]
             && this.viewportTable != null
-            && this.layout.hasViewport(this.viewportIds[slotId]);
+            && effectiveLayout.hasViewport(this.viewportIds[slotId]);
     }
 
     @Nullable
     public ViewportArea viewportOrNull(int slotId) {
-        return this.hasViewport(slotId)
-            ? this.viewportTable.viewport(this.viewportIds[slotId])
-            : null;
+        if (!this.hasViewport(slotId)) {
+            return null;
+        }
+        return this.effectiveViewportTable().viewport(this.viewportIds[slotId]);
     }
 
     public ViewportArea viewport(int slotId) {
@@ -121,7 +138,14 @@ public final class ViewportManager {
     }
 
     public ViewportLayout layout() {
-        return this.layout;
+        return this.effectiveLayout();
+    }
+
+    public int viewportCount() {
+        ViewportTable table = this.usesEditorLayout()
+            ? this.fullWindowViewportTable
+            : this.viewportTable;
+        return table != null ? table.size() : this.presentedCount();
     }
 
     public boolean hasWindowMetrics() {
@@ -136,15 +160,13 @@ public final class ViewportManager {
     }
 
     public ViewportTable viewportTable() {
-        if (this.viewportTable == null) {
-            throw new IllegalStateException("Viewport table has not been rebuilt yet");
-        }
-        return this.viewportTable;
+        return this.effectiveViewportTable();
     }
 
     public void rebuild(WindowMetrics metrics) {
         this.windowMetrics = metrics;
         this.viewportTable = this.createViewportTable(this.layout, metrics);
+        this.fullWindowViewportTable = this.createViewportTable(ViewportLayout.SINGLE, metrics);
     }
 
     public void setTwoPlayerOrientation(SplitOrientation orientation) {
@@ -207,6 +229,10 @@ public final class ViewportManager {
     private void rebuildExistingTable() {
         if (this.windowMetrics != null) {
             this.viewportTable = this.createViewportTable(this.layout, this.windowMetrics);
+            this.fullWindowViewportTable = this.createViewportTable(
+                ViewportLayout.SINGLE,
+                this.windowMetrics
+            );
         }
     }
 
@@ -223,6 +249,26 @@ public final class ViewportManager {
         return this.twoPlayerOrientation == SplitOrientation.HORIZONTAL
             ? ViewportLayout.TWO_HORIZONTAL
             : ViewportLayout.TWO_VERTICAL;
+    }
+
+    public boolean usesEditorLayout() {
+        return ScreenEditorHooks.fullWindowFor(
+            this.slots.slot(0).screenState().screen()
+        );
+    }
+
+    private ViewportLayout effectiveLayout() {
+        return this.usesEditorLayout() ? ViewportLayout.SINGLE : this.layout;
+    }
+
+    private ViewportTable effectiveViewportTable() {
+        ViewportTable table = this.usesEditorLayout()
+            ? this.fullWindowViewportTable
+            : this.viewportTable;
+        if (table == null) {
+            throw new IllegalStateException("Viewport table has not been rebuilt yet");
+        }
+        return table;
     }
 
     private ViewportTable createViewportTable(ViewportLayout layout, WindowMetrics metrics) {
@@ -242,5 +288,8 @@ public final class ViewportManager {
             requestedScales,
             Minecraft.getInstance().isEnforceUnicode()
         );
+    }
+
+    public record SlotViewport(Slots slot, ViewportArea viewport) {
     }
 }

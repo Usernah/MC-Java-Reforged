@@ -1,5 +1,6 @@
 package net.jr.client.ui.container.slots;
 
+import net.jr.client.ui.presentation.UiPresentation;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
@@ -131,19 +132,19 @@ public final class VanillaItemSlotLayer {
             return;
         }
 
-        float scale = 20.0F / 16.0F;
+        float scale = 32.0F / 16.0F;
         graphics.nextStratum();
         graphics.pose().pushMatrix();
         graphics.pose().translate(mouseX - 9.0F - scale / 2.0F, mouseY - 9.0F - scale / 2.0F);
         graphics.pose().scale(scale, scale);
         Font itemFont = IClientItemExtensions.of(carriedItem)
             .getFont(carriedItem, IClientItemExtensions.FontContext.ITEM_COUNT);
-        ((GuiGraphicsExtractorBridge)graphics).javaReforged$renderItemStackAtSize(
+        ((GuiGraphicsExtractorBridge)graphics).javaReforged$renderCarriedItemStackAtSize(
             carriedItem,
             0,
             0,
             0,
-            20,
+                UiPresentation.isSmall() ? 16 : 32,
             false,
             itemFont == null ? this.font : itemFont,
             null

@@ -3,7 +3,7 @@ package net.jr.api.client.split;
 import net.jr.api.client.input.IGamepad;
 import net.jr.api.client.input.IJoinPromptSource;
 
-/** Announces presentation changes for the global local-player join prompt. */
+
 public sealed interface JoinPromptAnnouncement {
     record Show(IGamepad gamepad, int playerNumber) implements JoinPromptAnnouncement, IJoinPromptSource {
         public Show {

@@ -9,6 +9,18 @@ import org.spongepowered.asm.mixin.Unique;
 public class EntityRenderStateMixin implements LegacyNameTagRenderState {
     @Unique
     private int javaReforged$playerColor = -1;
+    @Unique
+    private boolean javaReforged$player;
+
+    @Override
+    public void javaReforged$setPlayer(boolean player) {
+        this.javaReforged$player = player;
+    }
+
+    @Override
+    public boolean javaReforged$isPlayer() {
+        return this.javaReforged$player;
+    }
 
     @Override
     public void javaReforged$setPlayerColor(int color) {

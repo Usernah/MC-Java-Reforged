@@ -9,6 +9,7 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.jr.client.systemui.user.SignInMenu;
 
 public final class GamepadJoinTicker {
     private static final Map<IGamepad, Boolean> JOIN_LATCHED = new HashMap<>();
@@ -45,17 +46,29 @@ public final class GamepadJoinTicker {
 
             JOIN_LATCHED.put(gamepad, true);
 
-            if (!ClientRuntime.INSTANCE.input().join().canStartJoin(gamepad)) {
-                show(minecraft, "Ya hay 4 jugadores locales");
-                continue;
-            }
-
             try {
-                int slotId = ClientRuntime.INSTANCE.input().join().join(minecraft, gamepad);
-                JoinPromptAnnouncer.dismiss();
-                show(minecraft, "Mando asignado al jugador " + (slotId + 1));
+                SignInMenu.open(gamepad, user -> {
+                    try {
+                        int slotId = UserJoinService.select(minecraft, gamepad, user);
+                        JoinPromptAnnouncer.dismiss();
+                        show(minecraft, "Mando asignado a " + user.displayName()
+                            + " (jugador " + (slotId + 1) + ")");
+                    } catch (RuntimeException exception) {
+                        show(minecraft, "No se pudo seleccionar usuario: " + exception.getMessage());
+                    }
+                });
             } catch (RuntimeException exception) {
-                show(minecraft, "No se pudo unir jugador local: " + exception.getMessage());
+                if (ClientRuntime.INSTANCE.input().join().canStartJoin(gamepad)) {
+                    try {
+                        int slotId = ClientRuntime.INSTANCE.input().join().join(minecraft, gamepad);
+                        JoinPromptAnnouncer.dismiss();
+                        show(minecraft, "Mando asignado al jugador " + (slotId + 1));
+                    } catch (RuntimeException fallbackException) {
+                        show(minecraft, "No se pudo unir jugador local: " + fallbackException.getMessage());
+                    }
+                } else {
+                    show(minecraft, "No se pudo abrir el selector de usuarios: " + exception.getMessage());
+                }
             }
         }
     }

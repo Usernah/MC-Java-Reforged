@@ -3,11 +3,13 @@ package net.jr.client.input;
 import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.api.client.local.Client;
 import net.jr.api.client.input.GamepadDigitalInput;
-import net.jr.client.sound.action.InputActionSounds;
+import net.jr.registry.ModSounds;
 import net.jr.screens.crafting.Crafting2x2Screen;
 import net.jr.screens.inventory.CreativeInventoryScreen;
+import net.jr.client.runtime.state.CraftingMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 
@@ -39,6 +41,8 @@ public final class GameplayActionHandler {
                 minecraft.gui.setScreen(new CreativeInventoryScreen(
                     player, Component.translatable("container.creative")
                 ));
+            } else if (Client.current().options().craftingMode().get() == CraftingMode.CLASSIC) {
+                minecraft.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(player));
             } else {
                 minecraft.gui.setScreen(new Crafting2x2Screen(
                     player.inventoryMenu,
@@ -81,7 +85,9 @@ public final class GameplayActionHandler {
     public static boolean updateSounds(Minecraft minecraft, LocalPlayer player, boolean wasDropDown) {
         boolean dropDown = minecraft.options.keyDrop.isDown();
         if (dropDown && !wasDropDown && !player.getInventory().getSelectedItem().isEmpty()) {
-            InputActionSounds.playGameplayItemPop();
+            minecraft.getSoundManager().play(
+                SimpleSoundInstance.forUI(ModSounds.GAMEPLAY_ITEM_POP.get(), 1.0F, 1.0F)
+            );
         }
         return dropDown;
     }

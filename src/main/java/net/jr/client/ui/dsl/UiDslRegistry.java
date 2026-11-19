@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Registry of Java-owned element names understood by the structural DSL. */
+
 public final class UiDslRegistry {
     private static final Map<String, UiDslKind<?>> TYPES = new LinkedHashMap<>();
 

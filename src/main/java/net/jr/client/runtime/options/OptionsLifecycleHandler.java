@@ -29,7 +29,9 @@ public final class OptionsLifecycleHandler {
                 options.javaReforged$getToggleUse().get(),
                 options.javaReforged$getSprintWindow().get(),
                 options.javaReforged$getAutoJump().get(),
-                options.javaReforged$getOperatorItemsTab().get()
+                options.javaReforged$getOperatorItemsTab().get(),
+                options.javaReforged$getAttackIndicator().get(),
+                options.javaReforged$getMainHand().get()
         );
 
         for (Slots slot : ClientRuntime.INSTANCE.slots().all()) {
@@ -57,6 +59,8 @@ public final class OptionsLifecycleHandler {
         options.javaReforged$getSprintWindow().set(primary.sprintWindow().get());
         options.javaReforged$getAutoJump().set(primary.autoJump().get());
         options.javaReforged$getOperatorItemsTab().set(primary.operatorItemsTab().get());
+        options.javaReforged$getAttackIndicator().set(primary.attackIndicator().get());
+        options.javaReforged$getMainHand().set(primary.mainHand().get());
     }
 
     public static void setCameraType(OptionsAccessor options, CameraType cameraType) {

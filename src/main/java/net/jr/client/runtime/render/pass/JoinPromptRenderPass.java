@@ -7,17 +7,16 @@ import net.jr.api.client.resource.Asset;
 import net.jr.api.client.split.JoinPromptAnnouncement;
 import net.jr.api.client.split.JoinPromptAnnouncements;
 import net.jr.api.client.input.IGamepad;
+import net.jr.client.components.elements.TextElement;
 import net.jr.client.runtime.viewport.GuiScaleCalculator;
-import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
 import net.jr.client.ui.hint.glyph.GamepadGlyphThemeState;
-import net.jr.registry.ModFonts;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 
-/** Extracts the single window-global join prompt after all local viewports. */
+
 public final class JoinPromptRenderPass {
     private static final int PANEL_WIDTH = 186;
     private static final int PANEL_HEIGHT = 37;
@@ -27,9 +26,7 @@ public final class JoinPromptRenderPass {
     private static final int CONTROLLER_HEIGHT = 29;
     private static final int TEXT_AREA_LEFT = 40;
     private static final int TEXT_AREA_RIGHT = 6;
-    private static final int SEGMENT_GAP = 2;
     private static final float LABEL_SCALE = 1.0F;
-    private static final float GLYPH_SCALE = 1.0F;
     private static final int TEXT_COLOR = 0xFF4D4D4D;
     private static final long BLINK_PERIOD_MS = 1_000L;
 
@@ -116,42 +113,21 @@ public final class JoinPromptRenderPass {
         IGamepad gamepad
     ) {
         ControllerGlyphTheme theme = GamepadGlyphThemeState.themeForGamepad(gamepad);
-
-        Draw.TextBuilder prefix = label(Component.translatable("prompt.java_reforged.join.prefix"));
-        Draw.TextBuilder start = glyph(theme, ControllerGlyph.BUTTON_SELECT);
-        Draw.TextBuilder plus = label(Component.literal("+"));
-        Draw.TextBuilder select = glyph(theme, ControllerGlyph.BUTTON_START);
-        Draw.TextBuilder suffix = label(Component.translatable("prompt.java_reforged.join.suffix"));
-
-        Draw.TextBuilder[] segments = {prefix, start, plus, select, suffix};
-        int totalWidth = SEGMENT_GAP * (segments.length - 1);
-        for (Draw.TextBuilder segment : segments) {
-            totalWidth += segment.width();
-        }
-
         float areaX = panelX + TEXT_AREA_LEFT;
         int areaWidth = PANEL_WIDTH - TEXT_AREA_LEFT - TEXT_AREA_RIGHT;
-        int x = Math.round(areaX + (areaWidth - totalWidth) / 2.0F);
-        float centerY = panelY + PANEL_HEIGHT / 2.0F;
-
-        for (Draw.TextBuilder segment : segments) {
-            int y = Math.round(centerY - segment.lineHeight() / 2.0F);
-            segment.position(x, y).draw(graphics);
-            x += segment.width() + SEGMENT_GAP;
-        }
-    }
-
-    private static Draw.TextBuilder label(Component component) {
-        return Draw.text(component)
-            .scale(LABEL_SCALE)
-            .color(TEXT_COLOR);
-    }
-
-    private static Draw.TextBuilder glyph(ControllerGlyphTheme theme, ControllerGlyph glyph) {
-        return Draw.text(Component.literal(glyph.text()))
-            .font(GamepadGlyphThemeState.font(theme))
-            .scale(GLYPH_SCALE)
-            .color(0xFFFFFFFF);
+        GamepadGlyphThemeState.withRenderTheme(theme, () -> {
+            TextElement message = new TextElement(
+                Component.translatable("prompt.java_reforged.join"),
+                areaX + areaWidth / 2.0F,
+                0.0F,
+                graphics
+            );
+            message.setScale(LABEL_SCALE);
+            message.setColor(TEXT_COLOR);
+            message.setAlign(Draw.TextAlign.CENTER);
+            message.setY(panelY + (PANEL_HEIGHT - message.height()) / 2.0F);
+            message.draw();
+        });
     }
 
     private static Asset playerIcon(int playerNumber) {

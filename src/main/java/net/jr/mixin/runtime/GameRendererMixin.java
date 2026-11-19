@@ -2,15 +2,18 @@ package net.jr.mixin.runtime;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import net.jr.api.client.local.Client;
+import net.jr.client.runtime.render.pass.*;
 import net.jr.client.runtime.render.tick.CameraTicker;
 import net.jr.client.runtime.viewport.ViewportProjection;
 import net.jr.client.runtime.render.tick.HandRendererTicker;
 import net.jr.client.runtime.render.target.ViewportRenderTargets;
-import net.jr.client.runtime.render.pass.WorldExtractionPass;
-import net.jr.client.runtime.render.pass.WorldRenderPass;
-import net.jr.client.runtime.render.pass.ControlHintRenderPass;
+import net.jr.client.ui.render.composition.GuiCompositionScope;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.Lightmap;
@@ -29,12 +32,74 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
+    @Inject(method = "render", at = @At("HEAD"))
+    private void javaReforged$beginFinalFrame(CallbackInfo ci) {
+        LegacyGammaFramePass.beginFrame();
+    }
+
+    @Inject(method = "render", at = @At("RETURN"))
+    private void javaReforged$endFinalFrame(CallbackInfo ci) {
+        LegacyGammaFramePass.endFrame();
+    }
+
+    @Inject(
+        method = "render",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V",
+            shift = At.Shift.AFTER
+        )
+    )
+    private void javaReforged$applyLegacyGammaAfterGui(CallbackInfo ci) {
+        LegacyGammaFramePass.process((GameRenderer)(Object)this);
+    }
+
+    @Redirect(
+        method = "renderItemInHand",
+        at = @At(
+            value = "FIELD",
+            target = "Lnet/minecraft/client/Minecraft;gameMode:Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;"
+        )
+    )
+    private MultiPlayerGameMode javaReforged$readCurrentClientGameMode(Minecraft minecraft) {
+        return Client.current().gameMode();
+    }
+
+    @Redirect(
+        method = "renderItemInHand",
+        at = @At(
+            value = "FIELD",
+            target = "Lnet/minecraft/client/Minecraft;player:Lnet/minecraft/client/player/LocalPlayer;"
+        )
+    )
+    private LocalPlayer javaReforged$readCurrentClientPlayer(Minecraft minecraft) {
+        return Client.current().player();
+    }
+
     @Inject(method = "mainRenderTarget", at = @At("HEAD"), cancellable = true)
     private void javaReforged$resolveActiveMainTarget(CallbackInfoReturnable<RenderTarget> cir) {
+        RenderTarget compositionTarget = GuiCompositionScope.activeRenderTargetOrNull();
+        if (compositionTarget != null) {
+            cir.setReturnValue(compositionTarget);
+            return;
+        }
         RenderTarget activeTarget = ViewportRenderTargets.activeMainOrNull();
         if (activeTarget != null) {
             cir.setReturnValue(activeTarget);
+            return;
         }
+        RenderTarget presentationTarget = LegacyGammaFramePass.presentationTargetOrNull();
+        if (presentationTarget != null) {
+            cir.setReturnValue(presentationTarget);
+        }
+    }
+
+    @ModifyExpressionValue(
+        method = "takeAutoScreenshot",
+        at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/GameRenderer;mainRenderTarget:Lcom/mojang/blaze3d/pipeline/RenderTarget;")
+    )
+    private RenderTarget javaReforged$useResolvedTargetForAutoScreenshot(RenderTarget original) {
+        return LegacyGammaFramePass.lastPresentationTargetOr(original);
     }
 
     @ModifyExpressionValue(
@@ -47,7 +112,14 @@ public abstract class GameRendererMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     private void javaReforged$closeSlotRenderTargets(CallbackInfo ci) {
-        ControlHintRenderPass.closeAll();
+        ControlHintPass.closeAll();
+        HudCompositionPass.closeAll();
+        PlayerNameHudPass.closeAll();
+        SystemUiRenderPass.closeAll();
+        HudOpacityPass.closeAll();
+        BottomHudPass.closeAll();
+        ScreenCompositionPass.closeAll();
+        LegacyGammaFramePass.close();
         ViewportRenderTargets.closeAll();
     }
 

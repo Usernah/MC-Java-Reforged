@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 
-/** Owns the single modal/non-modal screen overlay for one local client slot. */
+
 public final class ScreenOverlayManager {
     private @Nullable ActiveOverlay active;
 

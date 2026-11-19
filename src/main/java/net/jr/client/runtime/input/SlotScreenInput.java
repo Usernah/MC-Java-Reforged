@@ -4,9 +4,11 @@ import net.jr.api.client.input.IScreenInput;
 import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.ui.render.composition.ScreenFramebufferSpace;
 import net.minecraft.client.MouseHandler;
+import net.minecraft.client.gui.screens.Screen;
 
-/** Converts the current pointer and dimensions into one slot's screen space. */
+
 final class SlotScreenInput implements IScreenInput {
     private final int slotId;
 
@@ -36,12 +38,18 @@ final class SlotScreenInput implements IScreenInput {
 
     @Override
     public int guiWidth() {
-        return Viewport.get(this.slotId).logicalGuiWidth();
+        ViewportArea viewport = viewport();
+        return ScreenFramebufferSpace.width(
+            screen(), viewport, viewport.logicalGuiWidth()
+        );
     }
 
     @Override
     public int guiHeight() {
-        return Viewport.get(this.slotId).logicalGuiHeight();
+        ViewportArea viewport = viewport();
+        return ScreenFramebufferSpace.height(
+            screen(), viewport, viewport.logicalGuiHeight()
+        );
     }
 
     @Override
@@ -56,15 +64,19 @@ final class SlotScreenInput implements IScreenInput {
 
     @Override
     public int framebufferWidth() {
-        return Viewport.get(this.slotId).width();
+        return viewport().width();
     }
 
     @Override
     public int framebufferHeight() {
-        return Viewport.get(this.slotId).height();
+        return viewport().height();
     }
 
     private ViewportArea viewport() {
-        return ClientRuntime.INSTANCE.viewports().viewport(this.slotId);
+        return Viewport.current();
+    }
+
+    private Screen screen() {
+        return ClientRuntime.INSTANCE.slots().slot(this.slotId).screenState().screen();
     }
 }

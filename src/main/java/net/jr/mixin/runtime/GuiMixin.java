@@ -21,6 +21,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -28,6 +29,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Gui.class)
 public abstract class GuiMixin {
+    @Unique
+    private boolean javaReforged$hasLoggedScreen;
+
+    @Unique
+    private @Nullable Screen javaReforged$lastLoggedScreen;
+
     @Shadow @Final
     private ChatListener chatListener;
 
@@ -86,6 +93,36 @@ public abstract class GuiMixin {
         if (SlotScreenTransitionHandler.shouldCancelSetScreen(screen)) {
             callback.cancel();
         }
+    }
+
+    @Inject(method = "setScreen", at = @At("RETURN"))
+    private void javaReforged$logCurrentScreenOncePerTransition(
+            @Nullable Screen requestedScreen,
+            CallbackInfo callback
+    ) {
+        Screen currentScreen = ((Gui)(Object)this).screen();
+        if (this.javaReforged$hasLoggedScreen
+                && currentScreen == this.javaReforged$lastLoggedScreen) {
+            return;
+        }
+
+        this.javaReforged$hasLoggedScreen = true;
+        this.javaReforged$lastLoggedScreen = currentScreen;
+        Integer slotId = net.jr.client.runtime.context.SlotScope.idOrNull();
+        if (currentScreen == null) {
+            net.jr.Java_reforged.LOGGER.info(
+                    "Current screen [slot {}]: <none>",
+                    slotId == null ? "global" : slotId
+            );
+            return;
+        }
+
+        net.jr.Java_reforged.LOGGER.info(
+                "Current screen [slot {}]: {} (title: '{}')",
+                slotId == null ? "global" : slotId,
+                currentScreen.getClass().getName(),
+                currentScreen.getTitle().getString()
+        );
     }
 
     @Redirect(

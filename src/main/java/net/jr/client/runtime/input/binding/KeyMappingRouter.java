@@ -33,4 +33,16 @@ public final class KeyMappingRouter {
             }
         }
     }
+
+    public static void setPhysicalDownAll(
+        KeyMappingLookup mappings,
+        InputConstants.Key key,
+        boolean down
+    ) {
+        for (KeyMapping keyMapping : mappings.getAll(key)) {
+            if (keyMapping != null) {
+                InputApi.setPhysicallyDown(keyMapping, down);
+            }
+        }
+    }
 }

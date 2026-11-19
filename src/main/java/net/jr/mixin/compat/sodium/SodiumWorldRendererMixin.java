@@ -19,6 +19,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer", remap = false)
 abstract class SodiumWorldRendererMixin {
+    @Inject(method = "reload", at = @At("HEAD"), remap = false)
+    private void javaReforged$releaseAllVirtualTerrainBeforeReload(CallbackInfo ci) {
+        WorldRenderBackends.sodium().releaseAllRendererStates(this);
+    }
+
     @Inject(method = "deleteRendererState", at = @At("HEAD"), cancellable = true, remap = false)
     private void javaReforged$releaseOwnedRendererState(CallbackInfo ci) {
         if (WorldRenderBackends.sodium().releaseRendererState(this)) {

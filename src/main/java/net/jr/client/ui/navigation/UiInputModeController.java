@@ -18,6 +18,8 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.Objects;
+
 public final class UiInputModeController {
     private static final double RAW_MOUSE_MOVE_EPSILON = 0.25D;
 
@@ -86,14 +88,30 @@ public final class UiInputModeController {
         return ScreenFocusController.resolveFocusedListener(screen);
     }
 
-    public static void prepareForFocusNavigation(int keyCode) {
+    public static boolean prepareForFocusNavigation(int keyCode) {
         if (!hasCurrentSlot()) {
-            return;
+            return false;
         }
         Minecraft minecraft = Minecraft.getInstance();
+        Screen screen = minecraft.gui.screen();
+        GuiEventListener focusedBefore = screen == null
+            ? null
+            : ScreenFocusController.resolveFocusedListener(screen);
+        Integer focusedSlotBefore = screen instanceof AbstractContainerScreen<?> containerScreen
+            ? ContainerItemSlotFocusController.getFocusedItemSlotIndex(containerScreen)
+            : null;
         applyKeyboardNavigationInputType(keyCode);
         activateFocusNavigation();
-        ScreenFocusController.completeFocusedContainerPath(minecraft.gui.screen());
+        ScreenFocusController.completeFocusedContainerPath(screen);
+
+        GuiEventListener focusedAfter = screen == null
+            ? null
+            : ScreenFocusController.resolveFocusedListener(screen);
+        Integer focusedSlotAfter = screen instanceof AbstractContainerScreen<?> containerScreen
+            ? ContainerItemSlotFocusController.getFocusedItemSlotIndex(containerScreen)
+            : null;
+        return focusedBefore != focusedAfter
+            || !Objects.equals(focusedSlotBefore, focusedSlotAfter);
     }
 
     public static void notifyJoystickPointerActivity() {

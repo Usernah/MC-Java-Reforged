@@ -145,7 +145,9 @@ public class VideoElement implements VisualElementsInterface, AutoCloseable {
                 window.getGuiScaledHeight()
             );
         } else {
-            activeRenderer.renderRect(guiGraphics, this.x(), this.y(), this.width(), this.height());
+            activeRenderer.renderRect(
+                guiGraphics, this.resolvedX(), this.resolvedY(), this.width(), this.height()
+            );
         }
     }
 

@@ -7,6 +7,8 @@ import net.jr.client.ui.dsl.UiDocument.ArithmeticNegationValue;
 import net.jr.client.ui.dsl.UiDocument.ArithmeticOperator;
 import net.jr.client.ui.dsl.UiDocument.ArithmeticValue;
 import net.jr.client.ui.dsl.UiDocument.BlueprintDirective;
+import net.jr.client.ui.dsl.UiDocument.BlueprintContent;
+import net.jr.client.ui.dsl.UiDocument.BlueprintMemberUse;
 import net.jr.client.ui.dsl.UiDocument.BlueprintParameterValue;
 import net.jr.client.ui.dsl.UiDocument.BlueprintUse;
 import net.jr.client.ui.dsl.UiDocument.CallValue;
@@ -16,7 +18,10 @@ import net.jr.client.ui.dsl.UiDocument.ComparisonOperator;
 import net.jr.client.ui.dsl.UiDocument.ComparisonValue;
 import net.jr.client.ui.dsl.UiDocument.ColorValue;
 import net.jr.client.ui.dsl.UiDocument.DefinitionDirective;
+import net.jr.client.ui.dsl.UiDocument.AssignmentDirective;
 import net.jr.client.ui.dsl.UiDocument.ExposedDataValue;
+import net.jr.client.ui.dsl.UiDocument.GlyphValue;
+import net.jr.client.ui.dsl.UiDocument.ElementValue;
 import net.jr.client.ui.dsl.UiDocument.BareValue;
 import net.jr.client.ui.dsl.UiDocument.ImportDirective;
 import net.jr.client.ui.dsl.UiDocument.ImportTarget;
@@ -31,10 +36,12 @@ import net.jr.client.ui.dsl.UiDocument.ObjectValue;
 import net.jr.client.ui.dsl.UiDocument.Position;
 import net.jr.client.ui.dsl.UiDocument.Property;
 import net.jr.client.ui.dsl.UiDocument.ReferenceValue;
+import net.jr.client.ui.dsl.UiDocument.RegisteredStyleValue;
 import net.jr.client.ui.dsl.UiDocument.Statement;
 import net.jr.client.ui.dsl.UiDocument.StringValue;
 import net.jr.client.ui.dsl.UiDocument.TupleValue;
 import net.jr.client.ui.dsl.UiDocument.Value;
+import net.jr.client.ui.dsl.UiDocument.VariableDirective;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -47,41 +54,62 @@ import java.util.Map;
 import java.util.Set;
 
 public final class UiParser {
+    private static final int MAX_BLOCK_DEPTH = 128;
     private final Asset source;
     private final UiFileType type;
     private final List<UiLexer.Token> tokens;
+    private final List<UiParseException> diagnostics;
     private int index;
     private int blockDepth;
+    private int blueprintNesting;
+    private final Set<Integer> blueprintBodyDepths = new HashSet<>();
 
-    private UiParser(Asset source, UiFileType type, List<UiLexer.Token> tokens) {
+    private UiParser(
+        Asset source,
+        UiFileType type,
+        List<UiLexer.Token> tokens,
+        List<UiParseException> diagnostics
+    ) {
         this.source = source;
         this.type = type;
         this.tokens = tokens;
+        this.diagnostics = new ArrayList<>(diagnostics);
     }
 
-    public static UiDocument parse(Reader reader, Asset source, UiFileType type)
-        throws IOException, UiParseException {
+    public static Result parse(Reader reader, Asset source, UiFileType type)
+        throws IOException {
         StringWriter writer = new StringWriter();
         reader.transferTo(writer);
-        List<UiLexer.Token> tokens = new UiLexer(source, writer.toString()).lex();
-        return new UiParser(source, type, tokens).document();
+        String sourceText = writer.toString();
+        UiLexer.Result lexed = new UiLexer(source, sourceText).lex();
+        return new UiParser(
+            source, type, lexed.tokens(), lexed.diagnostics()
+        ).document(sourceText);
     }
 
-    private UiDocument document() throws UiParseException {
+    private Result document(String sourceText) {
         List<Statement> statements = this.statementsUntil(UiLexer.Type.EOF);
-        this.expect(UiLexer.Type.EOF, "Expected end of file");
-        this.validateSymbols(statements);
-        return new UiDocument(this.source, this.type, statements);
+        statements = this.sanitizeSymbols(statements, Set.of(), false);
+        return new Result(
+            new UiDocument(this.source, this.type, statements, sourceText),
+            List.copyOf(this.diagnostics)
+        );
     }
 
-    private List<Statement> statementsUntil(UiLexer.Type terminator) throws UiParseException {
+    private List<Statement> statementsUntil(UiLexer.Type terminator) {
         List<Statement> statements = new ArrayList<>();
         while (!this.check(terminator) && !this.check(UiLexer.Type.EOF)) {
             if (this.match(UiLexer.Type.COMMA)) {
                 continue;
             }
-            statements.add(this.statement());
-            this.match(UiLexer.Type.COMMA);
+            int startIndex = this.index;
+            try {
+                statements.add(this.statement());
+                this.match(UiLexer.Type.COMMA);
+            } catch (UiParseException exception) {
+                this.diagnostics.add(exception);
+                this.synchronizeStatement(terminator, startIndex);
+            }
         }
         return statements;
     }
@@ -91,7 +119,19 @@ public final class UiParser {
             return this.directive(this.previous());
         }
         if (this.match(UiLexer.Type.AT)) {
-            return this.blueprintUse(this.previous());
+            UiLexer.Token marker = this.previous();
+            if (this.check(UiLexer.Type.IDENTIFIER) && this.peek().text().equals("content")) {
+                return this.blueprintContent(marker);
+            }
+            return this.blueprintUse(marker, false);
+        }
+        if (this.match(UiLexer.Type.DOUBLE_COLON)) {
+            return this.blueprintUse(this.previous(), true);
+        }
+        if (this.type == UiFileType.DATA && this.check(UiLexer.Type.STRING)) {
+            UiLexer.Token name = this.advance();
+            this.expect(UiLexer.Type.COLON, "Expected ':' after data key");
+            return new Property(name.text(), this.value(), this.position(name));
         }
         if (this.check(UiLexer.Type.IDENTIFIER)) {
             if (this.peek().text().equals("if")) {
@@ -108,6 +148,8 @@ public final class UiParser {
             case "import" -> this.importDirective(marker);
             case "def" -> this.definitionDirective(marker);
             case "blueprint" -> this.blueprintDirective(marker);
+            case "var" -> this.variableDirective(marker);
+            case "set" -> this.assignmentDirective(marker);
             default -> throw this.error(name, "Unknown directive '@@" + name.text() + "'");
         };
     }
@@ -159,8 +201,9 @@ public final class UiParser {
     }
 
     private BlueprintDirective blueprintDirective(UiLexer.Token marker) throws UiParseException {
-        if (this.blockDepth != 0) {
-            throw this.error(marker, "@@blueprint is only valid at document scope");
+        if (this.blockDepth != 0 && !this.blueprintBodyDepths.contains(this.blockDepth)) {
+            throw this.error(marker,
+                "@@blueprint is only valid at document scope or directly inside another blueprint");
         }
         String name = this.expect(UiLexer.Type.IDENTIFIER, "Expected blueprint name").text();
         this.expect(UiLexer.Type.LEFT_PAREN, "Expected '(' after blueprint name");
@@ -178,24 +221,79 @@ public final class UiParser {
         }
         this.expect(UiLexer.Type.RIGHT_PAREN, "Expected ')' after blueprint parameters");
         this.expect(UiLexer.Type.LEFT_BRACE, "Expected '{' after blueprint declaration");
-        List<Statement> body = this.blockStatements();
+        int bodyDepth = this.blockDepth + 1;
+        this.blueprintBodyDepths.add(bodyDepth);
+        this.blueprintNesting++;
+        List<Statement> body;
+        try {
+            body = this.blockStatements();
+        } finally {
+            this.blueprintNesting--;
+            this.blueprintBodyDepths.remove(bodyDepth);
+        }
         this.expect(UiLexer.Type.RIGHT_BRACE, "Expected '}' after blueprint declaration");
         return new BlueprintDirective(name, parameters, body, this.position(marker));
     }
 
-    private BlueprintUse blueprintUse(UiLexer.Token marker) throws UiParseException {
-        List<String> path = this.symbolPath("Expected blueprint name after '@'");
-        String instanceId = this.expect(
-            UiLexer.Type.STRING,
-            "Expected a quoted blueprint instance id"
-        ).text();
-        if (instanceId.isBlank()) {
-            throw this.error(this.previous(), "Blueprint instance id cannot be blank");
+    private VariableDirective variableDirective(UiLexer.Token marker) throws UiParseException {
+        this.requireBlueprintBody(marker, "@@var");
+        String name = this.expect(UiLexer.Type.IDENTIFIER, "Expected variable name").text();
+        this.expect(UiLexer.Type.EQUALS, "Expected '=' after variable name");
+        return new VariableDirective(name, this.value(), this.position(marker));
+    }
+
+    private AssignmentDirective assignmentDirective(UiLexer.Token marker) throws UiParseException {
+        this.requireBlueprintBody(marker, "@@set");
+        String name = this.expect(UiLexer.Type.IDENTIFIER, "Expected variable name").text();
+        this.expect(UiLexer.Type.EQUALS, "Expected '=' after variable name");
+        return new AssignmentDirective(name, this.value(), this.position(marker));
+    }
+
+    private void requireBlueprintBody(UiLexer.Token marker, String directive) throws UiParseException {
+        if (!this.blueprintBodyDepths.contains(this.blockDepth)) {
+            throw this.error(marker, directive + " is only valid directly inside a blueprint");
         }
-        this.expect(UiLexer.Type.LEFT_PAREN, "Expected '(' after blueprint instance id");
+    }
+
+    private BlueprintUse blueprintUse(UiLexer.Token marker, boolean registeredStyle)
+        throws UiParseException {
+        List<String> path = this.symbolPath(registeredStyle
+            ? "Expected registered style ID after '::'"
+            : "Expected blueprint name after '@'");
+        this.expect(UiLexer.Type.LEFT_PAREN, "Expected '(' after blueprint name");
         List<Value> arguments = this.arguments(UiLexer.Type.RIGHT_PAREN);
         this.expect(UiLexer.Type.RIGHT_PAREN, "Expected ')' after blueprint arguments");
-        return new BlueprintUse(path, instanceId, arguments, this.position(marker));
+        List<BlueprintMemberUse> members = new ArrayList<>();
+        while (this.match(UiLexer.Type.DOT)) {
+            UiLexer.Token member = this.expect(UiLexer.Type.IDENTIFIER,
+                "Expected nested blueprint name after '.'");
+            this.expect(UiLexer.Type.LEFT_PAREN,
+                "Expected '(' after nested blueprint name");
+            List<Value> memberArguments = this.arguments(UiLexer.Type.RIGHT_PAREN);
+            this.expect(UiLexer.Type.RIGHT_PAREN,
+                "Expected ')' after nested blueprint arguments");
+            members.add(new BlueprintMemberUse(
+                member.text(), memberArguments, this.position(member)
+            ));
+        }
+        boolean contentProvided = this.match(UiLexer.Type.LEFT_BRACE);
+        List<Statement> content = List.of();
+        if (contentProvided) {
+            content = this.blockStatements();
+            this.expect(UiLexer.Type.RIGHT_BRACE, "Expected '}' after blueprint content");
+        }
+        return new BlueprintUse(
+            path, arguments, members, content, contentProvided, registeredStyle,
+            this.position(marker)
+        );
+    }
+
+    private BlueprintContent blueprintContent(UiLexer.Token marker) throws UiParseException {
+        UiLexer.Token name = this.advance();
+        if (this.blueprintNesting == 0) {
+            throw this.error(name, "@content is only valid inside a blueprint");
+        }
+        return new BlueprintContent(this.position(marker));
     }
 
     private Statement namedStatement() throws UiParseException {
@@ -237,6 +335,10 @@ public final class UiParser {
             case MINUS -> this.negativeNumber(token);
             case COLOR -> new ColorValue(token.text(), this.position(token));
             case AT -> new ReferenceValue(this.symbolPath("Expected reference name after '@'"), this.position(token));
+            case DOUBLE_COLON -> new RegisteredStyleValue(
+                this.symbolPath("Expected registered style ID after '::'"),
+                this.position(token)
+            );
             case AMPERSAND -> new BlueprintParameterValue(
                 this.symbolPath("Expected blueprint parameter name after '&'"),
                 this.position(token)
@@ -376,6 +478,17 @@ public final class UiParser {
 
         List<Value> arguments = this.arguments(UiLexer.Type.RIGHT_PAREN);
         this.expect(UiLexer.Type.RIGHT_PAREN, "Expected ')' after function arguments");
+        if (name.toString().equals("element")) {
+            if (arguments.size() != 1 || !(arguments.getFirst() instanceof StringValue id)
+                || id.value().isBlank()) {
+                throw this.error(first, "element() requires one non-empty quoted id");
+            }
+            this.expect(UiLexer.Type.DOT, "Expected a property after element(...)");
+            UiLexer.Token property = this.expect(
+                UiLexer.Type.IDENTIFIER, "Expected a property after element(...)."
+            );
+            return new ElementValue(id.value(), property.text(), this.position(first));
+        }
         return new CallValue(name.toString(), arguments, this.position(first));
     }
 
@@ -442,8 +555,49 @@ public final class UiParser {
         return new NumberValue("-" + number.text(), this.position(minus));
     }
 
-    private ExposedDataValue exposedData(UiLexer.Token start) throws UiParseException {
-        List<String> path = this.symbolPath("Expected exposed data name after '${'");
+    private Value exposedData(UiLexer.Token start) throws UiParseException {
+        UiLexer.Token first = this.expect(
+            UiLexer.Type.IDENTIFIER,
+            "Expected exposed data or glyph name after '${'"
+        );
+        if (this.match(UiLexer.Type.DOUBLE_COLON)) {
+            UiLexer.Token second = this.expect(
+                UiLexer.Type.IDENTIFIER,
+                "Expected glyph ID or provider after '::'"
+            );
+            String provider = null;
+            String id = second.text();
+            if (this.match(UiLexer.Type.SLASH)) {
+                provider = second.text();
+                id = this.expect(
+                    UiLexer.Type.IDENTIFIER,
+                    "Expected glyph ID after provider"
+                ).text();
+            }
+            this.expect(UiLexer.Type.RIGHT_BRACE, "Expected '}' after glyph reference");
+            return new GlyphValue(
+                first.text(), provider, id, this.position(start)
+            );
+        }
+        if (this.match(UiLexer.Type.SLASH)) {
+            String id = this.expect(
+                UiLexer.Type.IDENTIFIER,
+                "Expected glyph ID after provider"
+            ).text();
+            this.expect(UiLexer.Type.RIGHT_BRACE, "Expected '}' after glyph reference");
+            return new GlyphValue(
+                null, first.text(), id, this.position(start)
+            );
+        }
+
+        List<String> path = new ArrayList<>();
+        path.add(first.text());
+        while (this.match(UiLexer.Type.DOT)) {
+            path.add(this.expect(
+                UiLexer.Type.IDENTIFIER,
+                "Expected exposed data name after '.'"
+            ).text());
+        }
         this.expect(UiLexer.Type.RIGHT_BRACE, "Expected '}' after exposed data path");
         return new ExposedDataValue(path, this.position(start));
     }
@@ -495,6 +649,11 @@ public final class UiParser {
     }
 
     private List<Statement> blockStatements() throws UiParseException {
+        if (this.blockDepth >= MAX_BLOCK_DEPTH) {
+            throw this.error(
+                this.peek(), "UI DSL block nesting exceeds " + MAX_BLOCK_DEPTH + " levels"
+            );
+        }
         this.blockDepth++;
         try {
             return this.statementsUntil(UiLexer.Type.RIGHT_BRACE);
@@ -503,26 +662,115 @@ public final class UiParser {
         }
     }
 
-    private void validateSymbols(List<Statement> statements) throws UiParseException {
-        Set<String> symbols = new HashSet<>();
+    private List<Statement> sanitizeSymbols(
+        List<Statement> statements,
+        Set<String> initialSymbols,
+        boolean blueprintScope
+    ) {
+        Set<String> symbols = new HashSet<>(initialSymbols);
+        List<Statement> accepted = new ArrayList<>();
         for (Statement statement : statements) {
             String name = null;
-            if (statement instanceof ImportDirective imported) {
-                name = imported.alias();
-            } else if (statement instanceof DefinitionDirective definition) {
-                name = definition.name();
-            } else if (statement instanceof BlueprintDirective blueprint) {
-                name = blueprint.name();
+            if (blueprintScope) {
+                if (statement instanceof VariableDirective variable) {
+                    name = variable.name();
+                } else if (statement instanceof BlueprintDirective blueprint) {
+                    name = blueprint.name();
+                }
+            } else {
+                if (statement instanceof ImportDirective imported) {
+                    name = imported.alias();
+                } else if (statement instanceof DefinitionDirective definition) {
+                    name = definition.name();
+                } else if (statement instanceof BlueprintDirective blueprint) {
+                    name = blueprint.name();
+                }
             }
             if (name != null && !symbols.add(name)) {
-                throw new UiParseException(
+                this.diagnostics.add(new UiParseException(
                     this.source,
                     statement.position().line(),
                     statement.position().column(),
-                    "Duplicate symbol '" + name + "'"
-                );
+                    (blueprintScope ? "Duplicate blueprint-local symbol '" : "Duplicate symbol '")
+                        + name + "'"
+                ));
+                continue;
+            }
+            if (statement instanceof BlueprintDirective blueprint) {
+                accepted.add(new BlueprintDirective(
+                    blueprint.name(),
+                    blueprint.parameters(),
+                    this.sanitizeSymbols(
+                        blueprint.body(), new HashSet<>(blueprint.parameters()), true
+                    ),
+                    blueprint.position()
+                ));
+            } else {
+                accepted.add(statement);
             }
         }
+        return List.copyOf(accepted);
+    }
+
+    private void synchronizeStatement(
+        UiLexer.Type terminator,
+        int startIndex
+    ) {
+        if (this.index <= startIndex && !this.check(UiLexer.Type.EOF)) {
+            this.advance();
+        }
+        int statementLine = this.tokens.get(Math.min(startIndex, this.tokens.size() - 1)).line();
+        int braces = 0;
+        int parentheses = 0;
+        int brackets = 0;
+        for (int cursor = startIndex; cursor < this.index && cursor < this.tokens.size(); cursor++) {
+            UiLexer.Type type = this.tokens.get(cursor).type();
+            switch (type) {
+                case LEFT_BRACE -> braces++;
+                case RIGHT_BRACE -> braces = Math.max(0, braces - 1);
+                case LEFT_PAREN -> parentheses++;
+                case RIGHT_PAREN -> parentheses = Math.max(0, parentheses - 1);
+                case LEFT_BRACKET -> brackets++;
+                case RIGHT_BRACKET -> brackets = Math.max(0, brackets - 1);
+                default -> {
+                }
+            }
+        }
+        while (!this.check(UiLexer.Type.EOF)) {
+            UiLexer.Token token = this.peek();
+            boolean atBoundary = braces == 0 && parentheses == 0 && brackets == 0;
+            if (atBoundary) {
+                if (token.type() == terminator || token.type() == UiLexer.Type.RIGHT_BRACE) {
+                    return;
+                }
+                if (token.type() == UiLexer.Type.COMMA) {
+                    this.advance();
+                    return;
+                }
+                if (token.line() > statementLine && isStatementStart(token.type())) {
+                    return;
+                }
+            }
+            switch (token.type()) {
+                case LEFT_BRACE -> braces++;
+                case RIGHT_BRACE -> braces = Math.max(0, braces - 1);
+                case LEFT_PAREN -> parentheses++;
+                case RIGHT_PAREN -> parentheses = Math.max(0, parentheses - 1);
+                case LEFT_BRACKET -> brackets++;
+                case RIGHT_BRACKET -> brackets = Math.max(0, brackets - 1);
+                default -> {
+                }
+            }
+            this.advance();
+        }
+    }
+
+    private static boolean isStatementStart(UiLexer.Type type) {
+        return type == UiLexer.Type.IDENTIFIER
+            || type == UiLexer.Type.STRING
+            || type == UiLexer.Type.AT
+            || type == UiLexer.Type.DOUBLE_COLON
+            || type == UiLexer.Type.AT_AT;
     }
 
     private boolean match(UiLexer.Type type) {
@@ -574,5 +822,11 @@ public final class UiParser {
 
     private UiParseException error(UiLexer.Token token, String message) {
         return new UiParseException(this.source, token.line(), token.column(), message);
+    }
+
+    public record Result(UiDocument document, List<UiParseException> diagnostics) {
+        public Result {
+            diagnostics = List.copyOf(diagnostics);
+        }
     }
 }

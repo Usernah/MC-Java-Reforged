@@ -26,15 +26,6 @@ public final class TabNavigationController {
             TabNavigator navigator,
             UiInputBinding previous,
             UiInputBinding next,
-            Component hintLabel
-    ) {
-        this.bind(new TabNavigationBinding(navigator, previous, next, hintLabel));
-    }
-
-    public void bind(
-            TabNavigator navigator,
-            UiInputBinding previous,
-            UiInputBinding next,
             Component hintLabel,
             Runnable selectionFeedback
     ) {

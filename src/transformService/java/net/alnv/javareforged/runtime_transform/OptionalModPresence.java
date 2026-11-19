@@ -25,7 +25,7 @@ final class OptionalModPresence {
                 sodiumLoaded = loaded;
                 return loaded;
             } catch (IllegalStateException ignored) {
-                // Class processors can be registered before the final loading list is published.
+
             }
         }
 

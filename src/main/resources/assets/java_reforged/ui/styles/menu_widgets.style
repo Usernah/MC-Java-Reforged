@@ -3,7 +3,7 @@
 @@import asset.local("textures/gui/widgets/button_withe.png") as button_withe
 
 @@blueprint main_button_withe() {
-    image "base" {
+    image {
         texture: @button_withe
         meta: true
         x: 0
@@ -12,7 +12,7 @@
         h: ${this.height}
     }
     if (${this.hovered} or ${this.focused}) {
-        image "hover_or_focus" {
+        image {
             texture: @base_hover_and_focus
             meta: true
             x: mat(0 - 1)

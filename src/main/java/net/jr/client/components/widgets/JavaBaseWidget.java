@@ -1,15 +1,14 @@
 package net.jr.client.components.widgets;
 
 import net.jr.client.components.elements.VisualElementsInterface;
+import net.jr.client.components.elements.VisualAnchor;
 import net.jr.client.components.elements.VisualState;
 import net.jr.client.components.interfaces.IWidgetSoundHandler;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
-import net.jr.client.input.InputApi;
-import net.jr.client.runtime.input.InputActionHandler;
-import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.dsl.DslNode;
 import net.jr.client.ui.dsl.DslElement;
+import net.jr.client.ui.dsl.UiCompiledDocument;
 import net.jr.client.ui.dsl.UiCompiledDocument.EntryDefinition;
 import net.jr.client.ui.dsl.UiDslKind;
 import net.minecraft.client.Minecraft;
@@ -26,22 +25,12 @@ import java.util.List;
 public abstract class JavaBaseWidget extends AbstractWidget
     implements UiActionHandler, VisualElementsInterface, DslElement {
 
-    private static final IWidgetSoundHandler DEFAULT_SOUND_HANDLER = (handler, widget, event) -> {
-        switch (event) {
-            case FOCUS -> InputActionSounds.playHover();
-            case PRESS -> {
-                InputActionHandler.suppressNextScreenTransitionSound();
-                InputActionSounds.playClick();
-            }
-            case HOVER, UNHOVER, RELEASE -> {
-            }
-        }
-    };
-
     private boolean pressed = false;
     private boolean wasClicked = false;
+    private boolean soundStateReady;
+    private boolean previousHovered;
 
-    protected IWidgetSoundHandler soundHandler = DEFAULT_SOUND_HANDLER;
+    protected IWidgetSoundHandler soundHandler;
     private final VisualState visualState;
     private final DslNode dsl;
     private final List<EntryDefinition> dslRenderables;
@@ -53,14 +42,13 @@ public abstract class JavaBaseWidget extends AbstractWidget
     }
 
     protected JavaBaseWidget(DslNode dsl, Component message) {
-        this(
-            Math.round(dsl.context().originX() + dsl.number("x")),
-            Math.round(dsl.context().originY() + dsl.number("y")),
-            Math.round(dsl.number("w")),
-            Math.round(dsl.number("h")),
-            message,
-            dsl
-        );
+        this(DslVisual.resolve(dsl), message, dsl);
+    }
+
+    private JavaBaseWidget(DslVisual visual, Component message, DslNode dsl) {
+        this(visual.x(), visual.y(), visual.width(), visual.height(), message, dsl);
+        this.setAnchor(visual.anchor());
+        this.captureBaseState();
     }
 
     private JavaBaseWidget(
@@ -82,12 +70,25 @@ public abstract class JavaBaseWidget extends AbstractWidget
         if (this.dsl == null) {
             throw new IllegalStateException("This widget was not created from a DSL node");
         }
+        if (!this.dsl.isUsable()) {
+            return;
+        }
         this.dsl.finish(kind, this);
     }
 
     @Override
     public VisualState visualState() {
         return this.visualState;
+    }
+
+    @Override
+    public int getX() {
+        return Math.round(this.resolvedX());
+    }
+
+    @Override
+    public int getY() {
+        return Math.round(this.resolvedY());
     }
 
     @Override
@@ -187,10 +188,17 @@ public abstract class JavaBaseWidget extends AbstractWidget
         this.setRotation(this.baseRotation());
         this.setAlpha(this.baseAlpha());
         this.setVisible(this.baseVisible());
+        this.setAnchor(this.baseAnchor());
     }
 
     @Override
     protected void extractWidgetRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        if (!this.soundStateReady) {
+            this.previousHovered = this.isHovered();
+            this.soundStateReady = true;
+        } else {
+            this.updateHoverSoundState();
+        }
         if (this.dsl == null || this.dslRenderables.isEmpty()) {
             return;
         }
@@ -203,12 +211,23 @@ public abstract class JavaBaseWidget extends AbstractWidget
             this.dsl.context().extractBlock(
                 this.dslRenderables,
                 guiGraphics,
-                this::resolveDslValue,
+                new UiCompiledDocument.DataContext() {
+                    @Override
+                    public Object resolve(List<String> path) {
+                        return JavaBaseWidget.this.resolveDslValue(path);
+                    }
+
+                    @Override
+                    public Object resolveElement(String id, String property) {
+                        return JavaBaseWidget.this.dsl.data().resolveElement(id, property);
+                    }
+                },
                 mouseX,
                 mouseY,
                 partialTick,
-                this.getX(),
-                this.getY()
+                0.0F,
+                0.0F,
+                this
             );
         } finally {
             if (this.dslScissor) {
@@ -219,10 +238,28 @@ public abstract class JavaBaseWidget extends AbstractWidget
 
     public final void closeDsl() {
         this.cancelInteraction();
+        this.soundStateReady = false;
     }
 
     protected Object resolveDslProperty(String name) {
         throw new IllegalArgumentException("Unknown widget DSL data: ${this." + name + "}");
+    }
+
+    @Override
+    public final Object dslValue(String name) {
+        return switch (name) {
+            case "focused" -> this.isFocused();
+            case "hovered" -> this.isHovered();
+            case "pressed" -> this.isPressed();
+            case "active" -> this.active;
+            default -> {
+                try {
+                    yield VisualElementsInterface.super.dslValue(name);
+                } catch (IllegalArgumentException ignored) {
+                    yield this.resolveDslProperty(name);
+                }
+            }
+        };
     }
 
     private Object resolveDslValue(List<String> path) {
@@ -232,19 +269,7 @@ public abstract class JavaBaseWidget extends AbstractWidget
         if (path.size() != 2) {
             throw new IllegalArgumentException("Unknown widget DSL data: ${" + String.join(".", path) + "}");
         }
-        return switch (path.get(1)) {
-            case "x" -> this.getX();
-            case "y" -> this.getY();
-            case "w", "width" -> this.getWidth();
-            case "h", "height" -> this.getHeight();
-            case "focused" -> this.isFocused();
-            case "hovered" -> this.isHovered();
-            case "pressed" -> this.isPressed();
-            case "active" -> this.active;
-            case "visible" -> this.visible;
-            case "alpha" -> this.getAlpha();
-            default -> this.resolveDslProperty(path.get(1));
-        };
+        return this.dslValue(path.get(1));
     }
 
     @Override
@@ -259,9 +284,13 @@ public abstract class JavaBaseWidget extends AbstractWidget
             return false;
         }
 
-        this.playDownSound(Minecraft.getInstance().getSoundManager());
+        var minecraft = Minecraft.getInstance();
+        var sourceScreen = minecraft.gui.screen();
         this.setPressed(true);
         this.onClick(mouseX, mouseY);
+        if (minecraft.gui.screen() == sourceScreen) {
+            this.playDownSound(minecraft.getSoundManager());
+        }
         return true;
     }
 
@@ -287,7 +316,11 @@ public abstract class JavaBaseWidget extends AbstractWidget
 
     @Override
     public void setFocused(boolean focused) {
+        boolean gainedFocus = focused && !this.isFocused();
         super.setFocused(focused);
+        if (gainedFocus && this.soundStateReady) {
+            this.handleSound(IWidgetSoundHandler.Event.FOCUS);
+        }
     }
 
     public void onClick(double mouseX, double mouseY) {
@@ -302,7 +335,7 @@ public abstract class JavaBaseWidget extends AbstractWidget
     }
 
     public void setSoundHandler(IWidgetSoundHandler handler) {
-        this.soundHandler = handler == null ? DEFAULT_SOUND_HANDLER : handler;
+        this.soundHandler = handler;
     }
 
     public boolean isPressed() {
@@ -324,9 +357,25 @@ public abstract class JavaBaseWidget extends AbstractWidget
 
     @Override
     public void playDownSound(@NotNull SoundManager pHandler) {
-
-        if (!InputApi.isGamepadMode() && soundHandler != null) {
+        if (soundHandler != null) {
             soundHandler.handle(pHandler, this, IWidgetSoundHandler.Event.PRESS);
+        }
+    }
+
+    private void updateHoverSoundState() {
+        boolean hovered = this.isHovered();
+        if (hovered == this.previousHovered) {
+            return;
+        }
+        this.previousHovered = hovered;
+        this.handleSound(hovered
+            ? IWidgetSoundHandler.Event.HOVER
+            : IWidgetSoundHandler.Event.UNHOVER);
+    }
+
+    private void handleSound(IWidgetSoundHandler.Event event) {
+        if (this.soundHandler != null) {
+            this.soundHandler.handle(Minecraft.getInstance().getSoundManager(), this, event);
         }
     }
 
@@ -426,4 +475,48 @@ public abstract class JavaBaseWidget extends AbstractWidget
     public boolean handleUiAction(UiAction action) {
         return false;
     }
+
+    private record DslVisual(
+        int x,
+        int y,
+        int width,
+        int height,
+        VisualAnchor anchor
+    ) {
+        private static DslVisual resolve(DslNode dsl) {
+            if (!dsl.isPresent()) {
+                return new DslVisual(0, 0, 0, 0, VisualAnchor.NONE);
+            }
+            return dsl.recover(
+                new DslVisual(0, 0, 0, 0, VisualAnchor.NONE),
+                () -> resolvePresent(dsl)
+            );
+        }
+
+        private static DslVisual resolvePresent(DslNode dsl) {
+            boolean layoutManaged = dsl.isLayoutManaged();
+            if (layoutManaged) {
+                dsl.ignoreProperty("anchor");
+                dsl.ignoreProperty("x");
+                dsl.ignoreProperty("y");
+            }
+            VisualAnchor anchor = layoutManaged
+                ? VisualAnchor.NONE
+                : VisualAnchor.parse(dsl.textOr("anchor", "none"));
+            float x = layoutManaged ? 0.0F : dsl.number("x");
+            float y = layoutManaged ? 0.0F : dsl.number("y");
+            if (!anchor.isExplicit()) {
+                x += dsl.context().originX();
+                y += dsl.context().originY();
+            }
+            return new DslVisual(
+                Math.round(x),
+                Math.round(y),
+                Math.round(dsl.number("w")),
+                Math.round(dsl.number("h")),
+                anchor
+            );
+        }
+    }
+
 }

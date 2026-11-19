@@ -5,10 +5,11 @@ import net.jr.api.client.render.gui.GuiRenderObjects;
 import net.jr.api.client.render.gui.GuiRenderPhase;
 import net.jr.client.ui.cursor.CursorRenderer;
 import net.jr.client.ui.overlay.ScreenOverlays;
+import net.jr.api.client.systemui.SystemUI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 
-/** Extracts local screen overlays before the local cursor. */
+
 public final class ScreenOverlayRenderPass {
     private ScreenOverlayRenderPass() {
     }
@@ -19,7 +20,7 @@ public final class ScreenOverlayRenderPass {
         );
         ScreenOverlays.renderGamepadDisconnectedNotice(context);
         GuiRenderObjects.render(GuiRenderPhase.SCREEN_OVERLAY, context);
-        if (!hidesCursor) {
+        if (!hidesCursor && !SystemUI.blocksSlot(context.slot().id())) {
             CursorRenderer.renderForCurrentClient(context.graphics(), minecraft);
         }
     }

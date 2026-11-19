@@ -1,5 +1,6 @@
 package net.jr.client.runtime.input;
 
+import net.jr.client.input.InputApi;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.ui.cursor.SystemCursorController;
@@ -46,12 +47,7 @@ public final class CursorVisibility {
     }
 
     public static boolean isHidden() {
-        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
-            if (isHiddenForSlot(slotId)) {
-                return true;
-            }
-        }
-        return false;
+        return isHiddenForSlot(InputApi.keyboardMouseSlotId());
     }
 
     public static boolean isHiddenForSlot(int slotId) {

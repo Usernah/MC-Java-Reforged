@@ -15,8 +15,37 @@ import javax.annotation.Nullable;
 
 @Mixin(Hud.class)
 public interface HudAccessor {
+    @Invoker("extractCrosshair")
+    void javaReforged$extractCrosshair(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
+
     @Invoker("extractCameraOverlays")
     void javaReforged$extractCameraEffects(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
+
+    @Invoker("extractHotbar")
+    void javaReforged$extractHotbar(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
+    @Invoker("extractHealthLevel")
+    void javaReforged$extractHealthLevel(GuiGraphicsExtractor graphics);
+    @Invoker("extractArmorLevel")
+    void javaReforged$extractArmorLevel(GuiGraphicsExtractor graphics);
+    @Invoker("extractFoodLevel")
+    void javaReforged$extractFoodLevel(GuiGraphicsExtractor graphics);
+    @Invoker("extractVehicleHealth")
+    void javaReforged$extractVehicleHealth(GuiGraphicsExtractor graphics);
+    @Invoker("extractAirLevel")
+    void javaReforged$extractAirLevel(GuiGraphicsExtractor graphics);
+    @Invoker("extractContextualInfoBarBackground")
+    void javaReforged$extractContextualInfoBarBackground(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
+    @Invoker("extractExperienceLevel")
+    void javaReforged$extractExperienceLevel(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
+    @Invoker("extractContextualInfoBar")
+    void javaReforged$extractContextualInfoBar(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
+
+    @Invoker("updateContextualBarRenderer")
+    void javaReforged$updateContextualBarRenderer();
+    @Invoker("maybeExtractSelectedItemName")
+    void javaReforged$maybeExtractSelectedItemName(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
+    @Invoker("maybeExtractSpectatorTooltip")
+    void javaReforged$maybeExtractSpectatorTooltip(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
 
     @Accessor("tickCount") int javaReforged$getTickCount();
     @Accessor("tickCount") void javaReforged$setTickCount(int value);

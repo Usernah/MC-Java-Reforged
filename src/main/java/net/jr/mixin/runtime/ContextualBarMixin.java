@@ -1,7 +1,7 @@
 package net.jr.mixin.runtime;
 
 import com.mojang.blaze3d.platform.Window;
-import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.client.runtime.viewport.ViewportGuiDimensions;
 import net.minecraft.client.gui.contextualbar.ContextualBar;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,7 +19,7 @@ public interface ContextualBarMixin {
             Window window,
             CallbackInfoReturnable<Integer> callback
     ) {
-        Integer width = ViewportGuiScale.activeGuiWidthOrNull();
+        Integer width = ViewportGuiDimensions.activeWidthOrNull();
 
         if (width != null) {
             callback.setReturnValue((width - 182) / 2);
@@ -35,7 +35,7 @@ public interface ContextualBarMixin {
             Window window,
             CallbackInfoReturnable<Integer> callback
     ) {
-        Integer height = ViewportGuiScale.activeGuiHeightOrNull();
+        Integer height = ViewportGuiDimensions.activeHeightOrNull();
 
         if (height != null) {
             callback.setReturnValue(height - 29);

@@ -39,6 +39,11 @@ public abstract class ScreenMixin implements DslScreenBridge, DslHostBridge {
     }
 
     @Override
+    public DslScreenContext javaReforged$peekDslContext() {
+        return this.javaReforged$dslContext;
+    }
+
+    @Override
     public void javaReforged$addDslWidget(JavaBaseWidget widget) {
         this.addWidget(widget);
     }
@@ -53,6 +58,16 @@ public abstract class ScreenMixin implements DslScreenBridge, DslHostBridge {
 
     @Inject(method = "init", at = @At("HEAD"))
     private void javaReforged$resetDslContextsForInit(CallbackInfo ci) {
+        this.javaReforged$resetDslContexts();
+    }
+
+    @Inject(method = "rebuildWidgets", at = @At("HEAD"))
+    private void javaReforged$resetDslContextsForRebuild(CallbackInfo ci) {
+        this.javaReforged$resetDslContexts();
+    }
+
+    @Unique
+    private void javaReforged$resetDslContexts() {
         this.javaReforged$closeDslContext();
         if ((Object)this instanceof DslContainerBridge containerBridge) {
             containerBridge.javaReforged$closeDslContainerContext();

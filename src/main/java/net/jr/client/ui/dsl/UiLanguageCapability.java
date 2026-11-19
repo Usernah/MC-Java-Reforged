@@ -1,0 +1,15 @@
+package net.jr.client.ui.dsl;
+
+public enum UiLanguageCapability {
+    ASSET_IMPORTS,
+    DOCUMENT_IMPORTS,
+    STYLE_REFERENCES,
+    BLUEPRINT_DECLARATIONS,
+    BLUEPRINT_USAGE,
+    CONTENT_INSERTION,
+    VARIABLES,
+    EXPOSED_DATA,
+    ELEMENT_REFERENCES,
+    LAYOUT,
+    VISUAL_ELEMENTS
+}

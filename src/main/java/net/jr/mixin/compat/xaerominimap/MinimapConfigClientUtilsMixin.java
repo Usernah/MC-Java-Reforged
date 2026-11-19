@@ -1,9 +1,8 @@
 package net.jr.mixin.compat.xaerominimap;
 
 import com.mojang.blaze3d.platform.Window;
-import net.jr.client.compat.xaero.XaeroViewport;
+import net.jr.client.compat.CompatHudDimensions;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.viewport.ViewportArea;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -32,8 +31,7 @@ abstract class MinimapConfigClientUtilsMixin {
         )
     )
     private static int javaReforged$viewportWidth(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getWidth() : viewport.width();
+        return CompatHudDimensions.framebufferWidth(window);
     }
 
     @Redirect(
@@ -44,8 +42,7 @@ abstract class MinimapConfigClientUtilsMixin {
         )
     )
     private static int javaReforged$viewportHeight(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getHeight() : viewport.height();
+        return CompatHudDimensions.framebufferHeight(window);
     }
 
     @Redirect(
@@ -56,7 +53,6 @@ abstract class MinimapConfigClientUtilsMixin {
         )
     )
     private static int javaReforged$viewportScale(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getGuiScale() : viewport.guiScale();
+        return CompatHudDimensions.rasterScale(window);
     }
 }

@@ -2,8 +2,10 @@ package net.jr.client.render.nametag;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.jr.api.client.split.SplitScreen;
+import net.jr.api.client.local.Client;
 import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.ui.presentation.UiPresentation;
 import net.jr.mixin.accessors.FontAccessor;
 import net.jr.playerdata.PlayerProfileDataManager;
 import net.minecraft.client.Minecraft;
@@ -30,6 +32,7 @@ public final class LegacyNameTagRenderPass {
 
     public static void extract(Entity entity, EntityRenderState state) {
         if (!(entity instanceof Player player)) return;
+        ((LegacyNameTagRenderState) state).javaReforged$setPlayer(true);
         ((LegacyNameTagRenderState) state).javaReforged$setPlayerColor(PlayerProfileDataManager.getLegacyColor(player));
         Component splitName = PlayerProfileDataManager.getSplitDisplayName(player);
         if (splitName != null && state.nameTag != null) {
@@ -39,7 +42,12 @@ public final class LegacyNameTagRenderPass {
 
     public static boolean submit(EntityRenderState state, PoseStack poseStack, SubmitNodeCollector collector,
                                  CameraRenderState camera, int offset, Font font) {
-        int playerColor = ((LegacyNameTagRenderState) state).javaReforged$getPlayerColor();
+        LegacyNameTagRenderState legacyState = (LegacyNameTagRenderState) state;
+        if (legacyState.javaReforged$isPlayer()
+                && !Client.get(0).options().showWorldPlayerNames().get()) {
+            return true;
+        }
+        int playerColor = legacyState.javaReforged$getPlayerColor();
         if (playerColor < 0 || state.nameTag == null || state.nameTagAttachment == null) return false;
 
         poseStack.pushPose();
@@ -89,7 +97,7 @@ public final class LegacyNameTagRenderPass {
     }
 
     private static int readableDistance() {
-        return SplitScreen.isActive() ? READABLE_COMPACT : READABLE_FULLSCREEN;
+        return UiPresentation.isSmall() ? READABLE_COMPACT : READABLE_FULLSCREEN;
     }
 
     private static float textOpacity(float distance, int readableDistance) {

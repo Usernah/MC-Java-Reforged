@@ -4,7 +4,7 @@ import java.util.Objects;
 import net.minecraft.sounds.Music;
 import org.jetbrains.annotations.Nullable;
 
-/** The current owner of the music channel, independent of the track scheduler. */
+
 public final class MusicPlaybackPolicy {
     public enum Mode {
         VANILLA,

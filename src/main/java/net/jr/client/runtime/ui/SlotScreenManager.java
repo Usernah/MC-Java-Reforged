@@ -8,8 +8,10 @@ import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.api.client.ui.PresentationRebuildableScreen;
+import net.jr.client.ui.render.composition.ScreenFramebufferSpace;
+import net.jr.screens.PauseScreen;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 
 public final class SlotScreenManager {
@@ -29,8 +31,16 @@ public final class SlotScreenManager {
         Integer activeSlotId = SlotScope.idOrNull();
         int slotId = activeSlotId != null ? activeSlotId : 0;
         ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
-        int width = viewport != null ? ViewportGuiScale.screenLogicalWidth(viewport) : vanillaWidth;
-        int height = viewport != null ? ViewportGuiScale.screenLogicalHeight(viewport) : vanillaHeight;
+        int width = viewport != null
+            ? ScreenFramebufferSpace.width(
+                screen, viewport, ViewportGuiScale.screenLogicalWidth(viewport)
+            )
+            : vanillaWidth;
+        int height = viewport != null
+            ? ScreenFramebufferSpace.height(
+                screen, viewport, ViewportGuiScale.screenLogicalHeight(viewport)
+            )
+            : vanillaHeight;
         screen.init(width, height);
     }
 
@@ -50,9 +60,23 @@ public final class SlotScreenManager {
                 continue;
             }
 
+            if (layoutChanged && screen instanceof PresentationRebuildableScreen rebuildable) {
+                Screen rebuilt = rebuildable.rebuildForPresentation();
+                SlotExecution.runForSlot(
+                    minecraft,
+                    slot.id(),
+                    () -> minecraft.gui.setScreen(rebuilt)
+                );
+                continue;
+            }
+
             ViewportArea viewport = runtime.viewports().viewport(slot.id());
-            int width = ViewportGuiScale.screenLogicalWidth(viewport);
-            int height = ViewportGuiScale.screenLogicalHeight(viewport);
+            int width = ScreenFramebufferSpace.width(
+                screen, viewport, ViewportGuiScale.screenLogicalWidth(viewport)
+            );
+            int height = ScreenFramebufferSpace.height(
+                screen, viewport, ViewportGuiScale.screenLogicalHeight(viewport)
+            );
             if (!layoutChanged && screen.width == width && screen.height == height) {
                 continue;
             }

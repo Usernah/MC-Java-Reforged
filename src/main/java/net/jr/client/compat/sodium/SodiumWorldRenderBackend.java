@@ -52,6 +52,13 @@ public final class SodiumWorldRenderBackend implements WorldRenderBackend {
     }
 
     @Override
+    public void resourcesReloaded() {
+        if (this.renderer != null) {
+            SodiumRendererBridge.reloadRenderer(this.renderer);
+        }
+    }
+
+    @Override
     public Scope enterExtractionView(WorldRenderView view) {
         if (view.updatesTerrain()) {
             return Scope.NOOP;
@@ -129,6 +136,11 @@ public final class SodiumWorldRenderBackend implements WorldRenderBackend {
 
     public boolean releaseRendererState(Object renderer) {
         return this.terrainStates.releaseRendererState(renderer);
+    }
+
+    public void releaseAllRendererStates(Object renderer) {
+        this.terrainStates.releaseAllRendererStates(renderer);
+        this.viewListEpoch = Integer.MIN_VALUE;
     }
 
     public void activateTerrainSourceForCurrentExecution(Object renderer) {

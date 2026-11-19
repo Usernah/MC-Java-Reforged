@@ -19,19 +19,23 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
 import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
 import net.jr.client.ui.hint.glyph.GamepadGlyphThemeState;
-import net.jr.client.ui.hint.render.GlyphTextureBoundsCache;
+import net.jr.api.client.render.glyph.Glyphs;
+import net.jr.Java_reforged;
 import net.jr.client.ui.overlay.ScreenOverlayCloseReason;
 import net.jr.client.ui.overlay.ScreenOverlayContext;
 import net.jr.client.ui.overlay.VanillaScreenOverlay;
 import net.jr.client.ui.render.GuiCompositionLayer;
 import net.jr.registry.ModFonts;
+import net.jr.client.systemui.user.SignInMenu;
+import net.jr.client.user.UserManager;
+import net.jr.client.user.UserProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 
-/** Selects the local players that will enter a world with the primary player. */
+
 public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
     private static final int PANEL_WIDTH = 144;
     private static final int PANEL_HEIGHT = 110;
@@ -54,6 +58,7 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
     private final Screen sourceScreen;
     private final Runnable openWorld;
     private final IGamepad[] assignedDevices = new IGamepad[4];
+    private final UserProfile[] selectedUsers = new UserProfile[4];
     private final Map<IGamepad, ButtonState> buttons = new HashMap<>();
     private final TextElement[] playerNames = new TextElement[4];
     private final TextElement joinLabel = text(Component.translatable("menu.java_reforged.pre_join.join"));
@@ -68,6 +73,7 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
         this.sourceScreen = sourceScreen;
         this.openWorld = openWorld;
         String primaryName = Minecraft.getInstance().getUser().getName();
+        this.selectedUsers[0] = UserManager.get().minecraftUser();
         this.playerNames[0] = text(Component.literal(primaryName));
         for (int slotId = 1; slotId < this.playerNames.length; slotId++) {
             this.playerNames[slotId] = text(Component.literal(primaryName + " (" + (slotId + 1) + ")"));
@@ -117,6 +123,12 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
             if (back) {
                 if (assignedPanel > 0) {
                     this.assignedDevices[assignedPanel] = null;
+                    this.selectedUsers[assignedPanel] = null;
+                    this.playerNames[assignedPanel].setText(Component.literal(
+                        Minecraft.getInstance().getUser().getName()
+                            + " (" + (assignedPanel + 1) + ")"
+                    ));
+                    InputApi.unassignGamepad(gamepad);
                 } else {
                     context.close(ScreenOverlayCloseReason.CANCELLED);
                 }
@@ -127,10 +139,7 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
                 return;
             }
             if (confirm && assignedPanel < 0) {
-                int freePanel = this.firstFreeSecondaryPanel();
-                if (freePanel >= 0 && this.assignedSecondaryCount() < connected.size()) {
-                    this.assignedDevices[freePanel] = gamepad;
-                }
+                SignInMenu.open(gamepad, user -> this.selectUser(gamepad, user));
                 return;
             }
         }
@@ -183,19 +192,17 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
         if (theme == null) {
             return;
         }
-        ControllerGlyph glyph = ControllerGlyph.BUTTON_DOWN;
-        Asset icon = theme.texture(glyph);
-        if (icon != null) {
-            float iconHeight = theme.hintHeight(glyph);
-            float iconWidth = GlyphTextureBoundsCache.get(icon).drawWidthForHeight(iconHeight);
-            Draw.image(
-                icon,
-                panelX + (PANEL_WIDTH - iconWidth) / 2.0F,
-                panelY + 26,
-                iconWidth,
-                iconHeight
+        GamepadGlyphThemeState.withRenderTheme(theme, () -> {
+            Draw.TextBuilder icon = Draw.text(Glyphs.component(
+                Java_reforged.MODID,
+                "controls",
+                ControllerGlyph.BUTTON_DOWN.name()
+            ));
+            icon.position(
+                Math.round(panelX + (PANEL_WIDTH - icon.width()) / 2.0F),
+                panelY + 26
             ).draw(graphics);
-        }
+        });
         this.joinLabel.setPosition(
             panelX + (PANEL_WIDTH - this.joinLabel.width()) / 2.0F,
             panelY + 80
@@ -223,7 +230,7 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
                     boolean occupied = panel == 0 || this.assignedDevices[panel] != null;
                     boolean available = panel > 0 && panel <= secondaryCapacity;
                     if (occupied) {
-                        ControllerGlyphTheme theme = panel == 0
+                        ControllerGlyphTheme theme = panel == 0 && this.assignedDevices[0] == null
                             ? rotatingTheme
                             : this.themeForDevice(this.assignedDevices[panel]);
                         this.renderController(canvas, panelX, panelY, theme, 1.0F);
@@ -294,11 +301,15 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
     }
 
     private void confirm(ScreenOverlayContext context) {
-        Map<Integer, IGamepad> players = new LinkedHashMap<>();
+        if (this.assignedDevices[0] != null) {
+            InputApi.assignGamepad(this.assignedDevices[0], 0);
+        }
+        Map<Integer, PreJoinWorldLoad.PendingPlayer> players = new LinkedHashMap<>();
         for (int slotId = 1; slotId < this.assignedDevices.length; slotId++) {
             IGamepad gamepad = this.assignedDevices[slotId];
-            if (gamepad != null) {
-                players.put(slotId, gamepad);
+            UserProfile user = this.selectedUsers[slotId];
+            if (gamepad != null && user != null) {
+                players.put(slotId, new PreJoinWorldLoad.PendingPlayer(gamepad, user));
             }
         }
         context.close(ScreenOverlayCloseReason.COMPLETED);
@@ -319,12 +330,13 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
             IGamepad gamepad = this.assignedDevices[panel];
             if (gamepad != null && !connected.contains(gamepad)) {
                 this.assignedDevices[panel] = null;
+                this.selectedUsers[panel] = null;
             }
         }
     }
 
     private int panelForDevice(IGamepad gamepad) {
-        for (int panel = 1; panel < this.assignedDevices.length; panel++) {
+        for (int panel = 0; panel < this.assignedDevices.length; panel++) {
             if (this.assignedDevices[panel] == gamepad) {
                 return panel;
             }
@@ -381,7 +393,30 @@ public final class PreJoinPlayersOverlay implements VanillaScreenOverlay {
                 continue;
             }
             this.assignedDevices[slotId] = candidate.gamepad();
+            UserProfile fallback = UserManager.get().fallbackUser(slotId);
+            this.selectedUsers[slotId] = fallback;
+            this.playerNames[slotId].setText(Component.literal(fallback.displayName()));
         }
+    }
+
+    private void selectUser(IGamepad gamepad, UserProfile user) {
+        for (int slotId = 0; slotId < this.selectedUsers.length; slotId++) {
+            UserProfile selected = this.selectedUsers[slotId];
+            if (selected != null && selected.id().equals(user.id())) {
+                if (slotId == 0 && this.assignedDevices[0] == null) {
+                    this.assignedDevices[0] = gamepad;
+                }
+                return;
+            }
+        }
+
+        int freePanel = this.firstFreeSecondaryPanel();
+        if (freePanel < 0) {
+            return;
+        }
+        this.assignedDevices[freePanel] = gamepad;
+        this.selectedUsers[freePanel] = user;
+        this.playerNames[freePanel].setText(Component.literal(user.displayName()));
     }
 
     private static TextElement text(Component component) {

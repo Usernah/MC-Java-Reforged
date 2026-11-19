@@ -11,20 +11,19 @@ import java.util.WeakHashMap;
 import net.jr.api.client.ui.Cursor;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.EditBoxElement;
-import net.jr.client.components.widgets.recipe.RecipeSlotElement;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
+import net.jr.client.runtime.slot.Slots;
 import net.jr.client.input.InputApi;
 import net.jr.client.input.GameplayActionHandler;
 import net.jr.client.input.binding.BindingContext;
 import net.jr.client.input.binding.KeyboardMouseInputBindings;
 import net.jr.client.input.binding.ModKeyBindings;
 import net.jr.api.client.input.GamepadDigitalInput;
-import net.jr.client.sound.action.InputActionSounds;
-import net.jr.client.sound.action.WidgetInputSounds;
+import net.jr.client.sound.action.WidgetSoundRouter;
 import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
 import net.jr.client.ui.container.actions.ContainerInventoryActionHandler;
 import net.jr.client.ui.container.actions.CreativeCatalogActionHost;
@@ -39,7 +38,8 @@ import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
 import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardController;
 import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardScreen;
 import net.jr.client.ui.overlay.ScreenOverlays;
-import net.jr.screens.crafting.AbstractCraftingScreen;
+import net.jr.api.client.systemui.SystemUI;
+import net.jr.registry.ModSounds;
 import net.minecraft.util.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -49,6 +49,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.Slot;
@@ -78,14 +80,18 @@ public final class InputActionHandler {
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
 
-        GamepadJoinTicker.tick(minecraft);
+        if (!SystemUI.blocksAllSlots()) {
+            GamepadJoinTicker.tick(minecraft);
+        }
         ClientRuntime runtime = ClientRuntime.INSTANCE;
-        for (int slotId : runtime.viewports().presentedSlotIds()) {
+        for (var drawable : runtime.viewports().drawableViewports()) {
+            Slots slot = drawable.slot();
+            int slotId = slot.id();
             Runnable action = () -> processCurrentSlot(minecraft, InputApi.isGamepadConnected());
             if (runtime.clients().hasClient(slotId)) {
-                InstanceExecution.runForClient(slotId, action);
+                InstanceExecution.runForClient(slotId, drawable.viewport(), action);
             } else {
-                SlotExecution.runForSlot(minecraft, slotId, action);
+                SlotExecution.runForSlot(minecraft, slot, drawable.viewport(), action);
             }
         }
     }
@@ -137,13 +143,6 @@ public final class InputActionHandler {
 
     public static void rememberSuppressedScreenMouseButton(int button) {
         state().suppressedScreenMouseButtons.add(button);
-    }
-
-    public static void suppressNextScreenTransitionSound() {
-        Screen screen = Minecraft.getInstance().gui.screen();
-        if (screen != null) {
-            state().suppressNextScreenTransitionSoundFrom = screen;
-        }
     }
 
     public static boolean suppressConsumedScreenMouseButton(@Nullable Screen screen, int button, int action) {
@@ -206,8 +205,19 @@ public final class InputActionHandler {
     }
 
     private static void processCurrentSlot(Minecraft minecraft, boolean gamepadInput) {
+        int slotId = SlotScope.requireId();
         ActionState state = state();
         Screen currentScreen = minecraft.gui.screen();
+        if (SystemUI.blocksSlot(slotId)) {
+            InputApi.releaseBindings();
+            InputApi.suppressHeldBindings();
+            drainUiActionClickCounters();
+            syncUiButtonLatches(state);
+            clearNavigationRepeat(state);
+            SystemUI.tickInput(slotId);
+            syncScreenSounds(currentScreen, state);
+            return;
+        }
         boolean overlayOwnsInput = currentScreen != null
             && ScreenOverlays.ownsInput(currentScreen);
 
@@ -255,7 +265,7 @@ public final class InputActionHandler {
                 minecraft, player, gamepadInput, state.wasPauseButtonDown, state.hotbarRepeatState
             );
         }
-        syncInGameScreenSounds(minecraft, minecraft.gui.screen(), state);
+        syncScreenSounds(minecraft.gui.screen(), state);
     }
 
     private static boolean clearHandledMouseButton(ActionState state, @Nullable Screen screen, int button) {
@@ -288,7 +298,6 @@ public final class InputActionHandler {
 
         if (matchesKey(ModKeyBindings.UI_BACK, keyCode, scanCode)) {
             if (GamepadInputHandler.dispatchFocusedUiAction(screen, UiAction.BACK)) {
-                GamepadInputHandler.playFocusedUiActionFeedback(screen, UiAction.BACK);
             } else {
                 closeScreenWithBackFeedback(state, screen);
             }
@@ -317,17 +326,15 @@ public final class InputActionHandler {
             boolean handled = handledByFocusedElement;
             if (!handled && keyCode != GLFW.GLFW_KEY_ENTER) {
                 state.dispatchingSyntheticKey = true;
+                WidgetSoundRouter.beginPress();
                 try {
                     handled = screen.keyPressed(new net.minecraft.client.input.KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
                 } finally {
+                    WidgetSoundRouter.finishPress(screen, handled);
                     state.dispatchingSyntheticKey = false;
                 }
             }
             if (handled) {
-                if (handledByFocusedElement) {
-                    GamepadInputHandler.playFocusedUiActionFeedback(screen, UiAction.ACCEPT);
-                }
-                state.suppressNextScreenTransitionSoundFrom = screen;
                 screen.afterKeyboardAction();
                 markHandledByInput(state, ModKeyBindings.UI_CONFIRM);
                 return true;
@@ -368,54 +375,36 @@ public final class InputActionHandler {
             double mouseX,
             double mouseY
     ) {
-        Slot cachedHoveredSlot =
-                ((AbstractContainerScreenAccessor) screen)
-                        .javaReforged$getHoveredItemSlot();
-        Slot hoveredSlot = cachedHoveredSlot;
-        CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
-        if (layout != null) {
-            hoveredSlot = layout.itemSlotLayer().getItemSlotAt(layout.itemSlotGrid(), mouseX, mouseY);
-        }
-
-        boolean validVanillaSlot =
-                hoveredSlot != null
-                        && hoveredSlot.isActive()
-                        && hoveredSlot.hasItem();
+        Slot hoveredSlot = itemSlotAt(screen, mouseX, mouseY);
+        boolean validVanillaSlot = hoveredSlot != null && hoveredSlot.hasItem();
 
         if (action == ContainerAction.QUICK_MOVE) {
             if (validVanillaSlot) {
-                InputActionSounds.playClick();
+                playClickSound();
             } else {
-                InputActionSounds.playBlock();
+                playBlockSound();
             }
             return;
         }
 
-        if (screen instanceof AbstractCraftingScreen<?> craftingScreen) {
-            int mouseButton = action == ContainerAction.PRIMARY ? 0 : 1;
-            RecipeSlotElement.ActivationFeedback feedback =
-                    craftingScreen.recipeMouseActivationFeedbackAt(
-                            mouseX,
-                            mouseY,
-                            mouseButton
-                    );
-            if (feedback != null) {
-                playRecipeActivationFeedback(feedback);
-                return;
-            }
-        }
-
-        if (hoveredSlot != null && hoveredSlot.isActive()) {
-            InputActionSounds.playClick();
+        if (hoveredSlot != null) {
+            playClickSound();
         }
     }
 
-    private static void playRecipeActivationFeedback(RecipeSlotElement.ActivationFeedback feedback) {
-        switch (feedback) {
-            case CRAFT -> InputActionSounds.playCraft();
-            case BLOCK -> InputActionSounds.playBlock();
-            case CLICK -> InputActionSounds.playClick();
+    @Nullable
+    private static Slot itemSlotAt(
+            AbstractContainerScreen<?> screen,
+            double mouseX,
+            double mouseY
+    ) {
+        Slot hoveredSlot = ((AbstractContainerScreenAccessor) screen)
+                .javaReforged$getHoveredItemSlot();
+        CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
+        if (layout != null) {
+            hoveredSlot = layout.itemSlotLayer().getItemSlotAt(layout.itemSlotGrid(), mouseX, mouseY);
         }
+        return hoveredSlot != null && hoveredSlot.isActive() ? hoveredSlot : null;
     }
 
     private static boolean handleMouseScrollContainerAction(ActionState state, AbstractContainerScreen<?> screen, double scrollY) {
@@ -441,11 +430,11 @@ public final class InputActionHandler {
             case ALTERNATE -> ContainerInventoryActionHandler.pickupFocusedOrHoveredSlot(screen, 1);
         };
 
-        InputActionSounds.playContainerActionFeedback(
-                handled,
-                action == ContainerAction.QUICK_MOVE,
-                action.consumesFailure
-        );
+        if (handled || action == ContainerAction.QUICK_MOVE) {
+            playClickSound();
+        } else if (action.consumesFailure) {
+            playBlockSound();
+        }
         if (handled || action.consumesFailure) {
             markHandledByInput(state, action.mapping);
         }
@@ -552,7 +541,7 @@ public final class InputActionHandler {
             if (screen instanceof GamepadKeyboardScreen keyboardScreen
                     && keyboardScreen.gamepadKeyboardSubmit()) {
                 state.suppressNextScreenTransitionSoundFrom = screen;
-                InputActionSounds.playClick();
+                playClickSound();
             } else if (screen instanceof PauseScreen) {
                 closeScreenWithBackFeedback(state, screen);
             }
@@ -574,7 +563,6 @@ public final class InputActionHandler {
                 && controllerUiActive) {
             while (ModKeyBindings.UI_BACK.consumeClick()) {
                 if (GamepadInputHandler.dispatchFocusedUiAction(screen, UiAction.BACK)) {
-                    GamepadInputHandler.playFocusedUiActionFeedback(screen, UiAction.BACK);
                 } else {
                     closeScreenWithBackFeedback(state, screen);
                 }
@@ -618,7 +606,6 @@ public final class InputActionHandler {
         }
 
         if (down && !action.wasDown) {
-            WidgetInputSounds.clearPointerClickFeedback();
             double mouseX = Cursor.x();
             double mouseY = Cursor.y();
             boolean handled = false;
@@ -626,7 +613,6 @@ public final class InputActionHandler {
             action.skipNextRelease = false;
             action.hasPressPosition = false;
             action.containerQuickCraft = false;
-            RecipeSlotElement.ActivationFeedback recipeFeedback = null;
             if (action.mouseButton == 0
                     && GamepadKeyboardController.activateFocusedFromPrimaryAction(screen)) {
                 handled = true;
@@ -672,13 +658,6 @@ public final class InputActionHandler {
                         GamepadInputHandler.focusedElementPrefersDirectAction(screen);
 
                     if (directFocusAction) {
-
-                        if (screen instanceof AbstractCraftingScreen<?> craftingScreen) {
-                            UiAction uiAction = action.mouseButton == 0
-                                    ? UiAction.ACCEPT
-                                    : UiAction.ALTERNATE;
-                            recipeFeedback = craftingScreen.focusedRecipeActivationFeedback(uiAction);
-                        }
                         handledByFocusedElement = GamepadInputHandler.activateFocusedElement(screen, action.mouseButton);
                         handled = handledByFocusedElement;
                     } else {
@@ -694,18 +673,12 @@ public final class InputActionHandler {
                             handled = clickScreen(screen, action, mouseX, mouseY);
                         }
 
-                        if (handled
-                                && screen instanceof AbstractCraftingScreen<?> craftingScreen) {
-                            recipeFeedback = craftingScreen.recipeMouseActivationFeedbackAt(
-                                    mouseX,
-                                    mouseY,
-                                    action.mouseButton
-                            );
-                        }
                     }
                 }
                 if (!handled && action.enterFallback) {
+                    WidgetSoundRouter.beginPress();
                     handled = screen.keyPressed(new net.minecraft.client.input.KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+                    WidgetSoundRouter.finishPress(screen, handled);
                 }
                 screen.afterKeyboardAction();
             } else {
@@ -715,14 +688,6 @@ public final class InputActionHandler {
                     action.containerQuickCraft = true;
                     action.dragX = mouseX;
                     action.dragY = mouseY;
-                }
-                if (handled
-                        && screen instanceof AbstractCraftingScreen<?> craftingScreen) {
-                    recipeFeedback = craftingScreen.recipeMouseActivationFeedbackAt(
-                            mouseX,
-                            mouseY,
-                            action.mouseButton
-                    );
                 }
             }
 
@@ -734,7 +699,6 @@ public final class InputActionHandler {
                     handledByFocusedElement = true;
                 }
 
-                state.suppressNextScreenTransitionSoundFrom = screen;
                 action.pressX = mouseX;
                 action.pressY = mouseY;
 
@@ -749,19 +713,9 @@ public final class InputActionHandler {
 
                 action.skipNextRelease = handledByFocusedElement;
 
-                if (recipeFeedback != null) {
-                    playRecipeActivationFeedback(recipeFeedback);
-                } else if (handledByFocusedElement) {
-                    GamepadInputHandler.playFocusedUiActionFeedback(
-                            screen,
-                            action.mouseButton == 0 ? UiAction.ACCEPT : UiAction.ALTERNATE
-                    );
-                } else {
-                    WidgetInputSounds.consumePointerClickFeedback()
-                            .ifPresentOrElse(
-                                    InputActionSounds::play,
-                                    InputActionSounds::playClick
-                            );
+                if (screen instanceof AbstractContainerScreen<?> containerScreen
+                        && itemSlotAt(containerScreen, mouseX, mouseY) != null) {
+                    playClickSound();
                 }
             }
         } else if (down
@@ -842,11 +796,13 @@ public final class InputActionHandler {
         long now = Util.getMillis();
         boolean doubleClick = action.lastClickScreen == screen
             && now - action.lastClickTimeMs < UI_DOUBLE_CLICK_INTERVAL_MS;
-        boolean handled;
+        boolean handled = false;
         dispatchingControllerPointerClick = true;
+        WidgetSoundRouter.beginPress();
         try {
             handled = screen.mouseClicked(mouseEvent(mouseX, mouseY, action.mouseButton), doubleClick);
         } finally {
+            WidgetSoundRouter.finishPress(screen, handled);
             dispatchingControllerPointerClick = false;
         }
         if (handled) {
@@ -900,13 +856,8 @@ public final class InputActionHandler {
         return BindingContext.UI;
     }
 
-    private static void syncInGameScreenSounds(Minecraft minecraft, @Nullable Screen currentScreen, ActionState state) {
-        if (minecraft.level == null) {
-            state.lastTrackedInGameScreen = null;
-            return;
-        }
-
-        Screen previousScreen = state.lastTrackedInGameScreen;
+    private static void syncScreenSounds(@Nullable Screen currentScreen, ActionState state) {
+        Screen previousScreen = state.lastTrackedScreen;
         if (currentScreen == previousScreen) {
             if (state.suppressNextScreenTransitionSoundFrom == currentScreen) {
                 state.suppressNextScreenTransitionSoundFrom = null;
@@ -927,7 +878,7 @@ public final class InputActionHandler {
             }
         }
 
-        state.lastTrackedInGameScreen = currentScreen;
+        state.lastTrackedScreen = currentScreen;
     }
 
     private static void playScreenTransitionSound(ActionState state, @Nullable Screen previousScreen, ScreenTransitionSound sound) {
@@ -938,8 +889,8 @@ public final class InputActionHandler {
         }
 
         switch (sound) {
-            case CLICK -> InputActionSounds.playClick();
-            case BACK -> InputActionSounds.playBack();
+            case CLICK -> playClickSound();
+            case BACK -> playBackSound();
         }
     }
 
@@ -1096,7 +1047,25 @@ public final class InputActionHandler {
     private static void closeScreenWithBackFeedback(ActionState state, Screen screen) {
         state.suppressNextScreenTransitionSoundFrom = screen;
         screen.onClose();
-        InputActionSounds.playBack();
+        playBackSound();
+    }
+
+    private static void playClickSound() {
+        playSound(ModSounds.UI_CLICK.get());
+    }
+
+    private static void playBlockSound() {
+        playSound(ModSounds.UI_BLOCK.get());
+    }
+
+    private static void playBackSound() {
+        playSound(ModSounds.UI_BACK.get());
+    }
+
+    private static void playSound(SoundEvent sound) {
+        Minecraft.getInstance().getSoundManager().play(
+            SimpleSoundInstance.forUI(sound, 1.0F, 1.0F)
+        );
     }
 
     @Nullable
@@ -1273,7 +1242,7 @@ public final class InputActionHandler {
         @Nullable
         private Screen suppressNextScreenTransitionSoundFrom;
         @Nullable
-        private Screen lastTrackedInGameScreen;
+        private Screen lastTrackedScreen;
         private BindingContext lastActionContext = BindingContext.GAMEPLAY;
         @Nullable
         private Screen navigationRepeatScreen;

@@ -4,8 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.platform.Window;
 import net.jr.client.compat.xaero.XaeroMinimapRuntimeState;
-import net.jr.client.compat.xaero.XaeroViewport;
-import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.client.compat.CompatHudDimensions;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,8 +22,7 @@ abstract class HudRendererMixin {
         )
     )
     private int javaReforged$viewportWidth(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getGuiScaledWidth() : viewport.logicalGuiWidth();
+        return CompatHudDimensions.width(window);
     }
 
     @Redirect(
@@ -35,8 +33,7 @@ abstract class HudRendererMixin {
         )
     )
     private int javaReforged$viewportHeight(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getGuiScaledHeight() : viewport.logicalGuiHeight();
+        return CompatHudDimensions.height(window);
     }
 
     @Redirect(
@@ -47,8 +44,7 @@ abstract class HudRendererMixin {
         )
     )
     private int javaReforged$viewportScale(Window window) {
-        ViewportArea viewport = XaeroViewport.currentOrNull();
-        return viewport == null ? window.getGuiScale() : viewport.guiScale();
+        return CompatHudDimensions.rasterScale(window);
     }
 
     @WrapMethod(method = "render")

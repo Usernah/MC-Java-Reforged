@@ -1,6 +1,6 @@
 package net.jr.client.runtime.input;
 
-/** Model plus a physical discriminator supplied by the device backend. */
+
 record PhysicalGamepadIdentity(String modelKey, String serial, String path) {
     boolean sameController(PhysicalGamepadIdentity other) {
         return this.modelKey.equals(other.modelKey)

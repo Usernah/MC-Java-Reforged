@@ -36,10 +36,7 @@ abstract class MapElementRenderHandlerMixin {
     private static final ThreadLocal<Deque<HoverScope>> javaReforged$hoverScopes =
             ThreadLocal.withInitial(ArrayDeque::new);
 
-    /**
-     * The handler is a WorldMap singleton. Without this swap, the map rendered
-     * last supplies the hover/right-click target to every other local player.
-     */
+
     @Inject(method = "render", at = @At("HEAD"))
     private void javaReforged$enterHoverState(
             CallbackInfoReturnable<HoveredMapElementHolder<?, ?>> cir

@@ -7,7 +7,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.LevelAccessor;
 import net.neoforged.fml.ModList;
 
-/** Cleans optional Create/Flywheel state before a local world is detached. */
+
 public final class CreateFlywheelLifecycle {
     private static volatile boolean resetLookupAttempted;
     private static volatile Method resetMethod;

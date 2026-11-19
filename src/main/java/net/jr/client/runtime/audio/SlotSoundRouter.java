@@ -155,7 +155,7 @@ public final class SlotSoundRouter {
         removeQueuedMatching(soundEngine, slotId, null, null, false);
     }
 
-    /** Stops every world/effect sound while leaving managed music untouched. */
+
     public static void stopAllEffects(SoundManager soundManager) {
         SoundEngine soundEngine = ((SoundManagerAccessor)soundManager).javaReforged$soundEngine();
         for (SoundInstance activeSound : activeSounds(soundEngine)) {
@@ -424,9 +424,9 @@ public final class SlotSoundRouter {
         }
 
         protected boolean javaReforged$slotCanPlay() {
-            // Camera and level bindings are swapped while local clients are
-            // joining and while viewports render. They are therefore not a
-            // sound-lifetime signal. Explicit slot teardown owns cleanup.
+
+
+
             return isClientAlive(this.slotId);
         }
 

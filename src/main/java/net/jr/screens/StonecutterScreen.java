@@ -278,7 +278,9 @@ public final class StonecutterScreen extends AbstractContainerScreen<Stonecutter
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (this.recipeGrid.mouseClicked(event, doubleClick)) {
-            this.enterRecipeFocus();
+            if (this.recipeGrid.shouldTakeFocusAfterInteraction()) {
+                this.enterRecipeFocus();
+            }
             return true;
         }
         boolean handled = this.itemSlotLayer.mouseClicked(

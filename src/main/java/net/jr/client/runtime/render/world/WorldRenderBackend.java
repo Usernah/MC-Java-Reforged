@@ -9,6 +9,9 @@ public interface WorldRenderBackend {
 
     void beginRenderFrame(List<WorldRenderView> views);
 
+    default void resourcesReloaded() {
+    }
+
     default Scope enterExtractionView(WorldRenderView view) {
         return Scope.NOOP;
     }

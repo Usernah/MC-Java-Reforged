@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import net.jr.client.ui.render.composition.GuiCompositionTarget;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Renders a fixed canvas into a GUI viewport. */
+
 public final class GuiCompositionLayer implements AutoCloseable {
     private final GuiCompositionTarget target = new GuiCompositionTarget();
     private final int canvasWidth;
@@ -38,7 +38,7 @@ public final class GuiCompositionLayer implements AutoCloseable {
             destinationX, destinationY, this.presentationScale, this.presentationScale);
     }
 
-    /** Scales the canvas uniformly to the GUI height and anchors its top-right corner. */
+
     public void submitTopRight(
         GuiGraphicsExtractor parentGraphics,
         FilterMode filter,

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class AbstractWidgetMixin {
     @Inject(method = "playDownSound", at = @At("HEAD"), cancellable = true)
     private void javaReforged$replaceVanillaClickSound(SoundManager soundManager, CallbackInfo ci) {
-        WidgetSoundRouter.playDownSound((AbstractWidget) (Object) this);
+        WidgetSoundRouter.playDownSound((AbstractWidget) (Object) this, soundManager);
         ci.cancel();
     }
 }

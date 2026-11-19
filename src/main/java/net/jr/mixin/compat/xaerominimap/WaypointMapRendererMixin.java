@@ -1,7 +1,7 @@
 package net.jr.mixin.compat.xaerominimap;
 
 import com.mojang.blaze3d.platform.Window;
-import net.jr.api.client.ui.Viewport;
+import net.jr.client.compat.CompatHudDimensions;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -17,7 +17,7 @@ abstract class WaypointMapRendererMixin {
         )
     )
     private int javaReforged$viewportWidth(Window window) {
-        return Viewport.current().logicalGuiWidth();
+        return CompatHudDimensions.width(window);
     }
 
     @Redirect(
@@ -28,6 +28,6 @@ abstract class WaypointMapRendererMixin {
         )
     )
     private int javaReforged$viewportHeight(Window window) {
-        return Viewport.current().logicalGuiHeight();
+        return CompatHudDimensions.height(window);
     }
 }

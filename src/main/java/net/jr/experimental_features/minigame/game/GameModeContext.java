@@ -2,11 +2,7 @@ package net.jr.experimental_features.minigame.game;
 
 import java.util.Objects;
 
-/**
- * Estado global simple del modo de juego activo.
- * Esto solo distingue entre juego vanilla y minijuego activo;
- * las fases especificas se modelan por separado.
- */
+
 public final class GameModeContext {
 
     private static volatile GameModeState currentMode = GameModeState.VANILLA;

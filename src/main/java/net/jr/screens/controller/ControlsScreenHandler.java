@@ -43,9 +43,7 @@ public final class ControlsScreenHandler {
         ));
         list.addSmall(new OptionInstance[]{
                 options.toggleCrouch(),
-                options.toggleSprint(),
-                options.autoJump(),
-                options.operatorItemsTab()
+                options.toggleSprint()
         });
     }
 }

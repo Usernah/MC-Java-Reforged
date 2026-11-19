@@ -2,16 +2,11 @@ package net.jr.client.compat.sodium;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 import net.minecraft.client.multiplayer.ClientLevel;
 
-/**
- * Owns the terrain data that Sodium normally keeps in one renderer instance.
- *
- * <p>A state has its own section storage, render regions, visibility data and
- * uniforms. New states borrow the first manager's {@code ChunkBuilder}, so
- * they do not start another worker pool.</p>
- */
+
 final class SodiumRendererStateRouter {
     private final Map<ClientLevel, State> states = new IdentityHashMap<>();
     private @Nullable Object sharedBuilder;
@@ -78,6 +73,37 @@ final class SodiumRendererStateRouter {
         return true;
     }
 
+    void releaseAllRendererStates(Object renderer) {
+        Set<Object> releasedManagers = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<Object> releasedUniforms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+
+        if (this.sharedBuilder != null) {
+            SodiumRendererBridge.shutdownBuilder(this.sharedBuilder);
+        }
+
+        for (State state : this.states.values()) {
+            if (releasedManagers.add(state.manager())) {
+                SodiumRendererBridge.releaseTerrainState(state.manager());
+            }
+            if (releasedUniforms.add(state.uniforms())) {
+                SodiumRendererBridge.deleteUniforms(state.uniforms());
+            }
+        }
+
+        Object currentManager = SodiumRendererBridge.sectionManager(renderer);
+        if (currentManager != null && releasedManagers.add(currentManager)) {
+            SodiumRendererBridge.releaseTerrainState(currentManager);
+        }
+        Object currentUniforms = SodiumRendererBridge.uniformBufferManager(renderer);
+        if (currentUniforms != null && releasedUniforms.add(currentUniforms)) {
+            SodiumRendererBridge.deleteUniforms(currentUniforms);
+        }
+
+        this.states.clear();
+        this.sharedBuilder = null;
+        SodiumRendererBridge.clearRendererState(renderer);
+    }
+
     private State stateFor(Object renderer, ClientLevel level) {
         State state = this.states.get(level);
         if (state != null) {
@@ -93,6 +119,7 @@ final class SodiumRendererStateRouter {
         Object manager = SodiumRendererBridge.createManagerLike(currentManager, level);
         SodiumRendererBridge.replaceDedicatedBuilder(manager, this.sharedBuilder);
         SodiumRendererBridge.stopDedicatedCullExecutor(manager);
+        SodiumRendererBridge.populateReadyChunks(manager, level);
         Object uniforms = SodiumRendererBridge.createUniformsLike(
             currentUniforms,
             level,

@@ -35,6 +35,8 @@ public class TabBarElement extends JavaBaseWidget implements TabNavigator {
 
     private float padding;
 
+    private int positionRoleCapacity;
+
     private int selectedIndex = -1;
 
     private Consumer<TabElement> onSelectionChange =
@@ -187,6 +189,16 @@ public class TabBarElement extends JavaBaseWidget implements TabNavigator {
 
     public void setPadding(float padding) {
         this.padding = padding;
+        this.layoutTabs();
+    }
+
+    /**
+     * Sets the number of visual positions in a complete tab row. A partially
+     * populated row keeps its final present tab as MIDDLE; LAST is reserved for
+     * the final position of a complete row.
+     */
+    public void setPositionRoleCapacity(int capacity) {
+        this.positionRoleCapacity = Math.max(0, capacity);
         this.layoutTabs();
     }
 
@@ -394,7 +406,11 @@ public class TabBarElement extends JavaBaseWidget implements TabNavigator {
     private TabElement.PositionRole resolveRole(
             int index
     ) {
-        if (this.tabs.size() == 1) {
+        int capacity = this.positionRoleCapacity > 0
+                ? this.positionRoleCapacity
+                : this.tabs.size();
+
+        if (capacity == 1 && this.tabs.size() == 1) {
             return TabElement.PositionRole.SINGLE;
         }
 
@@ -402,7 +418,7 @@ public class TabBarElement extends JavaBaseWidget implements TabNavigator {
             return TabElement.PositionRole.FIRST;
         }
 
-        if (index == this.tabs.size() - 1) {
+        if (index == capacity - 1) {
             return TabElement.PositionRole.LAST;
         }
 
@@ -411,6 +427,11 @@ public class TabBarElement extends JavaBaseWidget implements TabNavigator {
 
     @Override
     public boolean shouldTakeFocusAfterInteraction() {
+        return false;
+    }
+
+    @Override
+    public boolean participatesInFocusNavigation() {
         return false;
     }
 

@@ -4,7 +4,6 @@ import dev.isxander.sdl3java.jna.SdlNativeLibraryLoader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -41,7 +40,10 @@ final class SdlNativeLibrary {
 
             Path nativePath = resolvePath();
             Files.createDirectories(nativePath.getParent());
-            extractIfMissing(input, nativePath);
+            boolean updated = extractIfDifferent(input, nativePath);
+            if (updated) {
+                Java_reforged.LOGGER.info("SDL3 nativo actualizado en {}.", nativePath.toAbsolutePath());
+            }
             try {
                 SdlNativeLibraryLoader.loadLibSDL3FromFilePathNow(nativePath.toAbsolutePath().toString());
                 Java_reforged.LOGGER.debug("SDL3 nativo cargado desde {}.", nativePath.toAbsolutePath());
@@ -63,22 +65,26 @@ final class SdlNativeLibrary {
         return baseDirectory.resolve(".javareforged").resolve("natives").resolve(FILE_NAME);
     }
 
-    private static void extractIfMissing(InputStream input, Path nativePath) throws IOException {
-        if (Files.isRegularFile(nativePath)) {
-            return;
-        }
-
+    private static boolean extractIfDifferent(InputStream input, Path nativePath) throws IOException {
         Path temporaryPath = Files.createTempFile(nativePath.getParent(), "SDL3-", ".tmp");
         try {
             Files.copy(input, temporaryPath, StandardCopyOption.REPLACE_EXISTING);
-            try {
-                try {
-                    Files.move(temporaryPath, nativePath, StandardCopyOption.ATOMIC_MOVE);
-                } catch (AtomicMoveNotSupportedException exception) {
-                    Files.move(temporaryPath, nativePath);
-                }
-            } catch (FileAlreadyExistsException ignored) {
+
+            if (Files.isRegularFile(nativePath) && Files.mismatch(temporaryPath, nativePath) == -1L) {
+                return false;
             }
+
+            try {
+                Files.move(
+                    temporaryPath,
+                    nativePath,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING
+                );
+            } catch (AtomicMoveNotSupportedException exception) {
+                Files.move(temporaryPath, nativePath, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return true;
         } finally {
             Files.deleteIfExists(temporaryPath);
         }

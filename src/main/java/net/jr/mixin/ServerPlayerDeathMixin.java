@@ -28,8 +28,8 @@ public abstract class ServerPlayerDeathMixin {
                 .sendToTrackingPlayers(player, new ClientboundRemoveEntitiesPacket(player.getId()));
         }
 
-        // PlayerList.respawn (or disconnect) performs the real removal. Keeping the
-        // dead ServerPlayer tracked until then preserves its chunk/entity observer.
+
+
         ci.cancel();
     }
 }

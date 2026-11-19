@@ -7,14 +7,20 @@ import net.jr.client.ui.dsl.UiCompiledDocument.ConditionalRenderableDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.ImageDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.NineDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.RenderableDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.RectangleDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.TextDefinition;
+import net.jr.client.ui.dsl.UiCompiledDocument.TextBoxDefinition;
 import net.jr.client.ui.dsl.UiCompiledDocument.Vector2Definition;
 import net.jr.client.ui.dsl.UiCompiledDocument.VideoDefinition;
 import net.jr.api.client.video.VideoHolder;
 import net.jr.api.client.video.VideoRegister;
 import net.jr.client.components.elements.ImageElement;
+import net.jr.client.components.elements.FillColorElement;
 import net.jr.client.components.elements.TextElement;
+import net.jr.client.components.elements.TextBoxElement;
 import net.jr.client.components.elements.VideoElement;
+import net.jr.client.components.elements.VisualAnchor;
+import net.jr.client.components.elements.VisualElementsInterface;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
@@ -40,8 +46,14 @@ public final class UiElement {
         if (definition instanceof VideoDefinition video) {
             return new ElementVideo(video);
         }
+        if (definition instanceof RectangleDefinition rectangle) {
+            return new ElementRectangle(rectangle);
+        }
         if (definition instanceof TextDefinition text) {
             return new ElementText(text);
+        }
+        if (definition instanceof TextBoxDefinition textBox) {
+            return new ElementTextBox(textBox);
         }
         throw new IllegalArgumentException("Unsupported compiled renderable: " + definition.getClass().getName());
     }
@@ -61,6 +73,16 @@ public final class UiElement {
         }
 
         @Override
+        public void prepare(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            this.renderable.prepare(graphics, context, originX, originY);
+        }
+
+        @Override
         public void render(
             GuiGraphicsExtractor graphics,
             UiCompiledDocument.DataContext context,
@@ -73,6 +95,16 @@ public final class UiElement {
         }
 
         @Override
+        public Object dslValue(String property) {
+            return this.renderable.dslValue(property);
+        }
+
+        @Override
+        public void setLayoutParent(VisualElementsInterface parent) {
+            this.renderable.setLayoutParent(parent);
+        }
+
+        @Override
         public void close() {
             this.renderable.close();
         }
@@ -81,12 +113,24 @@ public final class UiElement {
     public interface ElementRenderable extends AutoCloseable {
         String id();
 
+        void prepare(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        );
+
         void render(
             GuiGraphicsExtractor graphics,
             UiCompiledDocument.DataContext context,
             float originX,
             float originY
         );
+
+        Object dslValue(String property);
+
+        default void setLayoutParent(VisualElementsInterface parent) {
+        }
 
         @Override
         default void close() {
@@ -108,16 +152,19 @@ public final class UiElement {
         }
 
         @Override
-        public void render(
+        public void prepare(
             GuiGraphicsExtractor graphics,
             UiCompiledDocument.DataContext context,
             float originX,
             float originY
         ) {
             this.image.setTexture(this.definition.texture().resolve(context));
+            VisualAnchor anchor = this.definition.anchor().resolve(context);
+            this.image.setAnchor(anchor);
+            this.image.setAlpha(this.definition.alpha().resolve(context));
             this.image.setBounds(
-                originX + this.definition.x().resolve(context),
-                originY + this.definition.y().resolve(context),
+                position(anchor, originX, this.definition.x().resolve(context)),
+                position(anchor, originY, this.definition.y().resolve(context)),
                 this.definition.width().resolve(context),
                 this.definition.height().resolve(context)
             );
@@ -126,7 +173,27 @@ public final class UiElement {
             this.applyMeta(context);
             this.applyNine(context);
             this.applyAnimation(context);
+        }
+
+        @Override
+        public void render(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            this.prepare(graphics, context, originX, originY);
             this.image.draw(graphics);
+        }
+
+        @Override
+        public Object dslValue(String property) {
+            return this.image.dslValue(property);
+        }
+
+        @Override
+        public void setLayoutParent(VisualElementsInterface parent) {
+            this.image.setLayoutParent(parent);
         }
 
         private void applyTextureRegion(UiCompiledDocument.DataContext context) {
@@ -162,17 +229,30 @@ public final class UiElement {
         }
 
         private void applyMeta(UiCompiledDocument.DataContext context) {
-            boolean useMeta = this.definition.useMeta().resolve(context);
-            this.image.setUseMeta(useMeta);
-            if (this.definition.metaConfig() == null) {
+            Object meta = this.definition.meta().resolve(context);
+            if (meta instanceof Asset metaResource) {
+                this.image.setMeta(metaResource);
+            } else if (meta instanceof Boolean useMeta) {
+                this.image.setMeta(useMeta);
+            } else {
+                throw new IllegalArgumentException(
+                    "Image meta must resolve to a boolean or Asset, got "
+                        + (meta == null ? "null" : meta.getClass().getSimpleName())
+                );
+            }
+            if (this.definition.metaConfigs().isEmpty()) {
                 this.image.clearConfig();
                 return;
             }
-            String config = this.definition.metaConfig().resolve(context);
-            if (config == null || config.isBlank()) {
+            List<String> configs = this.definition.metaConfigs().stream()
+                .map(config -> config.resolve(context))
+                .filter(java.util.Objects::nonNull)
+                .filter(config -> !config.isBlank())
+                .toList();
+            if (configs.isEmpty()) {
                 this.image.clearConfig();
             } else {
-                this.image.setConfig(config);
+                this.image.setConfigs(configs);
             }
         }
 
@@ -219,6 +299,7 @@ public final class UiElement {
     public static final class ElementVideo implements ElementRenderable {
         private final VideoDefinition definition;
         private VideoElement video;
+        private VisualElementsInterface layoutParent;
 
         private ElementVideo(VideoDefinition definition) {
             this.definition = definition;
@@ -230,7 +311,7 @@ public final class UiElement {
         }
 
         @Override
-        public void render(
+        public void prepare(
             GuiGraphicsExtractor graphics,
             UiCompiledDocument.DataContext context,
             float originX,
@@ -242,9 +323,12 @@ public final class UiElement {
             } else {
                 this.video.setVideo(holder);
             }
+            this.video.setLayoutParent(this.layoutParent);
+            VisualAnchor anchor = this.definition.anchor().resolve(context);
+            this.video.setAnchor(anchor);
             this.video.setBounds(
-                originX + this.definition.x().resolve(context),
-                originY + this.definition.y().resolve(context),
+                position(anchor, originX, this.definition.x().resolve(context)),
+                position(anchor, originY, this.definition.y().resolve(context)),
                 this.definition.width().resolve(context),
                 this.definition.height().resolve(context)
             );
@@ -253,7 +337,33 @@ public final class UiElement {
                 this.definition.loop().resolve(context),
                 this.definition.loopFadeMillis().resolve(context)
             );
+        }
+
+        @Override
+        public void render(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            this.prepare(graphics, context, originX, originY);
             this.video.draw(graphics);
+        }
+
+        @Override
+        public Object dslValue(String property) {
+            if (this.video == null) {
+                throw new IllegalStateException("Video element has not been prepared");
+            }
+            return this.video.dslValue(property);
+        }
+
+        @Override
+        public void setLayoutParent(VisualElementsInterface parent) {
+            this.layoutParent = parent;
+            if (this.video != null) {
+                this.video.setLayoutParent(parent);
+            }
         }
 
         @Override
@@ -262,6 +372,67 @@ public final class UiElement {
                 this.video.close();
                 this.video = null;
             }
+        }
+    }
+
+    public static final class ElementRectangle implements ElementRenderable {
+        private final RectangleDefinition definition;
+        private final FillColorElement rectangle;
+
+        private ElementRectangle(RectangleDefinition definition) {
+            this.definition = definition;
+            this.rectangle = new FillColorElement(0xFFFFFFFF, 0, 0, 0, 0, null);
+        }
+
+        @Override
+        public String id() {
+            return this.definition.id();
+        }
+
+        @Override
+        public void prepare(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            VisualAnchor anchor = this.definition.anchor().resolve(context);
+            this.rectangle.setAnchor(anchor);
+            this.rectangle.setBounds(
+                position(anchor, originX, this.definition.x().resolve(context)),
+                position(anchor, originY, this.definition.y().resolve(context)),
+                this.definition.width().resolve(context),
+                this.definition.height().resolve(context)
+            );
+            if (this.definition.gradient()) {
+                this.rectangle.setColor(
+                    this.definition.topColor().resolve(context),
+                    this.definition.bottomColor().resolve(context)
+                );
+            } else {
+                this.rectangle.setColor(this.definition.topColor().resolve(context));
+            }
+        }
+
+        @Override
+        public void render(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            this.prepare(graphics, context, originX, originY);
+            this.rectangle.draw(graphics);
+        }
+
+        @Override
+        public Object dslValue(String property) {
+            return this.rectangle.dslValue(property);
+        }
+
+        @Override
+        public void setLayoutParent(VisualElementsInterface parent) {
+            this.rectangle.setLayoutParent(parent);
         }
     }
 
@@ -280,7 +451,7 @@ public final class UiElement {
         }
 
         @Override
-        public void render(
+        public void prepare(
             GuiGraphicsExtractor graphics,
             UiCompiledDocument.DataContext context,
             float originX,
@@ -289,14 +460,24 @@ public final class UiElement {
             Component content = this.definition.literal() != null
                 ? Component.literal(this.definition.literal().resolve(context))
                 : Component.translatable(this.definition.translatable().resolve(context));
+            content = content.copy().withStyle(style -> style
+                .withBold(this.definition.bold().resolve(context))
+                .withItalic(this.definition.italic().resolve(context))
+                .withUnderlined(this.definition.underlined().resolve(context))
+                .withStrikethrough(this.definition.strikethrough().resolve(context))
+                .withObfuscated(this.definition.obfuscated().resolve(context))
+            );
             this.text.setText(content);
+            VisualAnchor anchor = this.definition.anchor().resolve(context);
+            this.text.setAnchor(anchor);
             this.text.setPosition(
-                originX + this.definition.x().resolve(context),
-                originY + this.definition.y().resolve(context)
+                position(anchor, originX, this.definition.x().resolve(context)),
+                position(anchor, originY, this.definition.y().resolve(context))
             );
             this.text.setScale(this.definition.scale().resolve(context));
             this.text.setColor(this.definition.color().resolve(context));
             this.text.setShadow(this.definition.shadow().resolve(context));
+            this.text.setLegacyShadow(this.definition.legacyShadow().resolve(context));
             if (this.definition.shadowColor() == null) {
                 this.text.clearShadowColor();
             } else {
@@ -313,7 +494,91 @@ public final class UiElement {
             } else {
                 this.text.setFont(this.definition.font().resolve(context));
             }
+        }
+
+        @Override
+        public void render(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            this.prepare(graphics, context, originX, originY);
             this.text.draw(graphics);
         }
+
+        @Override
+        public Object dslValue(String property) {
+            return this.text.dslValue(property);
+        }
+
+        @Override
+        public void setLayoutParent(VisualElementsInterface parent) {
+            this.text.setLayoutParent(parent);
+        }
+    }
+
+    public static final class ElementTextBox implements ElementRenderable {
+        private final TextBoxDefinition definition;
+        private final ElementText content;
+        private final TextBoxElement textBox;
+
+        private ElementTextBox(TextBoxDefinition definition) {
+            this.definition = definition;
+            this.content = new ElementText(definition.text());
+            this.textBox = new TextBoxElement(this.content.text, 0.0F, 0.0F);
+        }
+
+        @Override
+        public String id() {
+            return this.definition.id();
+        }
+
+        @Override
+        public void prepare(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            this.content.prepare(graphics, context, 0.0F, 0.0F);
+            VisualAnchor anchor = this.definition.anchor().resolve(context);
+            this.textBox.setAnchor(anchor);
+            this.textBox.setPosition(
+                position(anchor, originX, this.definition.x().resolve(context)),
+                position(anchor, originY, this.definition.y().resolve(context))
+            );
+            this.textBox.setSize(
+                Math.max(0.0F, this.definition.width().resolve(context)),
+                Math.max(0.0F, this.definition.height().resolve(context))
+            );
+            this.textBox.setMaxLines(this.definition.maxLines().resolve(context));
+            this.textBox.setLineSpacing(this.definition.lineSpacing().resolve(context));
+        }
+
+        @Override
+        public void render(
+            GuiGraphicsExtractor graphics,
+            UiCompiledDocument.DataContext context,
+            float originX,
+            float originY
+        ) {
+            this.prepare(graphics, context, originX, originY);
+            this.textBox.draw(graphics);
+        }
+
+        @Override
+        public Object dslValue(String property) {
+            return this.textBox.dslValue(property);
+        }
+
+        @Override
+        public void setLayoutParent(VisualElementsInterface parent) {
+            this.textBox.setLayoutParent(parent);
+        }
+    }
+
+    private static float position(VisualAnchor anchor, float origin, float offset) {
+        return anchor.isExplicit() ? offset : origin + offset;
     }
 }

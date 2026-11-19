@@ -2,27 +2,30 @@ package net.jr.screens.crafting;
 
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
+import net.jr.client.ui.presentation.UiPresentation;
 import net.jr.api.client.ui.Cursor;
+import net.jr.api.client.ui.DslContainer;
+import net.jr.api.client.ui.UiContainerFile;
+import net.jr.api.client.ui.UiDataFile;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.jr.client.components.navigation.TabNavigator;
-import net.jr.client.components.elements.TextElement;
 import net.jr.client.components.widgets.EditBoxElement;
 import net.jr.client.components.widgets.TabBarElement;
 import net.jr.client.components.widgets.TabElement;
 import net.jr.client.components.widgets.recipe.RecipeEntryView;
 import net.jr.client.components.widgets.recipe.RecipeGridElement;
 import net.jr.client.components.widgets.recipe.RecipeSlotElement;
+import net.jr.client.components.widgets.recipe.RecipeSlotStyle;
 import net.jr.client.components.widgets.recipe.RecipeVariantView;
 import net.jr.client.ui.navigation.UiInputBinding;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.api.client.input.GamepadDigitalInput;
-import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
+import net.jr.client.ui.container.DslContainerSize;
 import net.jr.client.ui.container.slots.ItemSlotGrid;
 import net.jr.client.ui.container.slots.ItemSlotGroup;
-import net.jr.client.ui.container.slots.ItemSlotMaps;
 import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
 import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.ui.navigation.FocusCursorVisibilityHost;
@@ -31,6 +34,8 @@ import net.jr.client.ui.navigation.tabs.TabNavigationHost;
 import net.jr.client.ui.hint.provider.RecipeControlHintHost;
 import net.jr.experimental_features.gamepad_keyboard.GamepadTextInputFocus;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
+import net.jr.registry.ModSounds;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -40,6 +45,7 @@ import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -75,52 +81,15 @@ import java.util.Set;
 
 public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         extends AbstractContainerScreen<M>
-        implements UiActionHandler, CustomItemSlotLayout, TabNavigationHost, FocusCursorVisibilityHost,
+        implements DslContainer, UiActionHandler, CustomItemSlotLayout, TabNavigationHost, FocusCursorVisibilityHost,
         RecipeControlHintHost, RecipeUpdateListener {
 
-    private static final int CRAFTING_TAB_WIDTH = 32;
-    private static final int CRAFTING_TAB_HEIGHT = 27;
-    private static final int CRAFTING_TAB_Y_OFFSET = -23;
-    private static final int CRAFTING_TAB_ICON_SIZE = 18;
-    private static final int CRAFTING_TAB_ICON_OFFSET_X = 7;
-    private static final int CRAFTING_TAB_ICON_OFFSET_Y = 4;
-    private static final int PAGE_BUTTON_SIZE = 20;
-    private static final int PAGE_BUTTON_Y_OFFSET = -49;
-    private static final int FIRST_PAGE_MOD_TABS = 3;
     private static final int MIN_MOD_CRAFTING_RECIPES = 5;
 
-    private static final Asset TAB_LEFT =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/tab_left.png");
-    private static final Asset TAB_LEFT_SELECTED =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/tab_left_selected.png");
-    private static final Asset TAB_CENTER =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/tab_center.png");
-    private static final Asset TAB_CENTER_SELECTED =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/tab_center_selected.png");
-    private static final Asset SCROLLER =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/scroller.png");
-    private static final Asset SCROLLER_DISABLED =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/scroller_disabled.png");
-    private static final Asset SEARCH_BOX =
-            Asset.MC("textures/gui/sprites/widgets/text_edit_box.png");
-
-    private static final Asset ICON_BUILDING_BLOCKS =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/icons/building_blocks.png");
-    private static final Asset ICON_EQUIPMENT =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/icons/equipment.png");
-    private static final Asset ICON_MATERIALS =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/icons/materials.png");
-    private static final Asset ICON_REDSTONE_AND_MECHANISMS =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/icons/redstone_and_mechanisms.png");
-    private static final Asset ICON_DECORATION =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/icons/decoration.png");
-    private static final Asset ICON_SEARCH =
-            Asset.MC("textures/gui/sprites/container/crafting_menu/icons/search.png");
-
-    private final Asset background;
+    private final UiContainerFile dslFile;
+    private final CraftingScreenData screenData;
     private final int craftingColumns;
     private final int craftingRows;
-    private final CraftingScreenLayout layout;
     private final CraftingRecipePreviewRenderer recipePreviewRenderer;
     private final TabNavigationController tabNavigation =
             new TabNavigationController();
@@ -128,6 +97,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     private FocusRegion focusRegion = FocusRegion.RECIPES;
     private boolean pendingDirectCraft;
     private int pendingCraftStateId = -1;
+    private String currentResultTitle = "";
 
     protected VanillaItemSlotLayer itemSlotLayer;
     protected ItemSlotGrid itemSlotGrid;
@@ -135,9 +105,6 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     protected TabBarElement recipeTabs;
     private Button previousPageButton;
     private Button nextPageButton;
-    private TextElement craftingTitleText;
-    private TextElement inventoryTitleText;
-    private TextElement tabTitleText;
     private EditBoxElement searchEditBox;
 
     protected AbstractCraftingScreen(
@@ -145,41 +112,94 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             Inventory inventory,
             Component title,
             int slotId,
-            Asset background,
-            int imageWidth,
-            int imageHeight,
+            UiContainerFile dslFile,
+            UiDataFile dataFile,
+            int fallbackWidth,
+            int fallbackHeight,
             int craftingColumns,
             int craftingRows,
-            CraftingScreenLayout layout
+            ItemSlotGroup craftingGridGroup,
+            ItemSlotGroup craftingResultGroup
     ) {
-        super(menu, inventory, title, imageWidth, imageHeight);
-        this.background = background;
+        this(menu, inventory, title, slotId, dslFile, dataFile, craftingColumns, craftingRows,
+                craftingGridGroup, craftingResultGroup,
+                DslContainerSize.resolve(dslFile, fallbackWidth, fallbackHeight));
+    }
+
+    private AbstractCraftingScreen(
+            M menu,
+            Inventory inventory,
+            Component title,
+            int slotId,
+            UiContainerFile dslFile,
+            UiDataFile dataFile,
+            int craftingColumns,
+            int craftingRows,
+            ItemSlotGroup craftingGridGroup,
+            ItemSlotGroup craftingResultGroup,
+            DslContainerSize dimensions
+    ) {
+        super(menu, inventory, title, dimensions.width(), dimensions.height());
+        this.dslFile = dslFile;
+        this.screenData = new CraftingScreenData(dataFile);
         this.craftingColumns = craftingColumns;
         this.craftingRows = craftingRows;
-        this.layout = layout;
         this.recipePreviewRenderer = new CraftingRecipePreviewRenderer(
                 craftingColumns,
                 craftingRows,
-                layout.craftingGridGroup(),
-                layout.craftingResultGroup()
+                craftingGridGroup,
+                craftingResultGroup,
+                new CraftingPreviewStyle(
+                        this.screenData.color("preview_missing_background"),
+                        this.screenData.color("preview_missing_tint"),
+                        this.screenData.decimal("preview_missing_item_alpha"),
+                        this.screenData.integer("preview_background_inset"),
+                        this.screenData.integer("preview_cycle_ticks"),
+                        this.screenData.asset("preview_missing_overlay_asset"),
+                        this.screenData.integer("preview_missing_overlay_x"),
+                        this.screenData.integer("preview_missing_overlay_y"),
+                        this.screenData.integer("preview_missing_overlay_width"),
+                        this.screenData.integer("preview_missing_overlay_height")
+                )
         );
+    }
+
+    @Override
+    public final UiContainerFile dslFile() {
+        return this.dslFile;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.topPos += 12;
         this.rebuildCreativeTabContents();
-        this.itemSlotLayer = new VanillaItemSlotLayer(this, this.menu, this.font, 16);
-        this.itemSlotGrid = this.createItemSlotGrid();
+        this.exposeDslData();
+        this.itemSlotGrid = this.dslItemSlotGrid("menu");
+        if (this.itemSlotGrid == null) {
+            throw new IllegalStateException("Crafting container DSL must declare item_slots id 'menu'");
+        }
+        this.itemSlotLayer = this.itemSlotGrid.itemSlotLayer();
 
         this.recipeGrid = new RecipeGridElement(
-                this.leftPos + 12,
-                this.topPos + 31,
-                this.layout.recipeColumns() * this.layout.recipeCellSize(),
-                this.layout.recipeRows() * this.layout.recipeCellSize(),
-                this.layout.recipeRows(),
-                this.layout.recipeColumns()
+                this.leftPos + this.screenData.integer("recipe_x"),
+                this.topPos + this.screenData.integer("recipe_y"),
+                this.screenData.integer("recipe_columns") * this.screenData.integer("recipe_cell_size"),
+                this.screenData.integer("recipe_rows") * this.screenData.integer("recipe_cell_size"),
+                this.screenData.integer("recipe_rows"),
+                this.screenData.integer("recipe_columns"),
+                new RecipeSlotStyle(
+                        this.screenData.asset("recipe_slot_available_asset"),
+                        this.screenData.asset("recipe_slot_unavailable_asset"),
+                        this.screenData.asset("recipe_variant_available_asset"),
+                        this.screenData.asset("recipe_variant_unavailable_asset"),
+                        this.screenData.asset("recipe_variants_closed_asset"),
+                        this.screenData.asset("recipe_variants_open_asset"),
+                        this.screenData.integer("recipe_variant_indicator_size"),
+                        this.screenData.integer("recipe_variant_indicator_inset"),
+                        this.screenData.integer("recipe_item_max_size"),
+                        this.screenData.integer("recipe_item_padding"),
+                        this.screenData.decimal("recipe_unavailable_item_alpha")
+                )
         );
         this.configureRecipeGrid(this.recipeGrid);
         this.recipeGrid.onCraft(this::craftRecipe);
@@ -187,7 +207,6 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         this.craftingTabGroup = new CraftingTabGroup();
         this.recipeTabs = this.craftingTabGroup.tabs();
         this.createPageButtons();
-        this.createTexts();
         this.createSearchBox();
         this.tabNavigation.clear();
         this.tabNavigation.bind(
@@ -195,14 +214,14 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                 UiInputBinding.gamepad(GamepadDigitalInput.BUMPER_LEFT),
                 UiInputBinding.gamepad(GamepadDigitalInput.BUMPER_RIGHT),
                 Component.translatable("hint.container.java_reforged.change_tab"),
-                InputActionSounds::playFocus
+                AbstractCraftingScreen::playTabSelectionSound
         );
         this.tabNavigation.bind(
                 this.craftingTabGroup,
                 UiInputBinding.gamepad(GamepadDigitalInput.TRIGGER_LEFT),
                 UiInputBinding.gamepad(GamepadDigitalInput.TRIGGER_RIGHT),
                 Component.translatable("hint.container.java_reforged.change_tab_page"),
-                InputActionSounds::playFocus
+                AbstractCraftingScreen::playTabSelectionSound
         );
 
         this.addRenderableWidget(this.recipeGrid);
@@ -212,6 +231,50 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         this.addRenderableWidget(this.searchEditBox);
         this.reloadRecipes();
         this.focusFirstRecipeEntryAndMoveCursor();
+    }
+
+    private void exposeDslData() {
+        this.dslData().exposeText("crafting.inventory_title", () -> this.playerInventoryTitle.getString());
+        this.dslData().exposeText("crafting.title", () -> this.playerInventoryTitle.getString());
+        this.dslData().exposeText("crafting.tab_title", () -> this.craftingTabGroup == null
+                ? "" : this.craftingTabGroup.selectedTitle().getString());
+        this.dslData().exposeText("crafting.page_label", () -> this.craftingTabGroup == null
+                ? "" : (this.craftingTabGroup.pageIndex() + 1) + " / " + this.craftingTabGroup.pageCount());
+        this.dslData().exposeText("crafting.result_title", () -> this.currentResultTitle);
+        this.dslData().exposeText("crafting.search_query", () -> this.searchEditBox == null
+                ? "" : this.searchEditBox.value());
+        this.dslData().exposeText("crafting.focus_region", () -> this.focusRegion.name()
+                .toLowerCase(java.util.Locale.ROOT));
+        this.dslData().exposeText("crafting.selected_category", () -> {
+            CraftingCategory category = this.craftingTabGroup == null
+                    ? null : this.craftingTabGroup.selectedCategory();
+            return category == null ? "" : category.name().toLowerCase(java.util.Locale.ROOT);
+        });
+        this.dslData().exposeText("crafting.selected_mod", () -> {
+            ModCraftingTab mod = this.craftingTabGroup == null
+                    ? null : this.craftingTabGroup.selectedMod();
+            return mod == null ? "" : mod.namespace;
+        });
+        this.dslData().exposeBoolean("crafting.search_selected", () -> this.craftingTabGroup != null
+                && this.craftingTabGroup.isSearchSelected());
+        this.dslData().exposeBoolean("crafting.show_tab_title", () -> this.craftingTabGroup != null
+                && !this.craftingTabGroup.isSearchSelected());
+        this.dslData().exposeBoolean("crafting.show_page_label", () -> this.craftingTabGroup != null
+                && this.craftingTabGroup.pageCount() > 1);
+        this.dslData().exposeBoolean("crafting.has_result_title", () -> !this.currentResultTitle.isEmpty());
+        this.dslData().exposeBoolean("crafting.has_targeted_recipe", this::hasTargetedRecipe);
+        this.dslData().exposeBoolean("crafting.targeted_recipe_craftable", this::isTargetedRecipeCraftable);
+        this.dslData().exposeBoolean("crafting.recipes_focused", () -> this.focusRegion == FocusRegion.RECIPES);
+        this.dslData().exposeBoolean("crafting.inventory_focused", () -> this.focusRegion == FocusRegion.INVENTORY);
+        this.dslData().exposeBoolean("crafting.search_focused", () -> this.focusRegion == FocusRegion.SEARCH);
+        this.dslData().exposeBoolean("crafting.has_previous_page", () -> this.craftingTabGroup != null
+                && this.craftingTabGroup.pageIndex() > 0);
+        this.dslData().exposeBoolean("crafting.has_next_page", () -> this.craftingTabGroup != null
+                && this.craftingTabGroup.pageIndex() + 1 < this.craftingTabGroup.pageCount());
+        this.dslData().exposeNumber("crafting.page", () -> this.craftingTabGroup == null
+                ? 1 : this.craftingTabGroup.pageIndex() + 1);
+        this.dslData().exposeNumber("crafting.page_count", () -> this.craftingTabGroup == null
+                ? 1 : this.craftingTabGroup.pageCount());
     }
 
     private void rebuildCreativeTabContents() {
@@ -227,32 +290,34 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     }
 
     private void createPageButtons() {
-        int y = this.topPos + PAGE_BUTTON_Y_OFFSET;
-        this.previousPageButton = Button.builder(Component.literal("<"), ignored -> this.craftingTabGroup.changePage(-1))
+        int buttonSize = this.screenData.integer("page_button_size");
+        int y = this.topPos + this.screenData.integer("page_button_y_offset");
+        this.previousPageButton = Button.builder(
+                        Component.literal("<"), ignored -> this.craftingTabGroup.changePage(-1))
                 .pos(this.leftPos, y)
-                .size(PAGE_BUTTON_SIZE, PAGE_BUTTON_SIZE)
+                .size(buttonSize, buttonSize)
                 .build();
-        this.nextPageButton = Button.builder(Component.literal(">"), ignored -> this.craftingTabGroup.changePage(1))
-                .pos(this.leftPos + this.imageWidth - PAGE_BUTTON_SIZE, y)
-                .size(PAGE_BUTTON_SIZE, PAGE_BUTTON_SIZE)
+        this.nextPageButton = Button.builder(
+                        Component.literal(">"), ignored -> this.craftingTabGroup.changePage(1))
+                .pos(this.leftPos + this.imageWidth - buttonSize, y)
+                .size(buttonSize, buttonSize)
                 .build();
         this.craftingTabGroup.updatePageButtons();
     }
 
     private void createSearchBox() {
-        int searchX = this.craftingColumns == 3 ? 84 : 78;
         this.searchEditBox = new EditBoxElement(
-                this.leftPos + searchX,
-                this.topPos + 5,
-                114,
-                13,
-                Component.translatable("crafting_tab.java_reforged.search_placeholder")
+                this.leftPos + this.screenData.integer("search_x"),
+                this.topPos + this.screenData.integer("search_y"),
+                this.screenData.integer("search_width"),
+                this.screenData.integer("search_height"),
+                Component.translatable(this.screenData.string("search_placeholder_key"))
         );
         this.searchEditBox.setFont(this.font);
         this.searchEditBox.setHint(
-                Component.translatable("crafting_tab.java_reforged.search_placeholder")
+                Component.translatable(this.screenData.string("search_placeholder_key"))
         );
-        this.searchEditBox.setMaxLength(64);
+        this.searchEditBox.setMaxLength(this.screenData.integer("search_max_length"));
         this.searchEditBox.setRenderer(this::renderSearchBox);
         this.searchEditBox.setResponder(ignored -> {
             if (this.craftingTabGroup != null && this.craftingTabGroup.isSearchSelected()) {
@@ -270,21 +335,32 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             float partialTick
     ) {
         EditBoxElement box = (EditBoxElement)widget;
-        Draw.image(SEARCH_BOX, box.getX(), box.getY(), box.getWidth(), box.getHeight()).draw(graphics);
+        Draw.image(this.screenData.asset("search_asset"), box.getX(), box.getY(), box.getWidth(), box.getHeight())
+                .draw(graphics);
 
         boolean empty = box.value().isEmpty();
-        String text = empty ? box.hint().getString() : box.visibleText(132);
-        Draw.text(Component.literal(text), box.getX() + 4, box.getY() + 3)
-                .scale(0.8F)
-                .color(empty ? 0xFF808080 : 0xFFE0E0E0)
+        int textX = this.screenData.integer("search_text_x");
+        int textY = this.screenData.integer("search_text_y");
+        float textScale = this.screenData.decimal("search_text_scale");
+        String text = empty
+                ? box.hint().getString()
+                : box.visibleText(this.screenData.integer("search_visible_text_width"));
+        Draw.text(Component.literal(text), box.getX() + textX, box.getY() + textY)
+                .scale(textScale)
+                .color(empty
+                        ? this.screenData.color("search_empty_color")
+                        : this.screenData.color("search_text_color"))
                 .draw(graphics);
 
         if (box.isCursorVisible()) {
             int cursorWidth = this.font.width(box.value().substring(0, box.cursorPosition()));
-            int cursorX = box.getX() + 4 + Math.min(105, Math.round(cursorWidth * 0.8F));
-            Draw.text(Component.literal("|"), cursorX, box.getY() + 3)
-                    .scale(0.8F)
-                    .color(0xFFFFFFFF)
+            int cursorX = box.getX() + textX + Math.min(
+                    this.screenData.integer("search_cursor_max_x"),
+                    Math.round(cursorWidth * textScale)
+            );
+            Draw.text(Component.literal(this.screenData.string("search_cursor_text")), cursorX, box.getY() + textY)
+                    .scale(textScale)
+                    .color(this.screenData.color("search_cursor_color"))
                     .draw(graphics);
         }
     }
@@ -304,73 +380,32 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
     }
 
     private void configureRecipeGrid(RecipeGridElement grid) {
-        grid.setCellSize(this.layout.recipeCellSize(), this.layout.recipeCellSize());
+        int cellSize = this.screenData.integer("recipe_cell_size");
+        grid.setCellSize(cellSize, cellSize);
         grid.setAutoPlaceScrollbar(false);
-        grid.setFixedScrollbarHandleSize(15.0F);
-        grid.scrollbar().setX(this.leftPos + 16
-                + this.layout.recipeColumns() * this.layout.recipeCellSize());
-        grid.scrollbar().setY(this.topPos + 23);
+        grid.setFixedScrollbarHandleSize(this.screenData.decimal("scrollbar_handle_size"));
+        grid.scrollbar().setX(this.leftPos + this.screenData.integer("scrollbar_x"));
+        grid.scrollbar().setY(this.topPos + this.screenData.integer("scrollbar_y"));
         grid.scrollbar().setSize(
-                9,
-                this.layout.recipeRows() * this.layout.recipeCellSize() + 4
+                this.screenData.integer("scrollbar_width"),
+                this.screenData.integer("scrollbar_height")
         );
         grid.scrollbar().setRenderer((graphics, ignored, mouseX, mouseY, partialTick) -> {
             boolean scrollable = grid.hasScrollableOverflow();
             grid.scrollbar().setActive(scrollable);
             Draw.image(
-                    scrollable ? SCROLLER : SCROLLER_DISABLED,
+                    this.screenData.asset(scrollable
+                            ? "scrollbar_asset"
+                            : "scrollbar_disabled_asset"),
                     Math.round(grid.scrollbar().handleX()),
                     Math.round(grid.scrollbar().handleY()),
-                    10,
-                    15
+                    this.screenData.integer("scrollbar_handle_width"),
+                    this.screenData.integer("scrollbar_handle_height")
             ).draw(graphics);
         });
     }
 
-    private void createTexts() {
-        this.craftingTitleText = this.createText(
-                this.title,
-                this.layout.craftingTitleX(),
-                this.layout.craftingTitleY(),
-                Draw.TextAlign.LEFT
-        );
-        this.craftingTitleText.setScrolling(
-                this.craftingColumns == 3 ? 116.0F : 98.0F,
-                TextElement.ScrollType.PING_PONG
-        );
-        this.craftingTitleText.setScrollVelocity(0.005F);
-        this.craftingTitleText.setScrollDelayMs(500L);
-        this.inventoryTitleText = this.createText(
-                Component.translatable("container.inventory"),
-                this.layout.inventoryTitleX(),
-                this.layout.inventoryTitleY(),
-                Draw.TextAlign.LEFT
-        );
-        this.tabTitleText = this.createText(
-                this.craftingTabGroup.selectedTitle(),
-                this.layout.tabTitleX(),
-                this.layout.tabTitleY(),
-                Draw.TextAlign.CENTER
-        );
-    }
-
-    private TextElement createText(Component text, int relativeX, int relativeY, Draw.TextAlign align) {
-        TextElement element = new TextElement(
-                text,
-                this.leftPos + relativeX,
-                this.topPos + relativeY,
-                null
-        );
-        element.setColor(0xFF404040);
-        element.setAlign(align);
-        element.setScale(1.0F);
-        return element;
-    }
-
-    private void renderTexts(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        if (this.craftingTitleText == null || this.inventoryTitleText == null || this.tabTitleText == null) {
-            return;
-        }
+    private void updateResultTitle(int mouseX, int mouseY) {
         ItemStack resultStack = this.menu.slots.isEmpty()
                 ? ItemStack.EMPTY
                 : this.menu.slots.getFirst().getItem();
@@ -388,20 +423,9 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                 );
             }
         }
-        this.craftingTitleText.setText(
-                resultStack.isEmpty()
-                        ? Component.empty()
-                        : resultStack.getHoverName()
-        );
-        this.tabTitleText.setText(this.craftingTabGroup.selectedTitle());
-        this.craftingTitleText.draw(graphics);
-        this.inventoryTitleText.draw(graphics);
-        if (!this.craftingTabGroup.isSearchSelected()) {
-            this.tabTitleText.draw(graphics);
-        }
+        Component resultTitle = resultStack.isEmpty() ? Component.empty() : resultStack.getHoverName();
+        this.currentResultTitle = resultTitle.getString();
     }
-
-    protected abstract ItemSlotGrid createItemSlotGrid();
 
     @Override
     public final ItemSlotGrid itemSlotGrid() {
@@ -486,23 +510,6 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         return false;
     }
 
-    protected final ItemSlotGrid craftingTableSlotGrid(
-            int craftingX,
-            int craftingY,
-            int resultX,
-            int resultY,
-            int inventoryX,
-            int inventoryY,
-            int hotbarX,
-            int hotbarY
-    ) {
-        return new ItemSlotGrid(ItemSlotMaps.CRAFTING_TABLE)
-                .grid(ItemSlotGroup.CRAFTING_GRID_3X3, craftingX, craftingY, 3, 18, 18,16)
-                .point(ItemSlotGroup.CRAFTING_RESULT, 0, resultX, resultY, 30, 30, 28)
-                .grid(ItemSlotGroup.PLAYER_INVENTORY, inventoryX, inventoryY, 9, 18, 18,16)
-                .grid(ItemSlotGroup.PLAYER_HOTBAR, hotbarX, hotbarY, 9, 18, 18, 16);
-    }
-
     @Override
     public void recipesUpdated() {
         this.pendingDirectCraft = false;
@@ -515,8 +522,8 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
 
     @Override
     public void fillGhostRecipe(RecipeDisplay display) {
-        // This UI already previews ingredients in its recipe panel. A ghost
-        // response means placement failed, so don't pick up a later result.
+
+
         this.pendingDirectCraft = false;
         this.pendingCraftStateId = -1;
         this.reloadRecipes();
@@ -685,7 +692,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         ModCraftingTab selectedMod = this.craftingTabGroup == null
                 ? null : this.craftingTabGroup.selectedMod();
         if (selectedMod != null) {
-            // Client recipe displays have numeric IDs, so group them by result item namespace.
+
             return recipe.resultItems(displayContext).stream()
                     .filter(result -> !result.isEmpty())
                     .map(result -> BuiltInRegistries.ITEM.getKey(result.getItem()))
@@ -846,24 +853,17 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
 
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        Draw.imageFromMeta(this.background, this.leftPos, this.topPos, this.imageWidth, this.imageHeight).draw(graphics);
+        this.extractDslBackground(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderTexts(graphics, mouseX, mouseY);
+        this.updateResultTitle(mouseX, mouseY);
+        this.extractDslContent(graphics, mouseX, mouseY, partialTick);
         this.recipeGrid.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.recipeTabs.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.previousPageButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.nextPageButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        if (this.craftingTabGroup.pageCount() > 1) {
-            Component page = Component.literal((this.craftingTabGroup.pageIndex() + 1)
-                    + " / " + this.craftingTabGroup.pageCount());
-            Draw.text(page,
-                    this.leftPos + (this.imageWidth - this.font.width(page)) / 2,
-                    this.topPos + PAGE_BUTTON_Y_OFFSET + 6
-            ).color(0xFFFFFFFF).draw(graphics);
-        }
         if (this.searchEditBox != null) {
             this.searchEditBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
         }
@@ -935,10 +935,12 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         RecipeSlotElement.ActivationFeedback recipeFeedback =
                 this.recipeGrid.mouseActivationFeedbackAt(event.x(), event.y(), event.button());
         if (this.recipeGrid.mouseClicked(event, doubleClick)) {
-            this.enterRecipeFocus(
-                    false,
-                    recipeFeedback != RecipeSlotElement.ActivationFeedback.CRAFT
-            );
+            if (this.recipeGrid.shouldTakeFocusAfterInteraction()) {
+                this.enterRecipeFocus(
+                        false,
+                        recipeFeedback != RecipeSlotElement.ActivationFeedback.CRAFT
+                );
+            }
             return true;
         }
         boolean handled = this.itemSlotLayer.mouseClicked(
@@ -1152,19 +1154,39 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         }
     }
 
-    private boolean shouldRefocusRecipesAfterTabChange() {
+    private void prepareRecipeTabChange() {
+        if (this.recipeGrid != null) {
+            this.recipeGrid.clearEntryFocus();
+        }
+        if (this.itemSlotLayer != null) {
+            this.itemSlotLayer.clearFocusedItemSlot();
+        }
+        this.setFocused(null);
+        this.focusRegion = FocusRegion.NONE;
+        this.returnCraftingGridItemsToInventory();
+    }
+
+    private void resetRecipeScroll() {
+        if (this.recipeGrid != null) {
+            this.recipeGrid.scrollToImmediately(0.0D, 0.0D);
+        }
+    }
+
+    private void focusRecipeEntryUnderCursor() {
         if (this.recipeGrid == null) {
-            return false;
+            return;
         }
-        if (this.recipeGrid.getFocused() != null) {
-            return true;
+        this.focusRegion = FocusRegion.RECIPES;
+        RecipeSlotElement recipeSlot = this.recipeGrid.previewedRecipeSlot(
+                Cursor.x(),
+                Cursor.y(),
+                false
+        );
+        if (recipeSlot == null) {
+            return;
         }
-        double cursorX = Cursor.x();
-        double cursorY = Cursor.y();
-        return cursorX >= this.recipeGrid.getX()
-            && cursorY >= this.recipeGrid.getY()
-            && cursorX < this.recipeGrid.getX() + this.recipeGrid.getWidth()
-            && cursorY < this.recipeGrid.getY() + this.recipeGrid.getHeight();
+        this.recipeGrid.setFocused(recipeSlot);
+        this.setFocused(this.recipeGrid);
     }
 
     private void enterInventoryFocus() {
@@ -1175,32 +1197,33 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         this.setFocused(null);
     }
 
-    private static Asset iconFor(CraftingCategory category) {
+    private Asset iconFor(CraftingCategory category) {
         return switch (category) {
-            case BUILDING_BLOCKS -> ICON_BUILDING_BLOCKS;
-            case EQUIPMENT_AND_TOOLS -> ICON_EQUIPMENT;
-            case RESOURCES_AND_FOOD -> ICON_MATERIALS;
-            case REDSTONE_AND_MECHANISMS -> ICON_REDSTONE_AND_MECHANISMS;
-            case DECORATION -> ICON_DECORATION;
+            case BUILDING_BLOCKS -> this.screenData.asset("icon_building_asset");
+            case EQUIPMENT_AND_TOOLS -> this.screenData.asset("icon_equipment_asset");
+            case RESOURCES_AND_FOOD -> this.screenData.asset("icon_materials_asset");
+            case REDSTONE_AND_MECHANISMS -> this.screenData.asset("icon_redstone_asset");
+            case DECORATION -> this.screenData.asset("icon_decoration_asset");
         };
     }
 
-    private static void renderCraftingTab(
+    private void renderCraftingTab(
             GuiGraphicsExtractor graphics,
             TabElement tab,
             Asset icon
     ) {
         renderCraftingTabBackground(graphics, tab);
+        int iconSize = this.screenData.integer("tab_icon_size");
         Draw.image(
                 icon,
-                tab.x() + CRAFTING_TAB_ICON_OFFSET_X,
-                tab.y() + CRAFTING_TAB_ICON_OFFSET_Y,
-                CRAFTING_TAB_ICON_SIZE,
-                CRAFTING_TAB_ICON_SIZE
+                tab.x() + this.screenData.integer("tab_icon_x"),
+                tab.y() + this.screenData.integer("tab_icon_y"),
+                iconSize,
+                iconSize
         ).draw(graphics);
     }
 
-    private static void renderCraftingTab(
+    private void renderCraftingTab(
             GuiGraphicsExtractor graphics,
             TabElement tab,
             ItemStack icon
@@ -1208,30 +1231,35 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         renderCraftingTabBackground(graphics, tab);
         graphics.pose().pushMatrix();
         graphics.pose().translate(
-                tab.x() + CRAFTING_TAB_ICON_OFFSET_X,
-                tab.y() + CRAFTING_TAB_ICON_OFFSET_Y
+                tab.x() + this.screenData.integer("tab_icon_x"),
+                tab.y() + this.screenData.integer("tab_icon_y")
         );
-        float iconScale = CRAFTING_TAB_ICON_SIZE / 16.0F;
+        float iconScale = this.screenData.integer("tab_icon_size") / 16.0F;
         graphics.pose().scale(iconScale, iconScale);
         graphics.item(icon, 0, 0);
         graphics.pose().popMatrix();
     }
 
-    private static void renderCraftingTabBackground(GuiGraphicsExtractor graphics, TabElement tab) {
-        boolean leftCorner = tab.positionRole() == TabElement.PositionRole.FIRST
-                || tab.positionRole() == TabElement.PositionRole.SINGLE;
+    private void renderCraftingTabBackground(GuiGraphicsExtractor graphics, TabElement tab) {
         boolean selected = tab.isSelected();
-        Asset background = leftCorner
-                ? selected ? TAB_LEFT_SELECTED : TAB_LEFT
-                : selected ? TAB_CENTER_SELECTED : TAB_CENTER;
+        Asset background = switch (tab.positionRole()) {
+            case SINGLE, FIRST -> this.screenData.asset(
+                    selected ? "tab_left_selected_asset" : "tab_left_asset");
+            case MIDDLE -> this.screenData.asset(
+                    selected ? "tab_center_selected_asset" : "tab_center_asset");
+            case LAST -> this.screenData.asset(
+                    selected ? "tab_right_selected_asset" : "tab_right_asset");
+        };
+        String config = UiPresentation.isSmall() ? "" : "fhd";
 
-        Draw.image(
+
+        Draw.imageFromMeta(
                 background,
                 tab.x(),
                 tab.y(),
-                CRAFTING_TAB_WIDTH,
-                CRAFTING_TAB_HEIGHT
-        ).draw(graphics);
+                this.screenData.integer("tab_width"),
+                this.screenData.integer("tab_height")
+        ).config(config).draw(graphics);
     }
 
     private record CraftingTab(CraftingCategory category, ModCraftingTab mod) {
@@ -1280,12 +1308,17 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         private CraftingTabGroup() {
             this.tabs = new TabBarElement(
                     AbstractCraftingScreen.this.leftPos,
-                    AbstractCraftingScreen.this.topPos + CRAFTING_TAB_Y_OFFSET,
-                    CRAFTING_TAB_WIDTH,
-                    CRAFTING_TAB_HEIGHT
+                    AbstractCraftingScreen.this.topPos
+                            + AbstractCraftingScreen.this.screenData.integer("tab_y_offset"),
+                    AbstractCraftingScreen.this.screenData.integer("tab_width"),
+                    AbstractCraftingScreen.this.screenData.integer("tab_height")
             );
             this.tabs.setOrientation(TabBarElement.Orientation.HORIZONTAL);
-            this.tabs.setPadding(-1.0F);
+            this.tabs.setPositionRoleCapacity(Math.max(
+                    1,
+                    AbstractCraftingScreen.this.screenData.integer("tabs_per_page")
+            ));
+            this.tabs.setPadding(AbstractCraftingScreen.this.screenData.decimal("tab_padding"));
             this.rebuildPages();
             this.populateTabs(false);
             this.tabs.onSelectionChange(this::onSelectionChange);
@@ -1354,18 +1387,23 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             }
             this.pages.clear();
             List<ModCraftingTab> mods = List.copyOf(this.modsByNamespace.values());
+            int tabsPerPage = Math.max(
+                    this.categories().size() + 1,
+                    AbstractCraftingScreen.this.screenData.integer("tabs_per_page")
+            );
+            int firstPageModTabs = Math.max(0, tabsPerPage - this.categories().size() - 1);
             List<CraftingTab> firstPage = new ArrayList<>();
             for (CraftingCategory category : this.categories()) {
                 firstPage.add(CraftingTab.vanilla(category));
             }
-            for (int i = 0; i < Math.min(FIRST_PAGE_MOD_TABS, mods.size()); i++) {
+            for (int i = 0; i < Math.min(firstPageModTabs, mods.size()); i++) {
                 firstPage.add(CraftingTab.mod(mods.get(i)));
             }
             firstPage.add(CraftingTab.search());
             this.pages.add(List.copyOf(firstPage));
 
-            int modTabsPerPage = this.categories().size() + FIRST_PAGE_MOD_TABS;
-            for (int start = FIRST_PAGE_MOD_TABS; start < mods.size(); start += modTabsPerPage) {
+            int modTabsPerPage = Math.max(1, tabsPerPage - 1);
+            for (int start = firstPageModTabs; start < mods.size(); start += modTabsPerPage) {
                 int end = Math.min(start + modTabsPerPage, mods.size());
                 List<CraftingTab> page = new ArrayList<>();
                 for (int i = start; i < end; i++) {
@@ -1422,14 +1460,16 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             TabElement tab = new TabElement(
                     0,
                     0,
-                    CRAFTING_TAB_WIDTH,
-                    CRAFTING_TAB_HEIGHT
+                    AbstractCraftingScreen.this.screenData.integer("tab_width"),
+                    AbstractCraftingScreen.this.screenData.integer("tab_height")
             );
             if (craftingTab.mod() != null) {
                 tab.setRenderer((graphics, widget, mouseX, mouseY, partialTick) ->
                         renderCraftingTab(graphics, (TabElement)widget, craftingTab.mod().icon));
             } else {
-                Asset icon = craftingTab.isSearch() ? ICON_SEARCH : iconFor(craftingTab.category());
+                Asset icon = craftingTab.isSearch()
+                        ? AbstractCraftingScreen.this.screenData.asset("icon_search_asset")
+                        : iconFor(craftingTab.category());
                 tab.setRenderer((graphics, widget, mouseX, mouseY, partialTick) ->
                         renderCraftingTab(graphics, (TabElement)widget, icon));
             }
@@ -1444,16 +1484,11 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
             if (newSelection == null || newSelection.equals(this.selectedTab)) {
                 return;
             }
-            boolean refocusRecipes = AbstractCraftingScreen.this
-                    .shouldRefocusRecipesAfterTabChange();
+            AbstractCraftingScreen.this.prepareRecipeTabChange();
             this.selectedTab = newSelection;
+            AbstractCraftingScreen.this.resetRecipeScroll();
             AbstractCraftingScreen.this.reloadRecipes();
-            if (refocusRecipes) {
-                AbstractCraftingScreen.this.focusFirstRecipeEntryAndMoveCursor();
-            } else if (AbstractCraftingScreen.this.getFocused()
-                    == AbstractCraftingScreen.this.recipeGrid) {
-                AbstractCraftingScreen.this.setFocused(null);
-            }
+            AbstractCraftingScreen.this.focusRecipeEntryUnderCursor();
             AbstractCraftingScreen.this.setSearchBoxVisible(this.isSearchSelected());
         }
 
@@ -1463,6 +1498,7 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
                 return false;
             }
             this.pageIndex = nextPage;
+            AbstractCraftingScreen.this.resetRecipeScroll();
             this.populateTabs(true);
             this.updatePageButtons();
             return true;
@@ -1546,24 +1582,16 @@ public abstract class AbstractCraftingScreen<M extends AbstractContainerMenu>
         }
     }
 
-    protected record CraftingScreenLayout(
-            ItemSlotGroup craftingGridGroup,
-            ItemSlotGroup craftingResultGroup,
-            int recipeColumns,
-            int recipeRows,
-            int recipeCellSize,
-            int craftingTitleX,
-            int craftingTitleY,
-            int inventoryTitleX,
-            int inventoryTitleY,
-            int tabTitleX,
-            int tabTitleY
-    ) {}
-
     private enum FocusRegion {
         NONE,
         SEARCH,
         RECIPES,
         INVENTORY
+    }
+
+    private static void playTabSelectionSound() {
+        Minecraft.getInstance().getSoundManager().play(
+            SimpleSoundInstance.forUI(ModSounds.UI_HOVER.get(), 1.0F, 1.0F)
+        );
     }
 }

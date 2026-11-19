@@ -2,6 +2,7 @@ package net.jr.client.components.widgets.compact;
 
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.JavaBaseWidget;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
@@ -55,11 +56,15 @@ public abstract class CompactSlotElement<G, V> extends JavaBaseWidget {
             return false;
         }
 
+        var sourceScreen = Minecraft.getInstance().gui.screen();
         this.setPressed(true);
         if (event.button() == 0) {
             this.primary.accept(this.entry);
         } else {
             this.alternate.accept(this.entry);
+        }
+        if (Minecraft.getInstance().gui.screen() == sourceScreen) {
+            this.playDownSound(Minecraft.getInstance().getSoundManager());
         }
         return true;
     }

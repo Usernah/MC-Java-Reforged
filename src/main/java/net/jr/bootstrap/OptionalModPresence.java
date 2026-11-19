@@ -4,10 +4,7 @@ import java.net.URL;
 import javax.annotation.Nullable;
 import net.neoforged.fml.loading.FMLLoader;
 
-/**
- * Early-safe optional-mod detection for Mixin selection and runtime backend routing.
- * This class deliberately does not reference Minecraft or optional-mod classes.
- */
+
 public final class OptionalModPresence {
     private static final String SODIUM_CLASS_RESOURCE =
         "net/caffeinemc/mods/sodium/client/SodiumClientMod.class";
@@ -37,7 +34,7 @@ public final class OptionalModPresence {
             try {
                 return new Detection(true, loader.getLoadingModList().getModFileById(modId) != null);
             } catch (IllegalStateException ignored) {
-                // Mixin configuration can be evaluated before the final loading list is published.
+
             }
         }
 

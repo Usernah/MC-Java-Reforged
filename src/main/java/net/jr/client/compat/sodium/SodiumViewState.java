@@ -7,10 +7,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import org.joml.Matrix4f;
 
-/**
- * Java Reforged's per-view ownership boundary for Sodium state.
- * Sodium-specific values remain opaque here until they move into the maintained fork.
- */
+
 public final class SodiumViewState {
     private final int slotId;
     private long frameSequence;

@@ -11,6 +11,7 @@ import net.jr.client.meta.Meta;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
 import net.jr.client.render.state.AnimatedTextureRenderState;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.client.ui.render.composition.GuiCompositionScope;
 import net.jr.client.video.VideoPlaybackEngine;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -74,6 +75,9 @@ public final class UiRenderEngine {
     public static ImageBuilder imageFromMeta(Asset texture, float x, float y, float width, float height) {
         return image(texture, x, y, width, height).fromMeta();
     }
+    public static RectangleBuilder rectangle(float x, float y, float width, float height) {
+        return new RectangleBuilder(x, y, width, height);
+    }
     public static TextBuilder text(Component text) { return new TextBuilder(text, 0, 0); }
     public static TextBuilder text(Component text, int x, int y) { return new TextBuilder(text, x, y); }
     public static TextBuilder text(FormattedCharSequence text) { return new TextBuilder(text, 0, 0); }
@@ -84,6 +88,85 @@ public final class UiRenderEngine {
     public static void closeVideos() {
         VIDEO_RENDERER_CACHE.values().forEach(VideoPlaybackEngine::close);
         VIDEO_RENDERER_CACHE.clear();
+    }
+
+    public static class RectangleBuilder {
+        private final float x;
+        private final float y;
+        private final float width;
+        private final float height;
+        private int topColor = 0xFFFFFFFF;
+        private int bottomColor = 0xFFFFFFFF;
+        private boolean gradient;
+        private float rotation;
+
+        private RectangleBuilder(float x, float y, float width, float height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }
+
+        public RectangleBuilder color(int color) {
+            this.topColor = color;
+            this.bottomColor = color;
+            this.gradient = false;
+            return this;
+        }
+
+        public RectangleBuilder color(int topColor, int bottomColor) {
+            this.topColor = topColor;
+            this.bottomColor = bottomColor;
+            this.gradient = true;
+            return this;
+        }
+
+        public RectangleBuilder rotation(float degrees) {
+            this.rotation = degrees;
+            return this;
+        }
+
+        public void draw(GuiGraphicsExtractor graphics) {
+            Objects.requireNonNull(graphics, "graphics");
+            if (this.width <= 0.0F || this.height <= 0.0F) {
+                return;
+            }
+
+            int left = Math.round(this.x);
+            int top = Math.round(this.y);
+            int right = Math.round(this.x + this.width);
+            int bottom = Math.round(this.y + this.height);
+            if (right <= left || bottom <= top) {
+                return;
+            }
+
+            if (this.rotation != 0.0F) {
+                graphics.pose().pushMatrix();
+                graphics.pose().rotateAbout(
+                    (float)Math.toRadians(this.rotation),
+                    this.x + this.width / 2.0F,
+                    this.y + this.height / 2.0F
+                );
+            }
+            try {
+                if (this.gradient) {
+                    graphics.fillGradient(
+                        left,
+                        top,
+                        right,
+                        bottom,
+                        this.topColor,
+                        this.bottomColor
+                    );
+                } else {
+                    graphics.fill(left, top, right, bottom, this.topColor);
+                }
+            } finally {
+                if (this.rotation != 0.0F) {
+                    graphics.pose().popMatrix();
+                }
+            }
+        }
     }
 
     public static class ImageBuilder {
@@ -123,7 +206,8 @@ public final class UiRenderEngine {
         private long animStartMillis;
 
         private boolean useMeta;
-        private String metaConfigId;
+        private Asset metaResource;
+        private List<String> metaConfigIds = List.of();
         private boolean blur;
         private boolean antialiasing;
         private boolean activeLinearFiltering;
@@ -140,11 +224,31 @@ public final class UiRenderEngine {
 
         private ImageBuilder fromMeta() {
             this.useMeta = true;
+            this.metaResource = null;
+            return this;
+        }
+
+        public ImageBuilder meta(Asset metaResource) {
+            this.useMeta = true;
+            this.metaResource = Objects.requireNonNull(metaResource, "metaResource");
             return this;
         }
 
         public ImageBuilder config(String configId) {
-            this.metaConfigId = configId;
+            this.metaConfigIds = configId == null || configId.isBlank()
+                ? List.of()
+                : List.of(configId);
+            this.useMeta = true;
+            return this;
+        }
+
+        public ImageBuilder configs(List<String> configIds) {
+            this.metaConfigIds = configIds == null
+                ? List.of()
+                : configIds.stream()
+                    .filter(Objects::nonNull)
+                    .filter(id -> !id.isBlank())
+                    .toList();
             this.useMeta = true;
             return this;
         }
@@ -483,14 +587,17 @@ public final class UiRenderEngine {
         }
 
         private void applyMeta(ResolvedImageState state) {
-            Meta meta = MetaManager.getInstance().getMeta(this.texture).orElse(null);
+            MetaManager manager = MetaManager.getInstance();
+            Meta meta = (this.metaResource == null
+                ? manager.getMeta(this.texture)
+                : manager.getMetaResource(this.metaResource)).orElse(null);
             if (meta == null) {
                 return;
             }
 
-            Map<String, Object> data = this.metaConfigId == null
+            Map<String, Object> data = this.metaConfigIds.isEmpty()
                 ? meta.resolveData()
-                : meta.resolveData(this.metaConfigId);
+                : meta.resolveData(this.metaConfigIds);
             Meta.Atlas atlas = Meta.Atlas.from(data);
             Meta.ImageSize imageSize = Meta.ImageSize.from(data);
             state.metaScale = Meta.imageScale(data);
@@ -987,6 +1094,10 @@ public final class UiRenderEngine {
         private Integer outlineColor;
         private TextAlign align = TextAlign.LEFT;
         private Asset fontLocation;
+        private float wrapWidth = Float.POSITIVE_INFINITY;
+        private float maxHeight = Float.POSITIVE_INFINITY;
+        private int maxLines;
+        private float lineSpacing;
 
         public TextBuilder(Component text, int x, int y) {
             this.componentText = Objects.requireNonNull(text, "text");
@@ -1087,19 +1198,62 @@ public final class UiRenderEngine {
             return this;
         }
 
+        public TextBuilder wrap(float width) {
+            this.wrapWidth = Math.max(0.0F, width);
+            return this;
+        }
+
+        public TextBuilder maxHeight(float height) {
+            this.maxHeight = Math.max(0.0F, height);
+            return this;
+        }
+
+        public TextBuilder maxLines(int maxLines) {
+            this.maxLines = Math.max(0, maxLines);
+            return this;
+        }
+
+        public TextBuilder lineSpacing(float lineSpacing) {
+            this.lineSpacing = Math.max(0.0F, lineSpacing);
+            return this;
+        }
+
         public int width() {
+            if (this.usesInlineLayout()) {
+                return Math.round(this.inlineLayout().width());
+            }
             return Math.round(this.rawWidth() * this.scale);
         }
 
         public int lineHeight() {
+            if (this.usesInlineLayout()) {
+                return Math.round(this.inlineLayout().lineHeight());
+            }
             return Math.round(Minecraft.getInstance().font.lineHeight * this.scale);
         }
 
         public int height() {
+            if (this.usesInlineLayout()) {
+                return Math.round(this.inlineLayout().height());
+            }
             return Math.round(this.rawHeight() * this.scale);
         }
 
+        public int lineCount() {
+            if (this.usesInlineLayout()) {
+                return this.inlineLayout().lineCount();
+            }
+            return this.componentText == null
+                    ? 1
+                    : Math.max(1, this.resolvedComponentLines().size());
+        }
+
         public void draw(GuiGraphicsExtractor graphics) {
+            if (this.usesInlineLayout()) {
+                this.inlineLayout().draw(graphics, this.x, this.y, this.align);
+                return;
+            }
+
             Font font = Minecraft.getInstance().font;
             graphics.pose().pushMatrix();
             graphics.pose().translate(this.x, this.y);
@@ -1252,10 +1406,37 @@ public final class UiRenderEngine {
             int x,
             int y
         ) {
+            float offset = this.resolvedLegacyShadowOffset();
             graphics.pose().pushMatrix();
-            graphics.pose().translate(0.4F, 0.4F);
+            graphics.pose().translate(offset, offset);
             graphics.text(font, text, x, y, this.resolvedShadowColor(), false);
             graphics.pose().popMatrix();
+        }
+
+        private float resolvedLegacyShadowOffset() {
+            double pixelDensity;
+            GuiCompositionScope.Extraction extraction =
+                GuiCompositionScope.activeExtractionOrNull();
+            if (extraction != null) {
+                pixelDensity = extraction.rasterScale();
+            } else {
+                ViewportGuiScale.Context viewportContext =
+                    ViewportGuiScale.activeOrNull();
+                pixelDensity = viewportContext != null
+                    ? viewportContext.viewport().glWidth()
+                        / (double)viewportContext.logicalWidth()
+                    : Minecraft.getInstance().getWindow().getGuiScale();
+            }
+
+            double combinedScale = Math.abs(this.scale) * pixelDensity;
+            if (!Double.isFinite(combinedScale) || combinedScale <= 0.0D) {
+                return 0.5F;
+            }
+            int physicalOffset = Math.max(
+                1,
+                (int)Math.round(0.5D * combinedScale)
+            );
+            return (float)(physicalOffset / combinedScale);
         }
 
         private FormattedCharSequence withoutShadow(FormattedCharSequence text) {
@@ -1269,6 +1450,36 @@ public final class UiRenderEngine {
                 return this.shadowColor;
             }
             return this.color & 0xFF000000 | (this.color & 0x00FCFCFC) >> 2;
+        }
+
+        private boolean hasInlineMarkers() {
+            return this.componentText != null
+                    && InlineTextRenderer.containsMarker(this.componentText);
+        }
+
+        private boolean usesInlineLayout() {
+            return this.componentText != null
+                    && (this.hasInlineMarkers() || Float.isFinite(this.wrapWidth));
+        }
+
+        private InlineTextRenderer.Layout inlineLayout() {
+            return InlineTextRenderer.layout(
+                    this.componentText,
+                    new InlineTextRenderer.TextStyle(
+                            this.scale,
+                            this.color,
+                            this.shadow,
+                            this.legacyShadow,
+                            this.shadowColor,
+                            this.outlineColor,
+                            this.fontLocation,
+                            this.componentText.getStyle()
+                    ),
+                    this.wrapWidth,
+                    this.maxHeight,
+                    this.maxLines,
+                    this.lineSpacing
+            );
         }
 
         private float offsetX(int lineWidth) {

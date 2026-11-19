@@ -57,7 +57,7 @@ public final class ViewportBlurRenderer implements AutoCloseable {
             }
 
             var color = Objects.requireNonNull(target.getColorTexture());
-            // Crop before filtering so samples cannot bleed across player borders.
+
             TextureCopyBounds.copyRegion(mainColor, color, 0, 0, region.x(), region.y(), region.width(), region.height());
             chain.process(target, pool);
             TextureCopyBounds.copyRegion(color, mainColor, region.x(), region.y(), 0, 0, region.width(), region.height());

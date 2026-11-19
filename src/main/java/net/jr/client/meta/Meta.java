@@ -35,6 +35,24 @@ public final class Meta {
         return immutable(result);
     }
 
+    public Map<String, Object> resolveData(Iterable<String> ids) {
+        if (ids == null) {
+            return data;
+        }
+
+        Map<String, Object> result = null;
+        for (String id : ids) {
+            if (id == null || id.isBlank() || !configs.containsKey(id)) {
+                continue;
+            }
+            if (result == null) {
+                result = mutable(data);
+            }
+            merge(result, configs.get(id));
+        }
+        return result == null ? data : immutable(result);
+    }
+
     public String resolveType() {
         return resolveType(data);
     }

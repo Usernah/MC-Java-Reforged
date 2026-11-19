@@ -10,17 +10,18 @@ import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.options.OptionsStateResolver;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.client.ui.render.composition.ScreenFramebufferSpace;
 import net.jr.client.runtime.viewport.ViewportArea;
+import net.jr.api.client.ui.Viewport;
 import net.jr.api.client.input.GamepadAxis;
 import net.jr.client.input.gamepad.GamepadGameplayInputHandler;
 import net.jr.client.input.gamepad.GamepadInputCurve;
 import net.jr.client.input.InputApi;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.client.ui.cursor.CursorAnimator;
-import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.components.navigation.UiAction;
-import net.jr.client.components.navigation.UiActionFeedback;
 import net.jr.client.components.navigation.UiActionHandler;
+import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.components.widgets.ScrollPanelElement;
 import net.jr.mixin.accessors.MouseHandlerAccessor;
 import net.jr.client.ui.container.actions.ContainerItemSlotFocusController;
@@ -30,6 +31,7 @@ import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.client.ui.overlay.ScreenOverlays;
 import net.jr.client.ui.cursor.MouseCoordinates;
 import net.jr.experimental_features.gamepad_keyboard.GamepadKeyboardController;
+import net.jr.registry.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
@@ -38,6 +40,7 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -110,7 +113,8 @@ public final class GamepadInputHandler {
         }
 
         ClientRuntime runtime = ClientRuntime.INSTANCE;
-        for (Slots slot : runtime.viewports().presentedSlots()) {
+        for (var drawable : runtime.viewports().drawableViewports()) {
+            Slots slot = drawable.slot();
             int slotId = slot.id();
             if (!slot.input().hasGamepad()) {
                 CursorVisibility.setHiddenForSlot(slotId, false);
@@ -125,9 +129,9 @@ public final class GamepadInputHandler {
             };
 
             if (runtime.clients().hasClient(slotId)) {
-                InstanceExecution.runForClient(slotId, frame);
+                InstanceExecution.runForClient(slotId, drawable.viewport(), frame);
             } else {
-                SlotExecution.runForSlot(minecraft, slotId, frame);
+                SlotExecution.runForSlot(minecraft, slot, drawable.viewport(), frame);
             }
         }
     }
@@ -138,7 +142,11 @@ public final class GamepadInputHandler {
         Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
         if (screen != null) {
             resetCameraTiming(slotId);
-            CursorVisibility.setHiddenForSlot(slotId, true);
+            CursorVisibility.setHiddenForSlot(
+                slotId,
+                InputApi.canPhysicalMouseDriveSlot(slotId)
+                    && isControllerCursorActive(slotId)
+            );
             handleVirtualCursorMovement(minecraft, screen, slotId);
             return;
         }
@@ -208,8 +216,11 @@ public final class GamepadInputHandler {
             }
             double frameScale = cursorClock(slotId).sample();
             double sensitivity = OptionsStateResolver.current().controllerCursorSensitivity().get();
-            state.virtualCursorX += stickX * sensitivity * frameScale;
-            state.virtualCursorY += stickY * sensitivity * frameScale;
+            ViewportArea viewport = Viewport.current();
+            double coordinateScale =
+                ScreenFramebufferSpace.pointerMovementScale(screen, viewport);
+            state.virtualCursorX += stickX * sensitivity * frameScale * coordinateScale;
+            state.virtualCursorY += stickY * sensitivity * frameScale * coordinateScale;
             markCursorAsJoystickDriven(slotId);
             UiInputModeController.notifyJoystickPointerActivity();
         } else {
@@ -515,7 +526,7 @@ public final class GamepadInputHandler {
 
     public static void centerPhysicalCursorForScreen(int slotId) {
         Minecraft minecraft = Minecraft.getInstance();
-        ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
+        ViewportArea viewport = viewportForSlot(slotId);
         if (minecraft == null || viewport == null || !InputApi.canPhysicalMouseDriveSlot(slotId)) {
             return;
         }
@@ -538,8 +549,11 @@ public final class GamepadInputHandler {
     }
 
     static void dispatchFocusNavigation(Screen screen, int keyCode) {
-        UiInputModeController.prepareForFocusNavigation(keyCode);
-        InputActionSounds.FocusSnapshot focusBefore = InputActionSounds.captureFocus(screen);
+        if (UiInputModeController.prepareForFocusNavigation(keyCode)) {
+            syncVirtualCursorToFocusedComponent(screen);
+            screen.afterKeyboardAction();
+            return;
+        }
         UiAction directionalAction = switch (keyCode) {
             case GLFW.GLFW_KEY_LEFT -> UiAction.MOVE_LEFT;
             case GLFW.GLFW_KEY_RIGHT -> UiAction.MOVE_RIGHT;
@@ -549,7 +563,6 @@ public final class GamepadInputHandler {
         };
 
         if (directionalAction != null && dispatchActionToFocusedElement(screen, directionalAction)) {
-            playFocusedUiActionFeedback(screen, directionalAction);
             syncVirtualCursorToFocusedComponent(screen);
             screen.afterKeyboardAction();
             return;
@@ -558,7 +571,6 @@ public final class GamepadInputHandler {
         if (directionalAction != null
                 && screen instanceof UiActionHandler screenHandler
                 && screenHandler.handleUiAction(directionalAction)) {
-            focusBefore.playIfChanged(screen);
             syncVirtualCursorToFocusedComponent(screen);
             screen.afterKeyboardAction();
             return;
@@ -570,7 +582,6 @@ public final class GamepadInputHandler {
             handled = screen.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, 0, 0));
         }
         if (handled) {
-            focusBefore.playIfChanged(screen);
             syncVirtualCursorToFocusedComponent(screen);
         }
         screen.afterKeyboardAction();
@@ -601,11 +612,10 @@ public final class GamepadInputHandler {
                 return true;
             }
             if (focused instanceof UiActionHandler handler) {
-                boolean handled = handler.handleUiAction(
-                        mouseButton == 0 ? UiAction.ACCEPT : UiAction.ALTERNATE
-                );
+                UiAction action = mouseButton == 0 ? UiAction.ACCEPT : UiAction.ALTERNATE;
+                boolean handled = handler.handleUiAction(action);
                 if (handled) {
-
+                    playHandledWidgetSound(screen, handler, action);
                     syncVirtualCursorToFocusedComponent(screen);
                 }
                 return handled;
@@ -616,20 +626,26 @@ public final class GamepadInputHandler {
     }
 
     static boolean dispatchFocusedUiAction(Screen screen, UiAction action) {
-        if (dispatchActionToFocusedElement(screen, action)) {
+        GuiEventListener focused = focusedElement(screen);
+        if (focused instanceof UiActionHandler handler && handler.handleUiAction(action)) {
+            playHandledWidgetSound(screen, handler, action);
             return true;
         }
 
-        return screen instanceof UiActionHandler handler && handler.handleUiAction(action);
+        if (screen instanceof UiActionHandler handler && handler.handleUiAction(action)) {
+            playHandledWidgetSound(screen, handler, action);
+            return true;
+        }
+        return false;
     }
 
-    static void playFocusedUiActionFeedback(Screen screen, UiAction action) {
-        GuiEventListener focused = focusedElement(screen);
-        if (focused instanceof UiActionHandler handler) {
-            InputActionSounds.play(handler.uiActionFeedback(action));
+    private static void playHandledWidgetSound(Screen screen, UiActionHandler handler, UiAction action) {
+        if (Minecraft.getInstance().gui.screen() != screen) {
             return;
         }
-        InputActionSounds.play(UiActionFeedback.CLICK);
+        if (handler instanceof JavaBaseWidget widget) {
+            widget.playDownSound(Minecraft.getInstance().getSoundManager());
+        }
     }
 
     static FocusedElementCenter focusedElementCenter(Screen screen) {
@@ -650,7 +666,9 @@ public final class GamepadInputHandler {
 
     static void dispatchBack(Screen screen) {
         screen.onClose();
-        InputActionSounds.playBack();
+        Minecraft.getInstance().getSoundManager().play(
+            SimpleSoundInstance.forUI(ModSounds.UI_BACK.get(), 1.0F, 1.0F)
+        );
     }
 
     static void dispatchUiAction(Screen screen, UiAction action) {
@@ -662,10 +680,12 @@ public final class GamepadInputHandler {
                 case MOVE_DOWN -> GLFW.GLFW_KEY_DOWN;
                 default -> throw new IllegalStateException("Unexpected directional UI action: " + action);
             };
-            UiInputModeController.prepareForFocusNavigation(keyCode);
+            if (UiInputModeController.prepareForFocusNavigation(keyCode)) {
+                syncVirtualCursorToFocusedComponent(screen);
+                return;
+            }
         }
         if (screen instanceof UiActionHandler handler && handler.handleUiAction(action)) {
-            InputActionSounds.play(handler.uiActionFeedback(action));
             syncVirtualCursorToFocusedComponent(screen);
         }
     }
@@ -789,12 +809,15 @@ public final class GamepadInputHandler {
         }
 
         LocalCursorState state = cursorState(slotId);
-        if (ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
-            ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slotId);
-            state.virtualCursorX = (mc.mouseHandler.xpos() - viewport.windowX())
-                * ViewportGuiScale.screenLogicalWidth(viewport) / viewport.windowWidth();
-            state.virtualCursorY = (mc.mouseHandler.ypos() - viewport.windowY())
-                * ViewportGuiScale.screenLogicalHeight(viewport) / viewport.windowHeight();
+        ViewportArea viewport = viewportForSlot(slotId);
+        if (viewport != null) {
+            Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
+            state.virtualCursorX = ScreenFramebufferSpace.windowMouseX(
+                screen, viewport, mc.mouseHandler.xpos()
+            );
+            state.virtualCursorY = ScreenFramebufferSpace.windowMouseY(
+                screen, viewport, mc.mouseHandler.ypos()
+            );
         } else {
             state.virtualCursorX = MouseCoordinates.rawMouseToGlobalGuiX(mc, mc.mouseHandler.xpos());
             state.virtualCursorY = MouseCoordinates.rawMouseToGlobalGuiY(mc, mc.mouseHandler.ypos());
@@ -813,19 +836,31 @@ public final class GamepadInputHandler {
     }
 
     private static int cursorSpaceWidth(Minecraft mc, int slotId, Screen screen) {
-        ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
+        ViewportArea viewport = viewportForSlot(slotId);
         if (viewport != null) {
-            return ViewportGuiScale.screenLogicalWidth(viewport);
+            return ScreenFramebufferSpace.width(
+                screen, viewport, ViewportGuiScale.screenLogicalWidth(viewport)
+            );
         }
         return screen != null && screen.width > 1 ? screen.width : Math.max(1, mc.getWindow().getGuiScaledWidth());
     }
 
     private static int cursorSpaceHeight(Minecraft mc, int slotId, Screen screen) {
-        ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
+        ViewportArea viewport = viewportForSlot(slotId);
         if (viewport != null) {
-            return ViewportGuiScale.screenLogicalHeight(viewport);
+            return ScreenFramebufferSpace.height(
+                screen, viewport, ViewportGuiScale.screenLogicalHeight(viewport)
+            );
         }
         return screen != null && screen.height > 1 ? screen.height : Math.max(1, mc.getWindow().getGuiScaledHeight());
+    }
+
+    private static ViewportArea viewportForSlot(int slotId) {
+        Integer currentSlotId = SlotScope.idOrNull();
+        if (currentSlotId != null && currentSlotId == slotId) {
+            return Viewport.currentOrNull();
+        }
+        return ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
     }
 
     private static void resetMouseSourceObservation(Minecraft mc, LocalCursorState state) {

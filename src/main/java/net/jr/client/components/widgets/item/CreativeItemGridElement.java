@@ -9,9 +9,19 @@ public class CreativeItemGridElement extends AbstractItemGridElement<ItemStack> 
     private Consumer<ItemStack> selection = ignored -> {};
     private Consumer<ItemStack> focusedPrimarySelection = ignored -> {};
     private Consumer<ItemStack> focusedAlternateSelection = ignored -> {};
+    private final CreativeItemSlotStyle slotStyle;
 
-    public CreativeItemGridElement(int x, int y, int width, int height, int visibleRows, int columns) {
+    public CreativeItemGridElement(
+            int x,
+            int y,
+            int width,
+            int height,
+            int visibleRows,
+            int columns,
+            CreativeItemSlotStyle slotStyle
+    ) {
         super(x, y, width, height, visibleRows, columns);
+        this.slotStyle = slotStyle;
     }
 
     public void onSelection(Consumer<ItemStack> selection) {
@@ -33,7 +43,8 @@ public class CreativeItemGridElement extends AbstractItemGridElement<ItemStack> 
                 entry,
                 this.selection,
                 this.focusedPrimarySelection,
-                this.focusedAlternateSelection
+                this.focusedAlternateSelection,
+                this.slotStyle
         );
     }
 

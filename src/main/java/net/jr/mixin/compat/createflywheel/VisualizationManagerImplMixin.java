@@ -9,11 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * Flywheel normally accepts only Minecraft's one globally installed level.
- * Java Reforged has one ClientLevel per local player, so entity/block visuals
- * must regard every owned level as visualizable even outside a slot scope.
- */
+
 @Mixin(targets = "dev.engine_room.create_flywheel.impl.visualization.VisualizationManagerImpl", remap = false)
 abstract class VisualizationManagerImplMixin {
     @Inject(

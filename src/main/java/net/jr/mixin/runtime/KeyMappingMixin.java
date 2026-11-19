@@ -21,6 +21,24 @@ public abstract class KeyMappingMixin {
     @Final
     private static KeyMappingLookup MAP;
 
+    @Inject(method = "set", at = @At("HEAD"))
+    private static void javaReforged$trackPhysicalKeyState(
+        InputConstants.Key key,
+        boolean down,
+        CallbackInfo ci
+    ) {
+        KeyMappingRouter.setPhysicalDownAll(MAP, key, down);
+    }
+
+    @Redirect(
+        method = "setAll",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;setDown(Z)V")
+    )
+    private static void javaReforged$restorePhysicalKeyState(KeyMapping keyMapping, boolean down) {
+        InputApi.setPhysicallyDown(keyMapping, down);
+        keyMapping.setDown(down);
+    }
+
     @Inject(method = "click", at = @At("HEAD"), cancellable = true)
     private static void javaReforged$clickSlotKeyMapping(InputConstants.Key key, CallbackInfo ci) {
         KeyMappingRouter.clickAll(MAP, key);

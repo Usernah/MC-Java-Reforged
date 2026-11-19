@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Blur requests belong to the extracted GUI frame, not to a live client scope. */
+
 public final class ViewportBlurState {
     private final Map<Integer, Region> regions = new LinkedHashMap<>();
     private boolean global;
@@ -34,7 +34,7 @@ public final class ViewportBlurState {
         this.global = false;
     }
 
-    /** Pixel coordinates use the same texture origin as viewport presentation. */
+
     public record Region(int id, int x, int y, int width, int height) {
         public Region clipTo(int targetWidth, int targetHeight) {
             int left = Math.max(0, this.x);

@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import net.jr.api.client.announcement.AnnouncementSource;
 import net.jr.api.client.announcement.AnnouncementSubscription;
 
-/** Mutable producer used internally; consumers only receive its read-only source. */
+
 public final class AnnouncementPublisher<T> {
     private final CopyOnWriteArrayList<Consumer<? super T>> listeners =
         new CopyOnWriteArrayList<>();

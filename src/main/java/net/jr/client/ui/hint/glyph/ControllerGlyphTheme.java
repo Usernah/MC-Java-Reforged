@@ -2,22 +2,17 @@ package net.jr.client.ui.hint.glyph;
 
 import net.jr.api.client.resource.Asset;
 
-import javax.annotation.Nullable;
-import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.Map;
 import java.util.Set;
 
 public enum ControllerGlyphTheme {
     XBOX(
         "controller/xbox",
-        standardGlyphs(ControllerGlyph.BUTTON_GUIDE),
-        faceButtonPressGlyphs()
+        standardGlyphs(ControllerGlyph.BUTTON_GUIDE)
     ),
     XBOX_OLD(
         "controller/xbox_o",
-        standardGlyphs(ControllerGlyph.BUTTON_GUIDE),
-        faceButtonPressGlyphs()
+        standardGlyphs(ControllerGlyph.BUTTON_GUIDE)
     ),
     STEAM(
         "controller/steam",
@@ -28,8 +23,7 @@ public enum ControllerGlyphTheme {
             ControllerGlyph.PADDLE_LEFT_2,
             ControllerGlyph.PADDLE_RIGHT_1,
             ControllerGlyph.PADDLE_RIGHT_2
-        ),
-        faceButtonPressGlyphs()
+        )
     ),
     PS(
         "controller/ps",
@@ -39,8 +33,7 @@ public enum ControllerGlyphTheme {
             ControllerGlyph.TOUCHPAD_BUTTON,
             ControllerGlyph.TOUCHPAD_LEFT_BUTTON,
             ControllerGlyph.TOUCHPAD_RIGHT_BUTTON
-        ),
-        faceButtonPressGlyphs()
+        )
     ),
     PS_OLD(
         "controller/ps_o",
@@ -50,61 +43,30 @@ public enum ControllerGlyphTheme {
             ControllerGlyph.TOUCHPAD_BUTTON,
             ControllerGlyph.TOUCHPAD_LEFT_BUTTON,
             ControllerGlyph.TOUCHPAD_RIGHT_BUTTON
-        ),
-        faceButtonPressGlyphs()
+        )
     ),
     GENERIC_A("controller/generic_a", standardGlyphs()),
     SWITCH("controller/switch", standardGlyphs());
 
-    private final Asset font;
     private final Asset textureFolder;
-    private final Asset definitions;
     private final Asset controlTexture;
+    private final String metricId;
     private final Set<ControllerGlyph> supportedGlyphs;
-    private final Map<ControllerGlyph, Asset> textures = new EnumMap<>(ControllerGlyph.class);
-    private final Map<ControllerGlyph, Asset> pressedTextures = new EnumMap<>(ControllerGlyph.class);
-    private final EnumSet<ControllerGlyph> pressGlyphs = EnumSet.noneOf(ControllerGlyph.class);
 
     ControllerGlyphTheme(String themePath, Set<ControllerGlyph> supportedGlyphs) {
-        this(themePath, supportedGlyphs, Set.of());
-    }
-
-    ControllerGlyphTheme(
-        String themePath,
-        Set<ControllerGlyph> supportedGlyphs,
-        Set<ControllerGlyph> pressGlyphs
-    ) {
-        this.font = Asset.MOD(themePath);
         this.textureFolder = Asset.MOD("textures/" + themePath);
-        this.definitions = textureFolder.child("definitions.json");
         this.controlTexture = textureFolder.child("control.png");
+        this.metricId = themePath.substring(themePath.lastIndexOf('/') + 1);
         this.supportedGlyphs = Set.copyOf(supportedGlyphs);
 
-        if (!this.supportedGlyphs.containsAll(pressGlyphs)) {
-            throw new IllegalArgumentException(
-                "Pressed glyphs must also be supported by theme " + name()
-            );
-        }
-        this.pressGlyphs.addAll(pressGlyphs);
-
-        for (ControllerGlyph glyph : this.supportedGlyphs) {
-            textures.put(glyph, textureFolder.child(glyph.fileName() + ".png"));
-            if (this.pressGlyphs.contains(glyph)) {
-                pressedTextures.put(glyph, textureFolder.child(glyph.fileName() + "_press.png"));
-            }
-        }
     }
 
-    public Asset font() {
-        return font;
+    public Asset textureFolder() {
+        return this.textureFolder;
     }
 
-    Asset definitions() {
-        return definitions;
-    }
-
-    Asset variantDefinitions(String folder) {
-        return this.textureFolder.child(folder).child("definitions.json");
+    public String metricId() {
+        return this.metricId;
     }
 
     public boolean supports(ControllerGlyph glyph) {
@@ -115,47 +77,8 @@ public enum ControllerGlyphTheme {
         return supportedGlyphs;
     }
 
-    @Nullable
-    public Asset texture(ControllerGlyph glyph) {
-        return ControllerGlyphDefinitions.texture(this, glyph, false);
-    }
-
-    public float hintHeight(ControllerGlyph glyph) {
-        return ControllerGlyphDefinitions.height(this, glyph);
-    }
-
     public Asset controlTexture() {
-        return ControllerGlyphDefinitions.controlTexture(this);
-    }
-
-    @Nullable
-    public Asset pressedTexture(ControllerGlyph glyph) {
-        return ControllerGlyphDefinitions.texture(this, glyph, true);
-    }
-
-    @Nullable
-    Asset baseTexture(ControllerGlyph glyph, boolean pressed) {
-        return pressed ? this.pressedTextures.get(glyph) : this.textures.get(glyph);
-    }
-
-    Asset baseControlTexture() {
         return this.controlTexture;
-    }
-
-    Asset variantControlTexture(String folder) {
-        return this.textureFolder.child(folder).child("control.png");
-    }
-
-    @Nullable
-    Asset variantTexture(String folder, ControllerGlyph glyph, boolean pressed) {
-        if (pressed && !this.pressGlyphs.contains(glyph)) {
-            return null;
-        }
-        if (!this.supportedGlyphs.contains(glyph)) {
-            return null;
-        }
-        String suffix = pressed ? "_press.png" : ".png";
-        return this.textureFolder.child(folder).child(glyph.fileName() + suffix);
     }
 
     private static Set<ControllerGlyph> standardGlyphs(ControllerGlyph... extraGlyphs) {
@@ -194,16 +117,4 @@ public enum ControllerGlyphTheme {
         return glyphs;
     }
 
-    private static Set<ControllerGlyph> faceButtonPressGlyphs() {
-        return EnumSet.of(
-            ControllerGlyph.BUTTON_UP,
-            ControllerGlyph.BUTTON_DOWN,
-            ControllerGlyph.BUTTON_LEFT,
-            ControllerGlyph.BUTTON_RIGHT,
-                ControllerGlyph.BUMPER_LEFT,
-                ControllerGlyph.BUMPER_RIGHT,
-                ControllerGlyph.TRIGGER_LEFT,
-                ControllerGlyph.TRIGGER_RIGHT
-        );
-    }
 }

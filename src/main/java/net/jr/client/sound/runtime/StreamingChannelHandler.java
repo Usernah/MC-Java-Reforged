@@ -35,8 +35,8 @@ public final class StreamingChannelHandler {
     }
 
     public static boolean shouldSkipUpdate(Channel channel, StreamingChannelState state) {
-        // OpenAL marks queued buffers as processed on stop. Vanilla would
-        // decode replacements for all of them just before releasing the channel.
+
+
         return !state.recoveryAllowed() && ((ChannelAccessor) channel).javaReforged$getStream() != null;
     }
 

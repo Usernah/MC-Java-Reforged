@@ -8,16 +8,22 @@ import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
 public final class ViewportRenderScope {
-    private static final ThreadLocal<ViewportArea> ACTIVE_VIEWPORT = new ThreadLocal<>();
+    private static final ThreadLocal<RenderFrame> ACTIVE_RENDER = new ThreadLocal<>();
 
     private ViewportRenderScope() {
     }
 
     public static Scope enter(ViewportArea viewport) {
         Objects.requireNonNull(viewport, "viewport");
-        ViewportArea previousViewport = ACTIVE_VIEWPORT.get();
-        ACTIVE_VIEWPORT.set(viewport);
-        return new Scope(previousViewport);
+        RenderFrame previousRender = ACTIVE_RENDER.get();
+        RenderFrame render = new RenderFrame();
+        ACTIVE_RENDER.set(render);
+        try {
+            return new Scope(render, previousRender, ViewportScope.enter(viewport));
+        } catch (RuntimeException | Error error) {
+            restore(previousRender);
+            throw error;
+        }
     }
 
     public static Scope enterGui(ViewportArea viewport) {
@@ -32,7 +38,7 @@ public final class ViewportRenderScope {
     }
 
     public static Matrix4f projectionMatrix(double fovDegrees, float zoom, float zoomX, float zoomY, float depthFar) {
-        ViewportArea viewport = ACTIVE_VIEWPORT.get();
+        ViewportArea viewport = activeViewportOrNull();
         if (viewport == null) {
             return null;
         }
@@ -46,29 +52,29 @@ public final class ViewportRenderScope {
     }
 
     public static int shaderWidth(Window window) {
-        ViewportArea viewport = ACTIVE_VIEWPORT.get();
+        ViewportArea viewport = activeViewportOrNull();
         return viewport != null ? viewport.width() : window.getWidth();
     }
 
     public static int shaderHeight(Window window) {
-        ViewportArea viewport = ACTIVE_VIEWPORT.get();
+        ViewportArea viewport = activeViewportOrNull();
         return viewport != null ? viewport.height() : window.getHeight();
     }
 
     public static @Nullable ViewportArea activeViewportOrNull() {
-        return ACTIVE_VIEWPORT.get();
+        return ACTIVE_RENDER.get() != null ? ViewportScope.currentOrNull() : null;
     }
 
     public static ViewportArea activeViewport() {
-        ViewportArea viewport = ACTIVE_VIEWPORT.get();
+        ViewportArea viewport = activeViewportOrNull();
         if (viewport == null) {
-            throw new IllegalStateException("No viewport is active");
+            throw new IllegalStateException("No viewport render scope is active");
         }
         return viewport;
     }
 
     public static boolean hasActiveViewport() {
-        return ACTIVE_VIEWPORT.get() != null;
+        return activeViewportOrNull() != null;
     }
 
     public static RenderPass.RenderArea areaFor(ViewportArea viewport, int textureWidth, int textureHeight) {
@@ -85,11 +91,19 @@ public final class ViewportRenderScope {
     }
 
     public static final class Scope implements AutoCloseable {
-        private final ViewportArea previousViewport;
+        private final RenderFrame render;
+        private final RenderFrame previousRender;
+        private final ViewportScope.Scope delegate;
         private boolean closed;
 
-        private Scope(ViewportArea previousViewport) {
-            this.previousViewport = previousViewport;
+        private Scope(
+            RenderFrame render,
+            @Nullable RenderFrame previousRender,
+            ViewportScope.Scope delegate
+        ) {
+            this.render = render;
+            this.previousRender = previousRender;
+            this.delegate = delegate;
         }
 
         @Override
@@ -97,12 +111,26 @@ public final class ViewportRenderScope {
             if (this.closed) {
                 return;
             }
+            if (ACTIVE_RENDER.get() != this.render) {
+                throw new IllegalStateException("Viewport render scope is unbalanced");
+            }
             this.closed = true;
-            if (this.previousViewport == null) {
-                ACTIVE_VIEWPORT.remove();
-            } else {
-                ACTIVE_VIEWPORT.set(this.previousViewport);
+            try {
+                this.delegate.close();
+            } finally {
+                restore(this.previousRender);
             }
         }
+    }
+
+    private static void restore(@Nullable RenderFrame render) {
+        if (render == null) {
+            ACTIVE_RENDER.remove();
+        } else {
+            ACTIVE_RENDER.set(render);
+        }
+    }
+
+    private static final class RenderFrame {
     }
 }

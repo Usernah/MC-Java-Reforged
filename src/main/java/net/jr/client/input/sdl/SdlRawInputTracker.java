@@ -10,7 +10,10 @@ import net.jr.client.input.gamepad.RawGamepadInputPress;
 
 final class SdlRawInputTracker {
     private static final float AXIS_DIGITAL_THRESHOLD = 0.55F;
-    private static final boolean LOG_RAW_INPUT = Boolean.getBoolean("split.sdlRawInputLog");
+    private static final boolean LOG_RAW_INPUT = Boolean.parseBoolean(System.getProperty(
+        "split.sdlRawInputLog",
+        Boolean.toString(SdlGamepad.isBackendProbeMode())
+    ));
     private static final ConcurrentLinkedQueue<RawGamepadInputPress> PRESSES = new ConcurrentLinkedQueue<>();
     private static final Map<Long, SdlGamepadSnapshot> BASELINES = new LinkedHashMap<>();
 

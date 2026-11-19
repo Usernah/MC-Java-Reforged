@@ -62,6 +62,10 @@ public final class ClientInstance {
         return this.slot.optionsState();
     }
 
+    public PlayerModelHudState playerModelHud() {
+        return this.slot.playerModelHudState();
+    }
+
     public SlotCursorView cursor() {
         return this.slot.cursor();
     }

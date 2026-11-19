@@ -2,28 +2,25 @@ package net.jr.client.runtime.render.pass;
 
 import com.mojang.blaze3d.textures.FilterMode;
 import java.util.List;
+import java.util.function.Consumer;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
-import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.ui.hint.ControlHintContext;
 import net.jr.client.ui.hint.ControlHintPipeline;
 import net.jr.client.ui.hint.model.ResolvedControlHint;
 import net.jr.client.ui.hint.render.ControlHintRenderer;
-import net.jr.client.ui.render.composition.GuiCompositionTarget;
 import net.jr.client.ui.presentation.UiPresentation;
-import net.jr.client.ui.presentation.UiResolution;
-import net.minecraft.client.Minecraft;
+import net.jr.client.ui.render.composition.GuiCompositionTarget;
+import net.jr.client.ui.render.composition.HintFramebufferLayout;
+import net.jr.client.ui.render.composition.UiFramebufferLayout;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import org.jetbrains.annotations.Nullable;
 
 public final class ControlHintRenderPass {
-    private static final int INTERNAL_RASTER_SCALE = 1;
     private static final int HINT_FRAMEBUFFER_HEIGHT = 100;
-    private static final float SPLIT_GUI_SCALE_REFERENCE = 2.0F;
-    private static final float FULL_HD_GUI_SCALE_REFERENCE = 3.0F;
-    private static final float PIXEL_BIAS = 0.35F;
+    private static final float PIXEL_BIAS = 1.0F;
     private static final float HUD_BOTTOM_SAFE_GAP = 4.0F;
     private static final int HUD_TARGET = 0;
     private static final int MENU_TARGET = 1;
@@ -36,27 +33,38 @@ public final class ControlHintRenderPass {
     @Nullable
     public static PreparedHud prepareHud(GuiGraphicsExtractor graphics) {
         ControlHintPipeline.Result result = ControlHintPipeline.resolveHud();
-        HintCompositionLayout layout = resolveLayout(graphics);
+        HintFramebufferLayout layout = resolveLayout(graphics);
         if (layout == null) {
             return null;
         }
 
+        int slotId = SlotScope.requireId();
+        float hudScale = UiFramebufferLayout.resolve(
+            ClientRuntime.INSTANCE.viewports().viewport(slotId)
+        ).scale();
+        float relativeScale = layout.scale()
+            / Math.max(hudScale, Float.MIN_NORMAL);
         float bottomInset =
-            ControlHintRenderer.reservedScreenBottomHeight() * layout.scale()
+            ControlHintRenderer.reservedScreenBottomHeight() * relativeScale
                 + HUD_BOTTOM_SAFE_GAP;
         return new PreparedHud(result, layout, bottomInset);
     }
 
-    public static void renderHud(PreparedHud prepared, GuiGraphicsExtractor graphics) {
+    public static void renderHud(
+        PreparedHud prepared,
+        GuiGraphicsExtractor graphics,
+        float opacity
+    ) {
         ControlHintPipeline.Result result = prepared.result();
-        if (result == null || result.hints().isEmpty()) {
+        if (result == null || result.hints().isEmpty() || opacity <= 0.0F) {
             return;
         }
         renderComposed(
             result.context(),
             graphics,
             result.hints(),
-            prepared.layout()
+            prepared.layout(),
+            premultipliedWhite(opacity)
         );
     }
 
@@ -83,9 +91,9 @@ public final class ControlHintRenderPass {
         if (result == null || result.hints().isEmpty()) {
             return;
         }
-        HintCompositionLayout layout = resolveLayout(graphics);
+        HintFramebufferLayout layout = resolveLayout(graphics);
         if (layout == null) {
-            float framebufferScale = framebufferScale();
+            float framebufferScale = UiPresentation.framebufferScale().value();
             graphics.pose().pushMatrix();
             graphics.pose().scale(framebufferScale, framebufferScale);
             try {
@@ -101,11 +109,17 @@ public final class ControlHintRenderPass {
             }
             return;
         }
-        renderComposed(result.context(), graphics, result.hints(), layout);
+        renderComposed(
+            result.context(),
+            graphics,
+            result.hints(),
+            layout,
+            0xFFFFFFFF
+        );
     }
 
     @Nullable
-    private static HintCompositionLayout resolveLayout(
+    private static HintFramebufferLayout resolveLayout(
         GuiGraphicsExtractor parentGraphics
     ) {
         Integer slotId = SlotScope.idOrNull();
@@ -113,9 +127,10 @@ public final class ControlHintRenderPass {
             return null;
         }
 
-        return resolveLayout(
-            parentGraphics,
+        return HintFramebufferLayout.resolve(
             ClientRuntime.INSTANCE.viewports().viewport(slotId),
+            parentGraphics.guiHeight(),
+            1.0F,
             HINT_FRAMEBUFFER_HEIGHT
         );
     }
@@ -124,32 +139,43 @@ public final class ControlHintRenderPass {
         ControlHintContext context,
         GuiGraphicsExtractor parentGraphics,
         List<ResolvedControlHint> hints,
-        HintCompositionLayout layout
+        HintFramebufferLayout layout,
+        int compositeColor
     ) {
         int slotId = SlotScope.requireId();
         int targetKind = context.isHud() ? HUD_TARGET : MENU_TARGET;
         GuiCompositionTarget target = target(slotId, targetKind);
-        target.extractCompositionAndSubmit(
-            parentGraphics,
-            layout.targetWidth(),
-            layout.targetHeight(),
-            INTERNAL_RASTER_SCALE,
-            0.0F,
-            layout.destinationY(),
-            layout.scale(),
-            layout.scale(),
-            FilterMode.NEAREST,
-            PIXEL_BIAS,
-            layout.sampleFootprint(),
-            layout.sampleFootprint(),
-            compositionGraphics -> ControlHintRenderer.renderDirect(
+        Consumer<GuiGraphicsExtractor> extractor = compositionGraphics ->
+            ControlHintRenderer.renderDirect(
                 context,
                 compositionGraphics,
                 hints,
                 layout.canvasWidth(),
                 layout.canvasHeight()
-            )
+            );
+        target.extractCompositionAndSubmit(
+            parentGraphics,
+            layout.canvasWidth(),
+            layout.canvasHeight(),
+            layout.rasterScale(),
+            0.0F,
+            layout.destinationY(),
+            layout.scale(),
+            layout.scale(),
+            FilterMode.LINEAR,
+            PIXEL_BIAS,
+            layout.sampleFootprint(),
+            layout.sampleFootprint(),
+            Integer.MIN_VALUE,
+            Integer.MIN_VALUE,
+            compositeColor,
+            extractor
         );
+    }
+
+    private static int premultipliedWhite(float opacity) {
+        int channel = Math.clamp(Math.round(opacity * 255.0F), 0, 255);
+        return channel << 24 | channel << 16 | channel << 8 | channel;
     }
 
     private static GuiCompositionTarget target(int slotId, int kind) {
@@ -161,73 +187,10 @@ public final class ControlHintRenderPass {
         return target;
     }
 
-    private static HintCompositionLayout resolveLayout(
-        GuiGraphicsExtractor parentGraphics,
-        ViewportArea viewport,
-        int compositionHeight
-    ) {
-        float scale = framebufferScale(viewport);
-        float canvasWidth = parentGraphics.guiWidth() / scale;
-        float canvasHeight = compositionHeight;
-        int targetWidth = Math.max(1, (int)Math.ceil(canvasWidth));
-        int targetHeight = Math.max(1, compositionHeight);
-        float destinationY = parentGraphics.guiHeight() - canvasHeight * scale;
-        double effectiveGuiScale = viewport.effectiveGuiScale();
-        if (!Double.isFinite(effectiveGuiScale) || effectiveGuiScale <= 0.0D) {
-            effectiveGuiScale = Minecraft.getInstance().getWindow().getGuiScale();
-        }
-        float physicalDestinationScale = scale * (float)effectiveGuiScale;
-        float sampleFootprint = physicalDestinationScale > 0.0F
-            ? Math.max(1.0F, INTERNAL_RASTER_SCALE / physicalDestinationScale)
-            : 1.0F;
-        return new HintCompositionLayout(
-            targetWidth,
-            targetHeight,
-            canvasWidth,
-            canvasHeight,
-            destinationY,
-            scale,
-            sampleFootprint
-        );
-    }
-
-    private static float framebufferScale() {
-        return UiPresentation.glyphResolution().framebufferScale();
-    }
-
-    private static float framebufferScale(ViewportArea viewport) {
-        float scale = framebufferScale();
-        if (!UiPresentation.isSplitScreen()) {
-            return scale;
-        }
-
-        double effectiveGuiScale = viewport.effectiveGuiScale();
-        if (!Double.isFinite(effectiveGuiScale) || effectiveGuiScale <= 0.0D) {
-            return scale;
-        }
-        var window = Minecraft.getInstance().getWindow();
-        float referenceScale = window.getWidth() >= UiResolution.FULL_HD.referenceWidth()
-                && window.getHeight() >= UiResolution.FULL_HD.referenceHeight()
-            ? FULL_HD_GUI_SCALE_REFERENCE
-            : SPLIT_GUI_SCALE_REFERENCE;
-        return scale * referenceScale / (float)effectiveGuiScale;
-    }
-
     public record PreparedHud(
         @Nullable ControlHintPipeline.Result result,
-        HintCompositionLayout layout,
+        HintFramebufferLayout layout,
         float bottomInset
-    ) {
-    }
-
-    public record HintCompositionLayout(
-        int targetWidth,
-        int targetHeight,
-        float canvasWidth,
-        float canvasHeight,
-        float destinationY,
-        float scale,
-        float sampleFootprint
     ) {
     }
 }

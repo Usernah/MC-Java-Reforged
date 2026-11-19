@@ -1,6 +1,7 @@
 package net.jr.client.runtime.viewport;
 
-import net.jr.client.runtime.ClientRuntime;
+import net.jr.api.client.ui.Viewport;
+import net.jr.client.ui.presentation.UiPresentation;
 
 public final class GuiScaleCalculator {
     private static final int STANDARD_BASE_WIDTH = 320;
@@ -10,14 +11,18 @@ public final class GuiScaleCalculator {
     }
 
     public static int resolve(int width, int height, int requestedScale, boolean enforceUnicode) {
-        return resolve(
+        int maximum = resolveStandard(
             width,
             height,
-            requestedScale,
-            enforceUnicode,
-            STANDARD_BASE_WIDTH,
-            STANDARD_BASE_HEIGHT
+            0,
+            enforceUnicode
         );
+        if (!UiPresentation.isSmall() && maximum > 1) {
+            maximum--;
+        }
+        return requestedScale == 0
+            ? maximum
+            : Math.clamp(requestedScale, 1, maximum);
     }
 
     public static int resolveStandard(
@@ -60,15 +65,14 @@ public final class GuiScaleCalculator {
     }
 
     public static int maximumForSlot(int slotId, boolean enforceUnicode) {
-        if (!ClientRuntime.INSTANCE.viewports().hasWindowMetrics()) {
-            return 1;
-        }
-        var viewports = ClientRuntime.INSTANCE.viewports();
-        if (viewports.hasViewport(slotId)) {
-            var viewport = viewports.viewport(slotId);
+        var viewport = Viewport.getOrNull(slotId);
+        if (viewport != null) {
             return resolve(viewport.glWidth(), viewport.glHeight(), 0, enforceUnicode);
         }
-        var metrics = ClientRuntime.INSTANCE.viewports().windowMetrics();
+        var metrics = Viewport.windowOrNull();
+        if (metrics == null) {
+            return 1;
+        }
         return resolve(metrics.framebufferWidth(), metrics.framebufferHeight(), 0, enforceUnicode);
     }
 }

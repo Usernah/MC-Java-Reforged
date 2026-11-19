@@ -52,6 +52,9 @@ public final class UiRegister {
             case STYLE -> throw new IllegalArgumentException(
                     "Style files are resolved through imports and cannot be registered"
             );
+            case DATA -> throw new IllegalArgumentException(
+                    "Data files must be registered through UiDataRegister"
+            );
         };
     }
 }

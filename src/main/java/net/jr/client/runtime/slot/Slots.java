@@ -7,6 +7,7 @@ import net.jr.client.runtime.state.ClientRenderState;
 import net.jr.client.runtime.state.GameplayState;
 import net.jr.client.runtime.state.InputState;
 import net.jr.client.runtime.state.OptionsState;
+import net.jr.client.runtime.state.PlayerModelHudState;
 import net.jr.client.runtime.state.ScreenState;
 import net.jr.client.runtime.state.ToastState;
 
@@ -19,6 +20,7 @@ public final class Slots {
     private final InputState inputState = new InputState();
     private final SlotInput input;
     private final ToastState toastState = new ToastState();
+    private final PlayerModelHudState playerModelHudState = new PlayerModelHudState();
     private final OptionsState optionsState;
     private final SlotCursorView cursor;
 
@@ -59,6 +61,10 @@ public final class Slots {
 
     public ToastState toastState() {
         return this.toastState;
+    }
+
+    public PlayerModelHudState playerModelHudState() {
+        return this.playerModelHudState;
     }
 
     public OptionsState optionsState() {

@@ -1,0 +1,12 @@
+@@import asset.local("styles/container_base/generic_54") as base
+
+container {
+    background {
+    }
+
+    content {
+    }
+
+    foreground {
+    }
+}

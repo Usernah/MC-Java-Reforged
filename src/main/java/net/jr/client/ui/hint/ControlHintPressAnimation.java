@@ -7,17 +7,17 @@ import net.jr.client.input.InputApi;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.client.KeyMapping;
 
-final class ControlHintPressAnimation {
+public final class ControlHintPressAnimation {
     private static final long DURATION_MS = 300L;
 
     private ControlHintPressAnimation() {
     }
 
-    static boolean isAnimating(GamepadDigitalInput input) {
+    public static boolean isAnimating(GamepadDigitalInput input) {
         return state().update(input, InputApi.isPressed(input), DURATION_MS);
     }
 
-    static boolean isAnimating(KeyMapping mapping) {
+    public static boolean isAnimating(KeyMapping mapping) {
         return state().update(mapping, InputApi.isDown(mapping), DURATION_MS);
     }
 

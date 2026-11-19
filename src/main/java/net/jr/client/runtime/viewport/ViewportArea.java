@@ -202,6 +202,16 @@ public final class ViewportArea implements RenderViewport {
         return ViewportGuiScale.logicalHeight(this);
     }
 
+
+    public int uiWidth() {
+        return ViewportGuiDimensions.width(this);
+    }
+
+
+    public int uiHeight() {
+        return ViewportGuiDimensions.height(this);
+    }
+
     public double windowDeltaToGuiX(double delta) {
         return delta * this.logicalGuiWidth() / this.windowWidth();
     }

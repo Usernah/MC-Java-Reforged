@@ -33,6 +33,7 @@ public final class WorldRenderPass {
 
     public static void renderLevelForVisibleSlots(GameRenderer gameRenderer, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
+        clearUnusedViewports(gameRenderer);
         List<WorldRenderView> views = WorldRenderViews.collect(
             deltaTracker,
             ReadinessPolicy::gameplayReady
@@ -47,6 +48,43 @@ public final class WorldRenderPass {
                 continue;
             }
             renderView(minecraft, gameRenderer, backend, view);
+        }
+    }
+
+    private static void clearUnusedViewports(GameRenderer gameRenderer) {
+        var viewports = ClientRuntime.INSTANCE.viewports();
+        if (!viewports.hasWindowMetrics()) {
+            return;
+        }
+
+        var table = viewports.viewportTable();
+        boolean[] occupied = new boolean[table.size()];
+        for (var drawable : viewports.drawableViewports()) {
+            occupied[drawable.viewport().id()] = true;
+        }
+
+        RenderTarget target = gameRenderer.mainRenderTarget();
+        for (ViewportArea viewport : table) {
+            if (occupied[viewport.id()]) {
+                continue;
+            }
+            RenderPass.RenderArea area = ViewportRenderScope.areaFor(
+                viewport,
+                target.width,
+                target.height
+            );
+            RenderSystem.getDevice()
+                .createCommandEncoder()
+                .clearColorAndDepthTextures(
+                    target.getColorTexture(),
+                    new Vector4f(0.0F, 0.0F, 0.0F, 1.0F),
+                    target.getDepthTexture(),
+                    0.0D,
+                    area.x(),
+                    area.y(),
+                    area.width(),
+                    area.height()
+                );
         }
     }
 
@@ -69,6 +107,8 @@ public final class WorldRenderPass {
             GameRendererAccessor renderer = (GameRendererAccessor)(Object)gameRenderer;
             var gameState = gameRenderer.gameRenderState();
             var optionsState = gameState.optionsRenderState;
+
+            gameState.guiRenderState.isHudHidden = minecraft.gui.hud.isHidden();
 
             optionsState.cameraType =
                     slot.optionsState().cameraType();

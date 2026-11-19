@@ -9,7 +9,7 @@ import net.jr.client.ui.render.GuiCompositionLayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Util;
 
-/** A single, window-wide autosave notice backed by a 1920x1080 composition. */
+
 public final class SavingIndicatorRenderObject implements IGlobalRenderObject, AutoCloseable {
     private static final int CANVAS_WIDTH = 1920;
     private static final int CANVAS_HEIGHT = 1080;

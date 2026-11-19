@@ -22,13 +22,7 @@ public final class XaeroWorldMapRuntime {
     private static final ConcurrentMap<Integer, XaeroWorldMapViewState> VIEW_STATES =
             new ConcurrentHashMap<>();
 
-    /*
-     * Xaero World Map keeps a single static "currentSession".  That is fine
-     * for vanilla, but joining a local secondary player used to make Xaero
-     * clean the primary player's session.  Keep the authoritative session per
-     * Java Reforged slot and temporarily project it into Xaero's static field
-     * only while its connection lifecycle code is executing.
-     */
+
     private static final ConcurrentMap<Integer, WorldMapSession> CORE_SESSIONS =
             new ConcurrentHashMap<>();
 
@@ -58,10 +52,7 @@ public final class XaeroWorldMapRuntime {
         );
         CORE_SESSIONS.put(slotId, session);
 
-        /*
-         * Ensure the slot has a persistent visual state as soon as
-         * Xaero registers its client session.
-         */
+
         VIEW_STATES.computeIfAbsent(
                 slotId,
                 ignored -> new XaeroWorldMapViewState()
@@ -75,13 +66,7 @@ public final class XaeroWorldMapRuntime {
             return;
         }
 
-        /*
-         * A reconnect can replace a ClientPacketListener while keeping
-         * the same Java Reforged slot alive.
-         *
-         * Only remove the visual state if no remaining Xaero session
-         * still belongs to this slot.
-         */
+
         int slotId = removed.slotId();
 
         CORE_SESSIONS.remove(slotId, removed.session());

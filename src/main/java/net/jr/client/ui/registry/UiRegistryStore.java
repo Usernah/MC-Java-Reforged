@@ -32,9 +32,11 @@ public final class UiRegistryStore {
 
     public UiEntry register(UiFileType type, String path) {
         Objects.requireNonNull(type, "type");
-        if (type == UiFileType.STYLE) {
+        if (type == UiFileType.STYLE || type == UiFileType.DATA) {
             throw new IllegalArgumentException(
-                    "Style files are resolved through imports and cannot be registered"
+                    type == UiFileType.STYLE
+                        ? "Style files are resolved through imports and cannot be registered"
+                        : "Data files must be registered through UiDataRegister"
             );
         }
         String normalizedPath = normalizePath(path);

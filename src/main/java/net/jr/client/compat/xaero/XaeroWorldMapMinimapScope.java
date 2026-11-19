@@ -5,7 +5,7 @@ import xaero.map.mods.SupportMods;
 import xaero.map.mods.SupportXaeroMinimap;
 import xaero.map.mods.minimap.element.MinimapElementGraphicsWrapper;
 
-/** Temporarily binds Xaero's singleton minimap bridge to one local slot. */
+
 public final class XaeroWorldMapMinimapScope implements AutoCloseable {
     private static final XaeroWorldMapMinimapScope NOOP =
             new XaeroWorldMapMinimapScope();

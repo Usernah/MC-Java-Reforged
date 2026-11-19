@@ -1,5 +1,6 @@
 package net.jr.screens.crafting;
 
+import net.jr.api.client.render.Draw;
 import net.jr.client.render.item.ItemRenderOpacity;
 import net.jr.client.render.GuiGraphicsExtractorBridge;
 import net.jr.client.ui.container.slots.ItemSlotGrid;
@@ -21,25 +22,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class CraftingRecipePreviewRenderer {
-    private static final int MISSING_BACKGROUND = 0x66B82020;
-    private static final int MISSING_TINT = 0x1AFF3030;
-    private static final float MISSING_ITEM_ALPHA = 0.70F;
-
     private final int columns;
     private final int rows;
     private final ItemSlotGroup craftingGridGroup;
     private final ItemSlotGroup craftingResultGroup;
+    private final CraftingPreviewStyle style;
 
     CraftingRecipePreviewRenderer(
             int columns,
             int rows,
             ItemSlotGroup craftingGridGroup,
-            ItemSlotGroup craftingResultGroup
+            ItemSlotGroup craftingResultGroup,
+            CraftingPreviewStyle style
     ) {
         this.columns = columns;
         this.rows = rows;
         this.craftingGridGroup = craftingGridGroup;
         this.craftingResultGroup = craftingResultGroup;
+        this.style = style;
     }
 
     void render(
@@ -59,7 +59,7 @@ final class CraftingRecipePreviewRenderer {
         AvailableItems availableItems = AvailableItems.capture(inventory, menu, this.columns * this.rows);
         int cycle = Minecraft.getInstance().level == null
                 ? 0
-                : (int)(Minecraft.getInstance().level.getGameTime() / 30L);
+                : (int)(Minecraft.getInstance().level.getGameTime() / this.style.cycleTicks());
 
         graphics.nextStratum();
         for (int index = 0; index < ingredients.length; index++) {
@@ -93,7 +93,7 @@ final class CraftingRecipePreviewRenderer {
         }
         int cycle = Minecraft.getInstance().level == null
                 ? 0
-                : (int)(Minecraft.getInstance().level.getGameTime() / 30L);
+                : (int)(Minecraft.getInstance().level.getGameTime() / this.style.cycleTicks());
         return selectDisplayStack(result.resolveForStacks(displayContext), cycle);
     }
 
@@ -124,15 +124,31 @@ final class CraftingRecipePreviewRenderer {
         if (slot == null) {
             return;
         }
-        int itemSize = Math.min(16, slot.itemSize());
+        int itemSize = slot.itemSize();
         int x = slot.x() + (slot.width() - itemSize) / 2;
         int y = slot.y() + (slot.height() - itemSize) / 2;
         if (!choice.available()) {
-            graphics.fill(slot.x() + 1, slot.y() + 1, slot.x() + slot.width() - 1, slot.y() + slot.height() - 1, MISSING_BACKGROUND);
+            int inset = this.style.backgroundInset();
+            graphics.fill(
+                    slot.x() + inset,
+                    slot.y() + inset,
+                    slot.x() + slot.width() - inset,
+                    slot.y() + slot.height() - inset,
+                    this.style.missingBackground()
+            );
         }
-        drawScaledItem(graphics, choice.stack(), x, y, itemSize, choice.available() ? 1.0F : MISSING_ITEM_ALPHA, false);
+        drawScaledItem(
+                graphics,
+                choice.stack(),
+                x,
+                y,
+                itemSize,
+                choice.available() ? 1.0F : this.style.missingItemAlpha(),
+                false
+        );
         if (!choice.available()) {
-            graphics.fill(x, y, x + itemSize, y + itemSize, MISSING_TINT);
+            graphics.fill(x, y, x + itemSize, y + itemSize, this.style.missingTint());
+            this.renderMissingOverlay(graphics, slot);
         }
     }
 
@@ -145,16 +161,17 @@ final class CraftingRecipePreviewRenderer {
         if (slot == null || result.isEmpty()) {
             return;
         }
-        int itemSize = Math.min(24, slot.itemSize());
+        int itemSize = slot.itemSize();
         int x = slot.x() + (slot.width() - itemSize) / 2;
         int y = slot.y() + (slot.height() - itemSize) / 2;
         if (!available) {
+            int inset = this.style.backgroundInset();
             graphics.fill(
-                    slot.x() + 1,
-                    slot.y() + 1,
-                    slot.x() + slot.width() - 1,
-                    slot.y() + slot.height() - 1,
-                    MISSING_BACKGROUND
+                    slot.x() + inset,
+                    slot.y() + inset,
+                    slot.x() + slot.width() - inset,
+                    slot.y() + slot.height() - inset,
+                    this.style.missingBackground()
             );
         }
         drawScaledItem(
@@ -163,12 +180,23 @@ final class CraftingRecipePreviewRenderer {
                 x,
                 y,
                 itemSize,
-                available ? 1.0F : MISSING_ITEM_ALPHA,
+                available ? 1.0F : this.style.missingItemAlpha(),
                 true
         );
         if (!available) {
-            graphics.fill(x, y, x + itemSize, y + itemSize, MISSING_TINT);
+            graphics.fill(x, y, x + itemSize, y + itemSize, this.style.missingTint());
+            this.renderMissingOverlay(graphics, slot);
         }
+    }
+
+    private void renderMissingOverlay(GuiGraphicsExtractor graphics, ItemSlotPos slot) {
+        Draw.image(
+                this.style.missingOverlay(),
+                slot.x() + this.style.missingOverlayX(),
+                slot.y() + this.style.missingOverlayY(),
+                this.style.missingOverlayWidth(),
+                this.style.missingOverlayHeight()
+        ).draw(graphics);
     }
 
     private static void drawScaledItem(

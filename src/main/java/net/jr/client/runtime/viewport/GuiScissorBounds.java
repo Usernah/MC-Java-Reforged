@@ -62,15 +62,24 @@ public final class GuiScissorBounds {
 
     @Nullable
     public static PixelRectangle resolvePrecise(ScreenRectangle rectangle, WindowRenderState window) {
+        return resolvePrecise(rectangle, window.width, window.height);
+    }
+
+    @Nullable
+    public static PixelRectangle resolvePrecise(
+        ScreenRectangle rectangle,
+        int targetWidth,
+        int targetHeight
+    ) {
         PreciseGuiScissor precise = ((PreciseScissorAccess) (Object) rectangle).javaReforged$preciseScissor();
         if (precise == null) {
             return null;
         }
 
-        int left = clamp((int) Math.floor(precise.left()), window.width);
-        int top = clamp((int) Math.floor(precise.top()), window.height);
-        int right = clamp((int) Math.ceil(precise.right()), window.width);
-        int bottom = clamp((int) Math.ceil(precise.bottom()), window.height);
+        int left = clamp((int) Math.floor(precise.left()), targetWidth);
+        int top = clamp((int) Math.floor(precise.top()), targetHeight);
+        int right = clamp((int) Math.ceil(precise.right()), targetWidth);
+        int bottom = clamp((int) Math.ceil(precise.bottom()), targetHeight);
         return right > left && bottom > top ? new PixelRectangle(left, top, right, bottom) : null;
     }
 

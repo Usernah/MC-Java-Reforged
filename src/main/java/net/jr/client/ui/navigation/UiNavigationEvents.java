@@ -1,7 +1,6 @@
 package net.jr.client.ui.navigation;
 
 import net.jr.Java_reforged;
-import net.jr.client.sound.action.InputActionSounds;
 import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -12,14 +11,11 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 
 @EventBusSubscriber(modid = Java_reforged.MODID, value = Dist.CLIENT)
 public final class UiNavigationEvents {
-    private static final ThreadLocal<InputActionSounds.FocusSnapshot> KEY_FOCUS = new ThreadLocal<>();
-
     private UiNavigationEvents() {
     }
 
     @SubscribeEvent
     public static void onScreenKeyPressed(ScreenEvent.KeyPressed.Pre event) {
-        KEY_FOCUS.remove();
         if (!UiInputModeController.hasCurrentSlot()) {
             return;
         }
@@ -28,14 +24,14 @@ public final class UiNavigationEvents {
             return;
         }
         if (UiInputModeController.isFocusNavigationKey(event.getKeyCode())) {
-            UiInputModeController.applyKeyboardNavigationInputType(event.getKeyCode());
-            UiInputModeController.activateFocusNavigation();
-            KEY_FOCUS.set(InputActionSounds.captureFocus(screen));
+            if (UiInputModeController.prepareForFocusNavigation(event.getKeyCode())) {
+                event.setCanceled(true);
+                screen.afterKeyboardAction();
+                return;
+            }
         }
         if (UiInputModeController.isContainerSlotNavigationKey(event.getKeyCode())
             && screen instanceof AbstractContainerScreen<?>) {
-            InputActionSounds.FocusSnapshot focusBefore = KEY_FOCUS.get();
-            KEY_FOCUS.remove();
             boolean handled = UiInputModeController.applyUnifiedContainerFocusNavigation(
                 screen, event.getKeyCode()
             );
@@ -46,9 +42,6 @@ public final class UiNavigationEvents {
             }
             event.setCanceled(true);
             if (handled) {
-                if (focusBefore != null) {
-                    focusBefore.playIfChanged(screen);
-                }
                 screen.afterKeyboardAction();
             }
         }
@@ -56,8 +49,6 @@ public final class UiNavigationEvents {
 
     @SubscribeEvent
     public static void onScreenKeyPressedPost(ScreenEvent.KeyPressed.Post event) {
-        InputActionSounds.FocusSnapshot focusBefore = KEY_FOCUS.get();
-        KEY_FOCUS.remove();
         if (!UiInputModeController.hasCurrentSlot()
             || !UiInputModeController.isFocusNavigationKey(event.getKeyCode())) {
             return;
@@ -73,9 +64,6 @@ public final class UiNavigationEvents {
         }
         if (UiInputModeController.applyContainerItemSlotFocusFallback(screen, event.getKeyCode())) {
             screen.afterKeyboardAction();
-        }
-        if (focusBefore != null) {
-            focusBefore.playIfChanged(screen);
         }
     }
 

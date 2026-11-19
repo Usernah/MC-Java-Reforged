@@ -10,6 +10,9 @@ import net.jr.client.ui.dsl.UiDocumentManager;
 import net.jr.client.ui.container.ContainerOriginClient;
 import net.jr.network.ContainerOriginNetwork;
 import net.jr.api.client.render.font.FontRegister;
+import net.jr.api.client.render.glyph.GlyphProviders;
+import net.jr.client.render.glyph.ControllerGlyphProvider;
+import net.minecraft.resources.Identifier;
 import net.jr.registry.ModFonts;
 import net.jr.registry.ModUi;
 import net.jr.registry.ModVideos;
@@ -36,6 +39,10 @@ public class JavaReforgedClient {
         ModFonts.bootstrap();
         ModUi.bootstrap();
         ModVideos.bootstrap();
+        GlyphProviders.register(
+            Identifier.fromNamespaceAndPath(Java_reforged.MODID, "controls"),
+            ControllerGlyphProvider::new
+        );
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
     }
 
@@ -56,6 +63,7 @@ public class JavaReforgedClient {
         VideoRegister.registerClientReloadListener(event);
         FontRegister.registerClientReloadListener(event);
         UiDocumentManager.registerClientReloadListener(event);
+        GlyphProviders.registerClientReloadListener(event);
     }
 
     @SubscribeEvent

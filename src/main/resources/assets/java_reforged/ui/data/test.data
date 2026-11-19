@@ -1,0 +1,10 @@
+"enabled": true
+"title": "Java Reforged"
+"lives": 3
+"scale": 1.5
+"accent": #ff55aaff
+"modes": ["vanilla", "battle"]
+"layout": {
+    width: 320
+    height: 180
+}

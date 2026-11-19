@@ -10,10 +10,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public interface DslContainer {
+public interface DslContainer extends FramebufferScreen {
     UiContainerFile dslFile();
 
     default DslContainerContext dslContext() {
@@ -41,8 +42,14 @@ public interface DslContainer {
         return this.dslContext().itemSlots();
     }
 
+    @Nullable
     default ItemSlotGrid dslItemSlotGrid(String id) {
-        return new ItemSlotGrid(this.dsl(id));
+        DslNode node = this.dsl(id);
+        if (!node.isPresent()) {
+            return null;
+        }
+        ItemSlotGrid grid = node.recover(null, () -> new ItemSlotGrid(node));
+        return node.isUsable() ? grid : null;
     }
 
     default void extractDslBackground(

@@ -3,6 +3,7 @@
   "package": "net.jr.mixin.compat.combatroll",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "ClientEventsNeoForgeMixin",
     "HudRenderHelperMixin"
   ],
   "injectors": {

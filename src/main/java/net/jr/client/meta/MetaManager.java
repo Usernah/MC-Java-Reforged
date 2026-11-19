@@ -22,6 +22,7 @@ public final class MetaManager {
     private static final Asset RELOAD_LISTENER_ID = Asset.MOD("reload/metadata");
     private static final MetaManager INSTANCE = new MetaManager();
     private final Map<Asset, Optional<Meta>> cache = new HashMap<>();
+    private final Map<Asset, Optional<Meta>> explicitCache = new HashMap<>();
 
     private MetaManager() {}
 
@@ -33,8 +34,13 @@ public final class MetaManager {
         return cache.computeIfAbsent(texture, this::load);
     }
 
+    public Optional<Meta> getMetaResource(Asset metaResource) {
+        return explicitCache.computeIfAbsent(metaResource, this::loadResource);
+    }
+
     public void clearCache() {
         cache.clear();
+        explicitCache.clear();
     }
 
     public static void registerClientReloadListener(AddClientReloadListenersEvent event) {
@@ -42,22 +48,29 @@ public final class MetaManager {
     }
 
     private Optional<Meta> load(Asset texture) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null || minecraft.getResourceManager() == null) return Optional.empty();
         for (String suffix : SUFFIXES) {
             Asset metaResource = texture.withPathSuffix(suffix);
-            try {
-                Optional<Resource> resource = metaResource.find(minecraft.getResourceManager());
-                if (resource.isEmpty()) continue;
-                try (Reader reader = new InputStreamReader(resource.get().open(), StandardCharsets.UTF_8)) {
-                    return Optional.of(MetaParser.parse(reader));
-                }
-            } catch (Exception exception) {
-                Java_reforged.LOGGER.error("Invalid metadata {}", metaResource, exception);
-                return Optional.empty();
+            Optional<Meta> meta = this.loadResource(metaResource);
+            if (meta.isPresent()) {
+                return meta;
             }
         }
         return Optional.empty();
+    }
+
+    private Optional<Meta> loadResource(Asset metaResource) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft == null || minecraft.getResourceManager() == null) return Optional.empty();
+        try {
+            Optional<Resource> resource = metaResource.find(minecraft.getResourceManager());
+            if (resource.isEmpty()) return Optional.empty();
+            try (Reader reader = new InputStreamReader(resource.get().open(), StandardCharsets.UTF_8)) {
+                return Optional.of(MetaParser.parse(reader));
+            }
+        } catch (Exception exception) {
+            Java_reforged.LOGGER.error("Invalid metadata {}", metaResource, exception);
+            return Optional.empty();
+        }
     }
 
     private static final class ReloadListener extends SimplePreparableReloadListener<List<String>> {

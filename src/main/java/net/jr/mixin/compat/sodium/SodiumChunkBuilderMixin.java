@@ -1,19 +1,32 @@
 package net.jr.mixin.compat.sodium;
 
-import net.jr.api.client.render.world.WorldRenderContext;
-import net.jr.api.client.render.world.WorldRenderContexts;
 import net.jr.client.compat.sodium.SodiumChunkBuildContextRouter;
+import net.minecraft.client.multiplayer.ClientLevel;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder", remap = false)
 abstract class SodiumChunkBuilderMixin {
+    @Unique
+    private ClientLevel javaReforged$level;
+
+    @Inject(method = "<init>", at = @At("RETURN"), remap = false)
+    private void javaReforged$captureLevel(
+        ClientLevel level,
+        @Coerce Object vertexType,
+        CallbackInfo ci
+    ) {
+        this.javaReforged$level = level;
+    }
+
     @Inject(method = "scheduleTask", at = @At("RETURN"), remap = false)
     private void javaReforged$bindJobToSourceLevel(
         @Coerce Object task,
@@ -21,10 +34,18 @@ abstract class SodiumChunkBuilderMixin {
         @Coerce Object consumer,
         CallbackInfoReturnable<Object> cir
     ) {
-        WorldRenderContext context = WorldRenderContexts.currentOrNull();
-        if (context != null && cir.getReturnValue() != null) {
-            SodiumChunkBuildContextRouter.register(cir.getReturnValue(), context.level());
+        if (this.javaReforged$level != null && cir.getReturnValue() != null) {
+            SodiumChunkBuildContextRouter.register(
+                this,
+                cir.getReturnValue(),
+                this.javaReforged$level
+            );
         }
+    }
+
+    @Inject(method = "shutdown", at = @At("HEAD"), remap = false)
+    private void javaReforged$discardScheduledRoutes(CallbackInfo ci) {
+        SodiumChunkBuildContextRouter.discardBuilder(this, this.javaReforged$level);
     }
 
     @Redirect(

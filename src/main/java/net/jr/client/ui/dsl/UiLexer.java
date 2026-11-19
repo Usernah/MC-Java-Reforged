@@ -9,6 +9,7 @@ final class UiLexer {
     enum Type {
         AT,
         AT_AT,
+        DOUBLE_COLON,
         AMPERSAND,
         DATA_START,
         IDENTIFIER,
@@ -36,6 +37,7 @@ final class UiLexer {
         PERCENT,
         COMMA,
         DOT,
+        INVALID,
         EOF
     }
 
@@ -45,6 +47,7 @@ final class UiLexer {
     private final Asset sourceAsset;
     private final String source;
     private final List<Token> tokens = new ArrayList<>();
+    private final List<UiParseException> diagnostics = new ArrayList<>();
     private int index;
     private int line = 1;
     private int column = 1;
@@ -54,7 +57,7 @@ final class UiLexer {
         this.source = source;
     }
 
-    List<Token> lex() throws UiParseException {
+    Result lex() {
         while (!this.end()) {
             this.skipWhitespaceAndComments();
             if (this.end()) {
@@ -78,6 +81,12 @@ final class UiLexer {
                 this.advance();
                 this.advance();
                 this.add(Type.DATA_START, "${", tokenLine, tokenColumn);
+                continue;
+            }
+            if (current == ':' && this.peekNext() == ':') {
+                this.advance();
+                this.advance();
+                this.add(Type.DOUBLE_COLON, "::", tokenLine, tokenColumn);
                 continue;
             }
             if (current == '&') {
@@ -109,7 +118,11 @@ final class UiLexer {
                     case '=' -> followedByEquals ? Type.EQUAL_EQUAL : Type.EQUALS;
                     case '!' -> {
                         if (!followedByEquals) {
-                            throw this.error(tokenLine, tokenColumn, "Expected '=' after '!'");
+                            this.diagnostics.add(this.error(
+                                tokenLine, tokenColumn, "Expected '=' after '!'"
+                            ));
+                            this.add(Type.INVALID, "!", tokenLine, tokenColumn);
+                            yield null;
                         }
                         yield Type.NOT_EQUAL;
                     }
@@ -117,6 +130,9 @@ final class UiLexer {
                     case '>' -> followedByEquals ? Type.GREATER_OR_EQUAL : Type.GREATER;
                     default -> throw new IllegalStateException();
                 };
+                if (type == null) {
+                    continue;
+                }
                 this.add(type, followedByEquals ? current + "=" : Character.toString(current), tokenLine, tokenColumn);
                 continue;
             }
@@ -137,13 +153,22 @@ final class UiLexer {
                 case '%' -> Type.PERCENT;
                 case ',' -> Type.COMMA;
                 case '.' -> Type.DOT;
-                default -> throw this.error(tokenLine, tokenColumn, "Unexpected character '" + current + "'");
+                default -> null;
             };
+            if (type == null) {
+                this.diagnostics.add(this.error(
+                    tokenLine, tokenColumn, "Unexpected character '" + current + "'"
+                ));
+                this.add(
+                    Type.INVALID, Character.toString(current), tokenLine, tokenColumn
+                );
+                continue;
+            }
             this.add(type, Character.toString(current), tokenLine, tokenColumn);
         }
 
         this.tokens.add(new Token(Type.EOF, "", this.line, this.column));
-        return List.copyOf(this.tokens);
+        return new Result(List.copyOf(this.tokens), List.copyOf(this.diagnostics));
     }
 
     private void skipWhitespaceAndComments() {
@@ -169,14 +194,25 @@ final class UiLexer {
         }
     }
 
-    private void lexString(char quote, int tokenLine, int tokenColumn) throws UiParseException {
+    private void lexString(char quote, int tokenLine, int tokenColumn) {
         this.advance();
         StringBuilder value = new StringBuilder();
         while (!this.end() && this.peek() != quote) {
+            if (this.peek() == '\n' || this.peek() == '\r') {
+                this.diagnostics.add(this.error(
+                    tokenLine, tokenColumn, "Unterminated string"
+                ));
+                this.add(Type.INVALID, value.toString(), tokenLine, tokenColumn);
+                return;
+            }
             char current = this.advance();
             if (current == '\\') {
                 if (this.end()) {
-                    throw this.error(tokenLine, tokenColumn, "Unterminated string");
+                    this.diagnostics.add(this.error(
+                        tokenLine, tokenColumn, "Unterminated string"
+                    ));
+                    this.add(Type.INVALID, value.toString(), tokenLine, tokenColumn);
+                    return;
                 }
                 char escaped = this.advance();
                 value.append(switch (escaped) {
@@ -193,7 +229,11 @@ final class UiLexer {
             }
         }
         if (this.end()) {
-            throw this.error(tokenLine, tokenColumn, "Unterminated string");
+            this.diagnostics.add(this.error(
+                tokenLine, tokenColumn, "Unterminated string"
+            ));
+            this.add(Type.INVALID, value.toString(), tokenLine, tokenColumn);
+            return;
         }
         this.advance();
         this.add(Type.STRING, value.toString(), tokenLine, tokenColumn);
@@ -283,6 +323,9 @@ final class UiLexer {
 
     private UiParseException error(int errorLine, int errorColumn, String message) {
         return new UiParseException(this.sourceAsset, errorLine, errorColumn, message);
+    }
+
+    record Result(List<Token> tokens, List<UiParseException> diagnostics) {
     }
 
     private static boolean isIdentifierStart(char value) {

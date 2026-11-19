@@ -6,10 +6,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
 
-/**
- * All view-dependent inputs required to extract or render one local world.
- * Implementations are valid only for the duration of the current render pass.
- */
+
 public interface WorldRenderContext {
     int slotId();
 
@@ -25,8 +22,6 @@ public interface WorldRenderContext {
 
     DeltaTracker deltaTracker();
 
-    /**
-     * Whether this view may advance work that belongs to the shared world renderer.
-     */
+
     boolean updatesTerrain();
 }

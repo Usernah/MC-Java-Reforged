@@ -32,6 +32,13 @@ import net.jr.client.input.gamepad.RawGamepadInputPress;
 import net.minecraft.client.Minecraft;
 
 public final class SdlGamepad {
+    private static final String BACKEND_MODE = System.getProperty("split.sdlBackend", "automatic")
+        .trim()
+        .toLowerCase(Locale.ROOT);
+    private static final String HINT_JOYSTICK_GAMEINPUT = "SDL_JOYSTICK_GAMEINPUT";
+    private static final String HINT_JOYSTICK_GAMEINPUT_RAW = "SDL_JOYSTICK_GAMEINPUT_RAW";
+    private static final String HINT_JOYSTICK_HIDAPI_GIP = "SDL_JOYSTICK_HIDAPI_GIP";
+    private static final String HINT_JOYSTICK_HIDAPI_GAMESIR = "SDL_JOYSTICK_HIDAPI_GAMESIR";
     private static final long EVENT_POLL_INTERVAL_MS = 8L;
     private static final long DEVICE_SETTLE_DELAY_MS = 1200L;
     private static final long INVENTORY_SCAN_INTERVAL_MS = 2000L;
@@ -193,11 +200,7 @@ public final class SdlGamepad {
         return snapshot(deviceId).identity();
     }
 
-    /**
-     * SDL instance IDs are recreated after a hot-plug. These two values come
-     * from the opened joystick and are stable enough to correlate a returning
-     * physical controller with its previous instance when SDL provides them.
-     */
+
     public static String serial(long deviceId) {
         SDL_LOCK.lock();
         try {
@@ -457,9 +460,9 @@ public final class SdlGamepad {
         }
 
         Map<Long, SdlGamepadSnapshot> nextSnapshots = null;
-        // Input sampling owns this lock while it is inside SDL. Rendering must
-        // never wait behind a slow native controller call just to check whether
-        // an inventory scan is due.
+
+
+
         if (!SDL_LOCK.tryLock()) {
             return;
         }
@@ -575,19 +578,70 @@ public final class SdlGamepad {
             return;
         }
 
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_AUTO_UPDATE_JOYSTICKS, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_XBOX, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_PS4, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_STEAM, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_STEAMDECK, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_SWITCH, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_WGI, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_DIRECTINPUT, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_RAWINPUT, "1");
-        SdlHints.SDL_SetHint(SdlHintConsts.SDL_HINT_JOYSTICK_RAWINPUT_CORRELATE_XINPUT, "1");
+        setHint(SdlHintConsts.SDL_HINT_AUTO_UPDATE_JOYSTICKS, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+
+        switch (BACKEND_MODE) {
+            case "gameinput-raw" -> configureGameInputRawHints();
+            case "hidapi-gip" -> configureHidapiGipHints();
+            case "automatic" -> configureAutomaticHints();
+            default -> {
+                Java_reforged.LOGGER.warn(
+                    "Modo SDL '{}' desconocido; se usara 'automatic'. Modos: gameinput-raw, hidapi-gip, automatic.",
+                    BACKEND_MODE
+                );
+                configureAutomaticHints();
+            }
+        }
+        Java_reforged.LOGGER.info("[SplitSDL] Backend solicitado: {}.", BACKEND_MODE);
+    }
+
+    private static void configureGameInputRawHints() {
+        setHint(HINT_JOYSTICK_GAMEINPUT, "1");
+        setHint(HINT_JOYSTICK_GAMEINPUT_RAW, "1");
+        setHint(SdlHintConsts.SDL_HINT_XINPUT_ENABLED, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_WGI, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_DIRECTINPUT, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_RAWINPUT, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI, "0");
+    }
+
+    private static void configureHidapiGipHints() {
+        setHint(HINT_JOYSTICK_GAMEINPUT, "0");
+        setHint(HINT_JOYSTICK_GAMEINPUT_RAW, "0");
+        setHint(SdlHintConsts.SDL_HINT_XINPUT_ENABLED, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_WGI, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_DIRECTINPUT, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_RAWINPUT, "0");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_XBOX, "1");
+        setHint(HINT_JOYSTICK_HIDAPI_GIP, "1");
+        setHint(HINT_JOYSTICK_HIDAPI_GAMESIR, "1");
+    }
+
+    private static void configureAutomaticHints() {
+        setHint(HINT_JOYSTICK_GAMEINPUT, "1");
+        setHint(HINT_JOYSTICK_GAMEINPUT_RAW, "1");
+        setHint(SdlHintConsts.SDL_HINT_XINPUT_ENABLED, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_XBOX, "1");
+        setHint(HINT_JOYSTICK_HIDAPI_GIP, "1");
+        setHint(HINT_JOYSTICK_HIDAPI_GAMESIR, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_PS4, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_STEAM, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_STEAMDECK, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_HIDAPI_SWITCH, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_WGI, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_DIRECTINPUT, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_RAWINPUT, "1");
+        setHint(SdlHintConsts.SDL_HINT_JOYSTICK_RAWINPUT_CORRELATE_XINPUT, "1");
+    }
+
+    private static void setHint(String name, String value) {
+        if (!SdlHints.SDL_SetHint(name, value)) {
+            Java_reforged.LOGGER.warn("SDL rechazo el hint {}={}.", name, value);
+        }
     }
 
     private static boolean openAvailableControllers() {
@@ -690,7 +744,7 @@ public final class SdlGamepad {
             Java_reforged.LOGGER.debug("[SplitSDL] Steam Input handle detectado para gamepad id {}: {}", deviceId.longValue(), steamHandle);
         }
         printedDebug = false;
-        Java_reforged.LOGGER.info("[SplitSDL] Opened gamepad instance={}", instanceId);
+        logOpenedDevice("gamepad", instanceId, openedJoystick);
         return true;
     }
 
@@ -725,8 +779,31 @@ public final class SdlGamepad {
             deviceIdentifier(SdlJoystick.SDL_GetJoystickPath(opened))
         ));
         printedDebug = false;
-        Java_reforged.LOGGER.info("[SplitSDL] Opened raw joystick instance={}", instanceId);
+        logOpenedDevice("raw joystick", instanceId, opened);
         return true;
+    }
+
+    private static void logOpenedDevice(String kind, long instanceId, SDL_Joystick joystick) {
+        GamepadIdentity identity = SdlGamepadIdentity.fromJoystick(joystick);
+        Java_reforged.LOGGER.info(
+            "[SplitSDL] Opened {} instance={} backend={} name='{}' vid={}:{} version={} path='{}' axes={} buttons={} hats={} guid={}",
+            kind,
+            instanceId,
+            BACKEND_MODE,
+            identity.displayName(),
+            String.format(Locale.ROOT, "%04x", identity.vendor()),
+            String.format(Locale.ROOT, "%04x", identity.product()),
+            String.format(Locale.ROOT, "%04x", identity.productVersion()),
+            deviceIdentifier(SdlJoystick.SDL_GetJoystickPath(joystick)),
+            Math.max(0, SdlJoystick.SDL_GetNumJoystickAxes(joystick)),
+            Math.max(0, SdlJoystick.SDL_GetNumJoystickButtons(joystick)),
+            Math.max(0, SdlJoystick.SDL_GetNumJoystickHats(joystick)),
+            identity.guid()
+        );
+    }
+
+    static boolean isBackendProbeMode() {
+        return !"automatic".equals(BACKEND_MODE);
     }
 
     private static boolean isGameController(SDL_JoystickID deviceId) {

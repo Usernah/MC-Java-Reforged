@@ -181,6 +181,10 @@ public final class TerrainCoordinator {
             return false;
         }
 
+        return requestGlobalGeometryRebuild();
+    }
+
+    public static boolean requestGlobalGeometryRebuild() {
         Minecraft minecraft = Minecraft.getInstance();
         int viewDistance = minecraft.options.getEffectiveRenderDistance();
         Set<ClientLevel> clearedLevels = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
@@ -209,8 +213,8 @@ public final class TerrainCoordinator {
             return;
         }
 
-        releaseAllViews();
         store.invalidateCompiledGeometry();
+        invalidateAllViewGraphs();
     }
 
     public static void clearSharedCompileQueueOnce(SectionRenderDispatcher dispatcher) {
@@ -337,6 +341,16 @@ public final class TerrainCoordinator {
         for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
             TerrainMultiDraw.invalidateSlot(slotId);
             ClientRuntime.INSTANCE.slots().slot(slotId).renderState().terrain().releaseViewArea();
+        }
+    }
+
+    private static void invalidateAllViewGraphs() {
+        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
+            TerrainMultiDraw.invalidateSlot(slotId);
+            TerrainState terrain = ClientRuntime.INSTANCE.slots().slot(slotId).renderState().terrain();
+            if (terrain.viewArea() != null) {
+                terrain.sectionOcclusionGraph().invalidate();
+            }
         }
     }
 

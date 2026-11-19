@@ -4,14 +4,17 @@ import net.jr.client.runtime.options.OptionsLifecycleHandler;
 import net.jr.client.runtime.options.OptionsStateResolver;
 import net.jr.mixin.accessors.OptionsAccessor;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.AttackIndicatorStatus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import net.minecraft.world.entity.HumanoidArm;
 
 @Mixin(Options.class)
 public abstract class OptionsMixin {
@@ -104,6 +107,27 @@ public abstract class OptionsMixin {
     @Inject(method = "operatorItemsTab", at = @At("HEAD"), cancellable = true)
     private void javaReforged$getOperatorItemsTab(CallbackInfoReturnable<OptionInstance<Boolean>> callback) {
         callback.setReturnValue(OptionsStateResolver.current().operatorItemsTab());
+    }
+
+    @Inject(method = "attackIndicator", at = @At("HEAD"), cancellable = true)
+    private void javaReforged$getAttackIndicator(CallbackInfoReturnable<OptionInstance<AttackIndicatorStatus>> callback) {
+        callback.setReturnValue(OptionsStateResolver.current().attackIndicator());
+    }
+
+    @Inject(method = "mainHand", at = @At("HEAD"), cancellable = true)
+    private void javaReforged$getMainHand(CallbackInfoReturnable<OptionInstance<HumanoidArm>> callback) {
+        callback.setReturnValue(OptionsStateResolver.current().mainHand());
+    }
+
+    @Redirect(
+            method = "buildPlayerInformation",
+            at = @At(
+                    value = "FIELD",
+                    target = "Lnet/minecraft/client/Options;mainHand:Lnet/minecraft/client/OptionInstance;"
+            )
+    )
+    private OptionInstance<HumanoidArm> javaReforged$buildInformationWithCurrentMainHand(Options options) {
+        return OptionsStateResolver.current().mainHand();
     }
 
     @Inject(method = "load", at = @At("TAIL"))

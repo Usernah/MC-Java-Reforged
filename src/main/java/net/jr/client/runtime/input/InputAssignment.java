@@ -12,7 +12,7 @@ import net.jr.api.client.input.IGamepad;
 import net.jr.api.client.input.IMutableInputAssignment;
 import net.jr.client.runtime.slot.ClientSlots;
 
-/** Owns controller assignment, neutralization and unique physical reconnects. */
+
 public final class InputAssignment implements IMutableInputAssignment {
     public static final int UNASSIGNED_SLOT = -1;
     public static final int KEYBOARD_MOUSE_SLOT = 0;

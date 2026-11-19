@@ -1,12 +1,13 @@
 package net.jr.client.ui.cursor;
 
 import net.jr.Java_reforged;
+import net.jr.api.client.split.SplitScreen;
 import net.jr.api.client.ui.Viewport;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.input.CursorVisibility;
 import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.runtime.viewport.ViewportArea;
-import net.jr.client.runtime.viewport.ViewportGuiScale;
+import net.jr.client.ui.render.composition.ScreenFramebufferSpace;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.api.client.render.Draw;
 import net.jr.api.client.resource.Asset;
@@ -24,8 +25,7 @@ public final class CursorRenderer {
 
     private static final Asset MOUSE_CURSOR_TEXTURE = Asset.NamespaceAndPatch(Java_reforged.MODID, "textures/cursor/mouse.png");
     private static final Asset JOYSTICK_CURSOR_TEXTURE = Asset.NamespaceAndPatch(Java_reforged.MODID, "textures/cursor/joystick.png");
-    private static final float CURSOR_WIDTH = 16.0f;
-    private static final float CURSOR_HEIGHT = 16.0f;
+    private static final float CURSOR_SIZE = 32.0f;
     private static final float HOTSPOT_X = 3.75f;
     private static final float HOTSPOT_Y = 1.875f;
 
@@ -35,7 +35,10 @@ public final class CursorRenderer {
     @SubscribeEvent
     public static void onRenderFrame(RenderFrameEvent.Pre event) {
         Minecraft minecraft = Minecraft.getInstance();
-        CursorVisibility.setReplacementHidden(slotWantsSystemCursorHidden(minecraft));
+        CursorVisibility.setReplacementHiddenForSlot(
+            InputApi.keyboardMouseSlotId(),
+            slotWantsSystemCursorHidden(minecraft)
+        );
         CursorVisibility.sync();
     }
 
@@ -75,8 +78,7 @@ public final class CursorRenderer {
             return false;
         }
         return GamepadInputHandler.isControllerCursorActive()
-            ? InputApi.isGamepadConnected()
-            : InputApi.canPhysicalMouseDrive();
+            && InputApi.isGamepadConnected();
     }
 
     private static boolean slotWantsSystemCursorHidden(Minecraft minecraft) {
@@ -84,7 +86,8 @@ public final class CursorRenderer {
             return true;
         }
 
-        return slotWantsReplacementCursor(minecraft);
+        return GamepadInputHandler.isControllerCursorActive()
+                && InputApi.isGamepadConnected();
     }
 
     private static CursorPosition resolveCursorPosition(Minecraft minecraft) {
@@ -110,10 +113,12 @@ public final class CursorRenderer {
 
         ViewportArea viewport = Viewport.current();
         return new CursorPosition(
-            viewport.windowMouseToLocalGuiX(minecraft.mouseHandler.xpos())
-                * ViewportGuiScale.screenLogicalWidth(viewport) / viewport.guiWidth(),
-            viewport.windowMouseToLocalGuiY(minecraft.mouseHandler.ypos())
-                * ViewportGuiScale.screenLogicalHeight(viewport) / viewport.guiHeight()
+            ScreenFramebufferSpace.windowMouseX(
+                minecraft.gui.screen(), viewport, minecraft.mouseHandler.xpos()
+            ),
+            ScreenFramebufferSpace.windowMouseY(
+                minecraft.gui.screen(), viewport, minecraft.mouseHandler.ypos()
+            )
         );
     }
 
@@ -122,21 +127,22 @@ public final class CursorRenderer {
             return;
         }
 
-        boolean shouldCenterCursor = GamepadInputHandler.isControllerCursorActive();
+        //boolean shouldCenterCursor = GamepadInputHandler.isControllerCursorActive();
 
-        float finalHotspotX = shouldCenterCursor ? CURSOR_WIDTH / 2.0F : HOTSPOT_X;
-        float finalHotspotY = shouldCenterCursor ? CURSOR_HEIGHT / 2.0F : HOTSPOT_Y;
+        //float finalHotspotX = shouldCenterCursor ? CURSOR_WIDTH / 2.0F : HOTSPOT_X;
+        //float finalHotspotY = shouldCenterCursor ? CURSOR_HEIGHT / 2.0F : HOTSPOT_Y;
 
-        float drawX = (float) cursor.x() - finalHotspotX;
-        float drawY = (float) cursor.y() - finalHotspotY;
-        Asset cursorTexture = resolveCursorTexture();
+        float finalHotspot = CURSOR_SIZE / 2.0F;
+
+        float drawX = (float) cursor.x() - finalHotspot;
+        float drawY = (float) cursor.y() - finalHotspot;
+        Asset cursorTexture = JOYSTICK_CURSOR_TEXTURE;
         guiGraphics.nextStratum();
-        Draw.image(cursorTexture, drawX, drawY, CURSOR_WIDTH, CURSOR_HEIGHT)
-            .uvSize(32, 32)
-            .atlasSize(32, 32)
+        Draw.image(cursorTexture, drawX, drawY, CURSOR_SIZE, CURSOR_SIZE)
             .draw(guiGraphics);
     }
 
+    //unused, reserved for future DSL-based cursor customizations.
     private static Asset resolveCursorTexture() {
         return GamepadInputHandler.isControllerCursorActive()
             ? JOYSTICK_CURSOR_TEXTURE

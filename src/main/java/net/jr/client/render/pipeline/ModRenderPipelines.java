@@ -18,6 +18,10 @@ public final class ModRenderPipelines {
         .withUniform("TerrainBatch", UniformType.UNIFORM_BUFFER)
         .build();
 
+    public static final BindGroupLayout LEGACY_GAMMA_LAYOUT = BindGroupLayout.builder()
+        .withUniform("LegacyGammaConfig", UniformType.UNIFORM_BUFFER)
+        .build();
+
     public static final VertexFormat TERRAIN_SECTION_INSTANCE_FORMAT = VertexFormat.builder(1)
         .addAttribute("ChunkPosition", GpuFormat.RGB32_SINT)
         .addAttribute("ChunkVisibility", GpuFormat.R32_FLOAT)
@@ -63,6 +67,15 @@ public final class ModRenderPipelines {
         .withPrimitiveTopology(PrimitiveTopology.QUADS)
         .build();
 
+    public static final RenderPipeline LEGACY_GAMMA = RenderPipeline.builder(RenderPipelines.GLOBALS_SNIPPET)
+        .withLocation(Asset.MOD("pipeline/legacy_gamma").res())
+        .withVertexShader(Asset.MC("core/screenquad").res())
+        .withFragmentShader(Asset.MOD("core/legacy_gamma").res())
+        .withBindGroupLayout(BindGroupLayouts.IN_SAMPLER)
+        .withBindGroupLayout(LEGACY_GAMMA_LAYOUT)
+        .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+        .build();
+
     private static final RenderPipeline.Snippet TERRAIN_MULTIDRAW_SNIPPET = RenderPipeline.builder(RenderPipelines.GENERIC_BLOCKS_SNIPPET)
         .withBindGroupLayout(BindGroupLayouts.PROJECTION)
         .withBindGroupLayout(TERRAIN_BATCH_LAYOUT)
@@ -86,6 +99,7 @@ public final class ModRenderPipelines {
     public static void register(RegisterRenderPipelinesEvent event) {
         event.registerPipeline(ANIMATED_TEXTURE);
         event.registerPipeline(PIXEL_ART_COMPOSITE);
+        event.registerPipeline(LEGACY_GAMMA);
         event.registerPipeline(SOLID_TERRAIN_MULTIDRAW);
         event.registerPipeline(CUTOUT_TERRAIN_MULTIDRAW);
     }

@@ -6,7 +6,7 @@
 @@import asset.local("textures/controller/steam/button_select.png") as steam_select
 
 @@blueprint controller_icon(x, y, width, height) {
-    image "glyph" {
+    image {
         texture: @steam_select
         x: &x
         y: &y
@@ -19,5 +19,5 @@
 }
 
 @@blueprint controller_badge(x, y, width, height) {
-    @controller_icon "icon" (&x, &y, &width, &height)
+    @controller_icon(&x, &y, &width, &height)
 }

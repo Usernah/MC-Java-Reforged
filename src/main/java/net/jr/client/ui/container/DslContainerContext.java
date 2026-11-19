@@ -9,7 +9,7 @@ import net.minecraft.world.inventory.Slot;
 
 import java.util.List;
 
-/** Runtime state and container geometry for one container DSL document. */
+
 public final class DslContainerContext extends DslUiContext<UiContainerFile> {
     private final AbstractContainerScreen<?> container;
 
@@ -63,7 +63,10 @@ public final class DslContainerContext extends DslUiContext<UiContainerFile> {
         }
         Object value = this.property("compatible_blocks");
         if (!(value instanceof List<?> blocks)) {
-            throw new IllegalArgumentException("container compatible_blocks must be a list");
+            this.report(
+                "$document", "container compatible_blocks must be a list", null
+            );
+            return false;
         }
         return blocks.stream().anyMatch(blockId::equals);
     }

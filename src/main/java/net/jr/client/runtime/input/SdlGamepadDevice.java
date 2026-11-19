@@ -13,7 +13,7 @@ import net.jr.client.input.gamepad.GamepadInput;
 import net.jr.client.input.gamepad.GamepadProfileResolver;
 import net.jr.client.input.sdl.SdlGamepad;
 
-/** The SDL instance handle stays on this side of the input API. */
+
 final class SdlGamepadDevice implements IGamepad, ReconnectableGamepad {
     private static final IGamepadHaptics NO_HAPTICS = new IGamepadHaptics() {
         @Override public boolean supported() { return false; }

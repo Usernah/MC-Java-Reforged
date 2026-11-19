@@ -6,4 +6,7 @@ public interface DslScreenBridge {
     DslScreenContext javaReforged$dslContext(UiScreenFile file);
 
     void javaReforged$closeDslContext();
+
+    /** Peek without instantiating a context (used by neutral inspection tools). */
+    DslScreenContext javaReforged$peekDslContext();
 }

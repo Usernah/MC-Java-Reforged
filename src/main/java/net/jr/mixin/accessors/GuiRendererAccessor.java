@@ -1,6 +1,9 @@
 package net.jr.mixin.accessors;
 
 import net.minecraft.client.gui.render.GuiRenderer;
+import net.minecraft.client.gui.render.GuiItemAtlas;
+import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -11,6 +14,12 @@ public interface GuiRendererAccessor {
     @Accessor("renderState")
     GuiRenderState javaReforged$getRenderState();
 
-    @Invoker("invalidateItemAtlas")
-    void javaReforged$invalidateItemAtlas();
+    @Accessor("featureRenderDispatcher")
+    FeatureRenderDispatcher javaReforged$getFeatureRenderDispatcher();
+
+    @Invoker("submitBlitFromItemAtlas")
+    void javaReforged$submitBlitFromItemAtlas(
+        GuiItemRenderState state,
+        GuiItemAtlas.SlotView slot
+    );
 }

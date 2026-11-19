@@ -9,6 +9,7 @@ import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
+import net.jr.client.ui.render.composition.GuiCompositionScope;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
@@ -44,6 +45,10 @@ abstract class MinimapCoreMixin {
 
     @Inject(method = "beforeIngameGuiRender", at = @At("HEAD"), cancellable = true)
     private static void javaReforged$renderWorldElementsPerViewport(CallbackInfo callback) {
+        if (GuiCompositionScope.activeRenderingOrNull() != null) {
+            callback.cancel();
+            return;
+        }
         if (!XaeroMinimapCore.isModLoaded() || ViewportRenderScope.hasActiveViewport()) {
             return;
         }
@@ -59,6 +64,10 @@ abstract class MinimapCoreMixin {
 
     @Inject(method = "afterIngameGuiRender", at = @At("HEAD"), cancellable = true)
     private static void javaReforged$finishWorldElementsPerViewport(CallbackInfo callback) {
+        if (GuiCompositionScope.activeRenderingOrNull() != null) {
+            callback.cancel();
+            return;
+        }
         if (!XaeroMinimapCore.isModLoaded() || ViewportRenderScope.hasActiveViewport()) {
             return;
         }

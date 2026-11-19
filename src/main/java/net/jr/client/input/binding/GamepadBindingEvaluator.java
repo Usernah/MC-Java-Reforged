@@ -56,6 +56,7 @@ final class GamepadBindingEvaluator {
                 InputApi.click(sample.keyMapping());
             }
             if (down != previous) {
+                InputApi.setPhysicallyDown(sample.keyMapping(), down);
                 sample.keyMapping().setDown(down);
             }
             nextStates.put(sample.keyName(), down);
@@ -65,6 +66,7 @@ final class GamepadBindingEvaluator {
             if (!nextStates.containsKey(keyName)) {
                 KeyMapping keyMapping = bindings.keyMapping(keyName);
                 if (keyMapping != null) {
+                    InputApi.setPhysicallyDown(keyMapping, false);
                     keyMapping.setDown(false);
                 }
             }
@@ -82,6 +84,7 @@ final class GamepadBindingEvaluator {
         for (String keyName : this.appliedStates.keySet()) {
             KeyMapping keyMapping = bindings.keyMapping(keyName);
             if (keyMapping != null) {
+                InputApi.setPhysicallyDown(keyMapping, false);
                 keyMapping.setDown(false);
             }
         }

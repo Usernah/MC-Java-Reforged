@@ -5,61 +5,80 @@ import net.minecraft.client.renderer.state.gui.GuiRenderState;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class ItemRenderResolution {
-    private static final int VANILLA_ITEM_SIZE = 16;
+    public static final int VANILLA_ITEM_SIZE = 16;
 
-    private static final ThreadLocal<Integer> ACTIVE_SIZE =
-            ThreadLocal.withInitial(() -> VANILLA_ITEM_SIZE);
-    private static final Map<GuiItemRenderState, Integer> STATE_SIZES =
-            new IdentityHashMap<>();
+    private static final Request DEFAULT_REQUEST = new Request(VANILLA_ITEM_SIZE, Kind.SLOT);
+    private static final ThreadLocal<Request> ACTIVE_REQUEST =
+        ThreadLocal.withInitial(() -> DEFAULT_REQUEST);
+    private static final ThreadLocal<Map<GuiItemRenderState, Request>> STATE_REQUESTS =
+        ThreadLocal.withInitial(WeakHashMap::new);
 
-    private static int frameItemSize = VANILLA_ITEM_SIZE;
-
-    private ItemRenderResolution() {}
+    private ItemRenderResolution() {
+    }
 
     public static void drawAtSize(int size, Runnable drawCall) {
-        int previous = ACTIVE_SIZE.get();
-        ACTIVE_SIZE.set(Math.max(VANILLA_ITEM_SIZE, size));
+        draw(new Request(requirePositive(size), Kind.SLOT), drawCall);
+    }
+
+    public static void drawCarriedAtSize(int size, Runnable drawCall) {
+        draw(new Request(requirePositive(size), Kind.CARRIED), drawCall);
+    }
+
+    private static void draw(Request request, Runnable drawCall) {
+        Request previous = ACTIVE_REQUEST.get();
+        ACTIVE_REQUEST.set(request);
         try {
             drawCall.run();
         } finally {
-            ACTIVE_SIZE.set(previous);
+            ACTIVE_REQUEST.set(previous);
         }
     }
 
     public static GuiItemRenderState capture(GuiItemRenderState state) {
-        int size = ACTIVE_SIZE.get();
-        if (size > VANILLA_ITEM_SIZE) {
-            STATE_SIZES.put(state, size);
+        Request request = ACTIVE_REQUEST.get();
+        if (!request.equals(DEFAULT_REQUEST)) {
+            STATE_REQUESTS.get().put(state, request);
         }
         return state;
     }
 
-    public static void prepareFrame(GuiRenderState renderState) {
-        frameItemSize = VANILLA_ITEM_SIZE;
-        renderState.forEachItem(state -> frameItemSize = Math.max(
-                frameItemSize,
-                STATE_SIZES.getOrDefault(state, VANILLA_ITEM_SIZE)
-        ));
-    }
-
-    public static int atlasSlotSize(int vanillaSlotSize) {
-        if (frameItemSize <= VANILLA_ITEM_SIZE) {
-            return vanillaSlotSize;
+    public static Map<GuiItemRenderState, Request> collect(GuiRenderState renderState) {
+        Map<GuiItemRenderState, Request> pending = STATE_REQUESTS.get();
+        Map<GuiItemRenderState, Request> requests = new IdentityHashMap<>();
+        renderState.forEachItem(state -> {
+            Request request = pending.remove(state);
+            if (request != null) {
+                requests.put(state, request);
+            }
+        });
+        if (pending.isEmpty()) {
+            STATE_REQUESTS.remove();
         }
-        return Math.max(
-                vanillaSlotSize,
-                (int)Math.ceil((double)vanillaSlotSize * frameItemSize / VANILLA_ITEM_SIZE)
-        );
+        return requests;
     }
 
-    public static int preparedItemSize() {
-        return frameItemSize;
+    public static Request requestFor(
+        Map<GuiItemRenderState, Request> requests,
+        GuiItemRenderState state
+    ) {
+        return requests.getOrDefault(state, DEFAULT_REQUEST);
     }
 
-    public static void clearFrame() {
-        STATE_SIZES.clear();
-        frameItemSize = VANILLA_ITEM_SIZE;
+    private static int requirePositive(int size) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("Item render size must be positive");
+        }
+        return size;
+    }
+
+    public enum Kind {
+        SLOT,
+        CARRIED
+    }
+
+    public record Request(int size, Kind kind) {
     }
 }

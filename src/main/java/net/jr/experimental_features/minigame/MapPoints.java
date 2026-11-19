@@ -29,10 +29,10 @@ public class MapPoints {
                 centralSpawns.add(new PointPos(215,69,-216));
 
         List<PointPos> secondarySpawns = new ArrayList<>();
-                //secondarySpawns.add(new PointPos(13,68,14));
-                //secondarySpawns.add(new PointPos(-2,68,-1));
-                //secondarySpawns.add(new PointPos(13,68,-16));
-                //secondarySpawns.add(new PointPos(28,68,-1));
+
+
+
+
 
         List<PointPos> centralChest = new ArrayList<>();
                 centralChest.add(new PointPos(218, 63, -221));

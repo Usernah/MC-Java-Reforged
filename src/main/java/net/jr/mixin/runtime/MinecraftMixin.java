@@ -9,7 +9,8 @@ import net.jr.client.runtime.input.ScreenInputHandler;
 import net.jr.client.runtime.network.ClientPacketHandler;
 import net.jr.client.runtime.network.PacketExecutionRouter;
 import net.jr.client.runtime.player.BedrockBridgeUseHandler;
-import net.jr.client.runtime.render.pass.HudRenderPass;
+import net.jr.client.runtime.player.LegacyGameplayModes;
+import net.jr.client.runtime.render.pass.HudPass;
 import net.jr.client.runtime.render.pass.WorldExtractionPass;
 import net.jr.client.runtime.render.experimental.ExperimentalRenderController;
 import net.jr.client.runtime.session.DisconnectHandler;
@@ -145,6 +146,11 @@ public abstract class MinecraftMixin {
         }
     }
 
+    @Inject(method = "handleKeybinds", at = @At("HEAD"))
+    private void javaReforged$prepareLegacyConstructionRepeat(CallbackInfo ci) {
+        LegacyGameplayModes.prepareConstructionRepeat((Minecraft)(Object)this);
+    }
+
     @Redirect(method = "handleKeybinds", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MouseHandler;isMouseGrabbed()Z"))
     private boolean javaReforged$usePerClientGameplayCapture(MouseHandler mouseHandler) {
         return ScreenInputHandler.isGameplayCaptured((Minecraft) (Object) this, mouseHandler);
@@ -157,7 +163,7 @@ public abstract class MinecraftMixin {
 
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;tick()V"))
     private void javaReforged$tickHudBySlot(Gui gui) {
-        HudRenderPass.tick(gui);
+        HudPass.tick(gui);
     }
 
     @Inject(method = "pauseGame", at = @At("HEAD"), cancellable = true)
@@ -204,8 +210,8 @@ public abstract class MinecraftMixin {
         boolean advanceGameTime,
         Operation<Void> original
     ) {
-        // A forced no-time frame clears the entire shared target without rendering any world.
-        // Keep it for the initial world load, but not for a local respawn or transition.
+
+
         boolean localWorldVisible = ClientRuntime.INSTANCE.viewports().presentedCount() > 1
             || ClientRuntime.INSTANCE.clients().all().stream()
                 .anyMatch(ReadinessPolicy::worldReady);
@@ -219,6 +225,7 @@ public abstract class MinecraftMixin {
         Minecraft minecraft = (Minecraft) (Object) this;
         PreJoinWorldLoad.tick(minecraft);
         SlotScreenTransitionHandler.closeCompletedPrimaryJoiningScreen(minecraft);
+        SlotScreenTransitionHandler.closeCompletedSecondaryJoiningScreens(minecraft);
     }
 
     @Inject(method = "tick", at = @At("RETURN"))
@@ -279,5 +286,34 @@ public abstract class MinecraftMixin {
         }
 
         return original.call(gameMode, player, hand);
+    }
+
+    @WrapOperation(
+            method = "startUseItem",
+            at = @At(
+                    value = "INVOKE",
+                    target =
+                            "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;" +
+                                    "useItemOn(" +
+                                    "Lnet/minecraft/client/player/LocalPlayer;" +
+                                    "Lnet/minecraft/world/InteractionHand;" +
+                                    "Lnet/minecraft/world/phys/BlockHitResult;" +
+                                    ")Lnet/minecraft/world/InteractionResult;"
+            )
+    )
+    private InteractionResult javaReforged$trackLegacyCreativePlacement(
+            MultiPlayerGameMode gameMode,
+            net.minecraft.client.player.LocalPlayer player,
+            InteractionHand hand,
+            net.minecraft.world.phys.BlockHitResult hitResult,
+            Operation<InteractionResult> original
+    ) {
+        boolean placingBlock = player.getItemInHand(hand).getItem()
+                instanceof net.minecraft.world.item.BlockItem;
+        InteractionResult result = original.call(gameMode, player, hand, hitResult);
+        if (placingBlock && result instanceof InteractionResult.Success) {
+            LegacyGameplayModes.recordSuccessfulPlacement(player);
+        }
+        return result;
     }
 }

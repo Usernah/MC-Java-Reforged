@@ -15,6 +15,10 @@ public final class WorldRenderBackends {
         return ACTIVE;
     }
 
+    public static void resourcesReloaded() {
+        ACTIVE.resourcesReloaded();
+    }
+
     public static SodiumWorldRenderBackend sodium() {
         if (ACTIVE instanceof SodiumWorldRenderBackend sodium) {
             return sodium;

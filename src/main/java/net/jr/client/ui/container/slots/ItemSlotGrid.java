@@ -11,6 +11,7 @@ import net.jr.client.ui.dsl.UiDslKind;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.inventory.Slot;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -24,6 +25,7 @@ public final class ItemSlotGrid implements DslElement {
 
     private final ItemSlotMap map;
     private final Map<Integer, ItemSlotPos> positions = new TreeMap<>();
+    private final Map<String, ItemSlotPos> layoutBounds = new LinkedHashMap<>();
     private final int originX;
     private final int originY;
     private final DslNode dsl;
@@ -40,7 +42,12 @@ public final class ItemSlotGrid implements DslElement {
         this.itemSlotLayer = null;
     }
 
-    /** Builds slot layout and per-slot visuals from an item_slots DSL declaration. */
+    @Nullable
+    public ItemSlotGroup groupOf(int slotId) {
+        return this.map.findGroup(slotId);
+    }
+
+
     public ItemSlotGrid(DslNode dsl) {
         if (!(dsl.context() instanceof DslContainerContext containerContext)) {
             throw new IllegalArgumentException("item_slots can only be used by a DslContainer");
@@ -170,7 +177,31 @@ public final class ItemSlotGrid implements DslElement {
                 slotBackgrounds.put(slotId, background);
             }
         }
+        this.captureLayoutBounds(layout.id(), type, group, firstSlot);
         layout.finishBlock();
+    }
+
+    /** Actual slot layout geometry, also useful for navigation, debugging and inspection. */
+    public Map<String, ItemSlotPos> layoutBounds() {
+        return Map.copyOf(this.layoutBounds);
+    }
+
+    private void captureLayoutBounds(String id, String type, ItemSlotGroup group, int firstSlot) {
+        int count = type.equals("slot") || type.equals("point") ? 1 : this.map.get(group).size();
+        int left = Integer.MAX_VALUE, top = Integer.MAX_VALUE;
+        int right = Integer.MIN_VALUE, bottom = Integer.MIN_VALUE;
+        for (int index = 0; index < count; index++) {
+            int slotId = type.equals("slot") || type.equals("point")
+                ? firstSlot : this.map.get(group).slot(index);
+            ItemSlotPos pos = this.positions.get(slotId);
+            if (pos == null) continue;
+            left = Math.min(left, pos.x()); top = Math.min(top, pos.y());
+            right = Math.max(right, pos.x() + pos.width());
+            bottom = Math.max(bottom, pos.y() + pos.height());
+        }
+        if (left < right && top < bottom) {
+            this.layoutBounds.put(id, new ItemSlotPos(left, top, right - left, bottom - top));
+        }
     }
 
     private static int dimension(DslNode node, String name, int fallback) {
@@ -383,31 +414,40 @@ public final class ItemSlotGrid implements DslElement {
             }
             Slot slot = this.itemSlotLayer.getItemSlotAt(this, position.x() + position.width() / 2.0,
                 position.y() + position.height() / 2.0);
-            UiCompiledDocument.DataContext scope = path -> {
-                if (!path.isEmpty() && path.getFirst().equals("this")) {
-                    if (path.size() != 2) {
-                        throw new IllegalArgumentException("Unknown item slot DSL value: ${" + String.join(".", path) + "}");
-                    }
-                    return switch (path.get(1)) {
-                        case "x" -> position.x();
-                        case "y" -> position.y();
-                        case "width", "w" -> position.width();
-                        case "height", "h" -> position.height();
-                        case "item_size" -> position.itemSize();
-                        case "index" -> entry.getKey();
-                        case "group" -> {
-                            ItemSlotGroup group = this.map.findGroup(entry.getKey());
-                            yield group == null ? "custom" : group.name().toLowerCase(java.util.Locale.ROOT);
+            UiCompiledDocument.DataContext scope = new UiCompiledDocument.DataContext() {
+                @Override
+                public Object resolve(List<String> path) {
+                    if (!path.isEmpty() && path.getFirst().equals("this")) {
+                        if (path.size() != 2) {
+                            throw new IllegalArgumentException("Unknown item slot DSL value: ${" + String.join(".", path) + "}");
                         }
-                        case "hovered" -> slot != null && this.itemSlotLayer.getHoveredItemSlot() == slot;
-                        case "focused" -> slot != null && this.itemSlotLayer.getFocusedItemSlot() == slot;
-                        case "empty" -> slot == null || !slot.hasItem();
-                        default -> throw new IllegalArgumentException(
-                            "Unknown item slot DSL value: ${this." + path.get(1) + "}"
-                        );
-                    };
+                        return switch (path.get(1)) {
+                            case "x" -> position.x();
+                            case "y" -> position.y();
+                            case "width", "w" -> position.width();
+                            case "height", "h" -> position.height();
+                            case "item_size" -> position.itemSize();
+                            case "index" -> entry.getKey();
+                            case "group" -> {
+                                ItemSlotGroup group = ItemSlotGrid.this.map.findGroup(entry.getKey());
+                                yield group == null ? "custom" : group.name().toLowerCase(java.util.Locale.ROOT);
+                            }
+                            case "hovered" -> slot != null && ItemSlotGrid.this.itemSlotLayer.getHoveredItemSlot() == slot;
+                            case "focused" -> slot != null && ItemSlotGrid.this.itemSlotLayer.getFocusedItemSlot() == slot;
+                            case "empty" -> slot == null || !slot.hasItem();
+                            default -> throw new IllegalArgumentException(
+                                "Unknown item slot DSL value: ${this." + path.get(1) + "}"
+                            );
+                        };
+                    }
+                    return ItemSlotGrid.this.dsl.data().resolve(path);
                 }
-                return this.dsl.data().resolve(path);
+
+                @Override
+                public boolean contains(List<String> path) {
+                    return !path.isEmpty() && path.getFirst().equals("this")
+                        || ItemSlotGrid.this.dsl.data().contains(path);
+                }
             };
             for (UiElement.ElementRenderable background : entry.getValue()) {
                 background.render(graphics, scope, position.x(), position.y());

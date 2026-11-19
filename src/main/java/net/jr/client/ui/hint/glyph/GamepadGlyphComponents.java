@@ -1,32 +1,15 @@
 package net.jr.client.ui.hint.glyph;
 
 import java.util.Objects;
-import java.util.function.Supplier;
-
-import net.jr.api.client.resource.Asset;
 import net.jr.client.input.binding.GamepadInputChord;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.jr.api.client.render.glyph.Glyphs;
+import net.jr.Java_reforged;
 
 public final class GamepadGlyphComponents {
-    private static final HintSet CURRENT_HINTS = new HintSet(
-            GamepadGlyphThemeState::currentFont,
-            GamepadGlyphThemeState::currentTheme
-    );
-    private static final HintSet XBOX_HINTS = new HintSet(
-            ControllerGlyphTheme.XBOX::font,
-            () -> ControllerGlyphTheme.XBOX
-    );
-    private static final HintSet PS_HINTS = new HintSet(
-            ControllerGlyphTheme.PS::font,
-            () -> ControllerGlyphTheme.PS
-    );
-
-    private static final HintSet GENERIC_A_HINTS = new HintSet(
-            ControllerGlyphTheme.GENERIC_A::font,
-            () -> ControllerGlyphTheme.GENERIC_A
-    );
+    private static final HintSet CURRENT_HINTS = new HintSet();
 
     private GamepadGlyphComponents() {
     }
@@ -35,33 +18,9 @@ public final class GamepadGlyphComponents {
         return CURRENT_HINTS;
     }
 
-    public static HintSet xbox() {
-        return XBOX_HINTS;
-    }
-
-    public static HintSet ps() {
-        return PS_HINTS;
-    }
-
-    public static HintSet generic_a() {
-        return GENERIC_A_HINTS;
-    }
-
     public static final class HintSet {
-        private final Supplier<Asset> fontSupplier;
-        private final Supplier<ControllerGlyphTheme> themeSupplier;
-
-        private HintSet(Supplier<Asset> fontSupplier, Supplier<ControllerGlyphTheme> themeSupplier) {
-            this.fontSupplier = Objects.requireNonNull(fontSupplier, "fontSupplier");
-            this.themeSupplier = Objects.requireNonNull(themeSupplier, "themeSupplier");
-        }
-
         public ControllerGlyphTheme theme() {
-            return themeSupplier.get();
-        }
-
-        public Asset font() {
-            return fontSupplier.get();
+            return GamepadGlyphThemeState.currentTheme();
         }
 
         public MutableComponent glyph(ControllerGlyph glyph) {
@@ -69,8 +28,7 @@ public final class GamepadGlyphComponents {
             if (!theme().supports(glyph)) {
                 return Component.empty();
             }
-            return Component.literal(glyph.text())
-                    .withStyle(style -> style.withFont(font().asFontDescription()));
+            return Glyphs.component(Java_reforged.MODID, "controls", glyph.name());
         }
 
         public MutableComponent icon(ControllerGlyph glyph) {

@@ -3,7 +3,6 @@ package net.jr.mixin;
 import net.jr.client.components.navigation.SliderInteractionHandler;
 import net.jr.client.components.navigation.SliderInteractionState;
 import net.jr.client.components.navigation.UiAction;
-import net.jr.client.components.navigation.UiActionFeedback;
 import net.jr.client.components.navigation.UiActionHandler;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -63,11 +62,6 @@ public abstract class AbstractSliderButtonMixin implements UiActionHandler {
                 this.javaReforged$interactionState,
                 action
         );
-    }
-
-    @Override
-    public UiActionFeedback uiActionFeedback(UiAction action) {
-        return this.javaReforged$interactionState.lastFeedback();
     }
 
     @Override

@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/** Registration and ordered dispatch for GUI render objects. */
+
 public final class GuiRenderObjects {
     private static final List<HudRenderObject> HUD = new CopyOnWriteArrayList<>();
+    private static final List<HudRenderObject> HUD_FRAMEBUFFER = new CopyOnWriteArrayList<>();
+    private static final List<HudRenderObject> HUD_FULL_HD_FRAMEBUFFER = new CopyOnWriteArrayList<>();
     private static final List<BottomHudRenderObject> BOTTOM_HUD = new CopyOnWriteArrayList<>();
     private static final List<HudRenderObject> HUD_TAIL = new CopyOnWriteArrayList<>();
     private static final EnumMap<GuiRenderPhase, List<IGuiRenderObject<GuiRenderContext>>> LOCAL =
@@ -29,12 +31,21 @@ public final class GuiRenderObjects {
         HUD.add(Objects.requireNonNull(object, "object"));
     }
 
-    /** Registers an HUD object anchored above reserved bottom content such as hints. */
+
+    public static void registerHudFramebuffer(HudRenderObject object) {
+        HUD_FRAMEBUFFER.add(Objects.requireNonNull(object, "object"));
+    }
+
+    public static void registerHudFullHdFramebuffer(HudRenderObject object) {
+        HUD_FULL_HD_FRAMEBUFFER.add(Objects.requireNonNull(object, "object"));
+    }
+
+
     public static void registerBottomHud(BottomHudRenderObject object) {
         BOTTOM_HUD.add(Objects.requireNonNull(object, "object"));
     }
 
-    /** Registers an HUD object after vanilla debug extraction, before deferred subtitles. */
+
     public static void registerHudTail(HudRenderObject object) {
         HUD_TAIL.add(Objects.requireNonNull(object, "object"));
     }
@@ -59,6 +70,18 @@ public final class GuiRenderObjects {
 
     public static void renderHud(HudRenderContext context) {
         for (HudRenderObject object : HUD) {
+            object.render(context);
+        }
+    }
+
+    public static void renderHudFramebuffer(HudRenderContext context) {
+        for (HudRenderObject object : HUD_FRAMEBUFFER) {
+            object.render(context);
+        }
+    }
+
+    public static void renderHudFullHdFramebuffer(HudRenderContext context) {
+        for (HudRenderObject object : HUD_FULL_HD_FRAMEBUFFER) {
             object.render(context);
         }
     }

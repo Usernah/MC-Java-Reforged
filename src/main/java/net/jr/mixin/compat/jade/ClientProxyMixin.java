@@ -3,11 +3,13 @@ package net.jr.mixin.compat.jade;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.jr.client.compat.jade.JadeRuntimeState;
-import net.jr.api.client.ui.Viewport;
+import net.jr.client.compat.CompatHudDimensions;
+import net.jr.client.compat.jade.JadeHudRenderRoute;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.platform.Window;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut;
 import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
@@ -36,6 +38,10 @@ abstract class ClientProxyMixin {
         float tickDelta,
         Operation<Void> original
     ) {
+        if (Minecraft.getInstance().gui.screen() == null
+            && !JadeHudRenderRoute.isRegisteredRender()) {
+            return;
+        }
         JadeRuntimeState.run(() -> original.call(graphics, tickDelta));
     }
 
@@ -68,7 +74,7 @@ abstract class ClientProxyMixin {
         )
     )
     private static int javaReforged$viewportWidth(Window window) {
-        return Viewport.current().logicalGuiWidth();
+        return CompatHudDimensions.width(window);
     }
 
     @WrapMethod(method = "onPlayerLeave")

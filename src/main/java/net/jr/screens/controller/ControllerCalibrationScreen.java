@@ -2,16 +2,14 @@ package net.jr.screens.controller;
 
 import net.jr.Java_reforged;
 import net.jr.api.client.render.Draw;
+import net.jr.api.client.render.glyph.Glyphs;
+import net.jr.Java_reforged;
 import net.jr.client.input.InputApi;
 import net.jr.api.client.input.IGamepad;
 import net.jr.client.input.gamepad.GamepadCalibrationRegistry;
 import net.jr.api.client.input.GamepadDigitalInput;
 import net.jr.api.client.input.GamepadIdentity;
 import net.jr.client.ui.hint.glyph.ControllerGlyph;
-import net.jr.client.ui.hint.glyph.ControllerGlyphTheme;
-import net.jr.client.ui.hint.glyph.GamepadGlyphThemeState;
-import net.jr.client.ui.hint.render.GlyphTextureBounds;
-import net.jr.client.ui.hint.render.GlyphTextureBoundsCache;
 import net.jr.client.ui.navigation.ControllerBindingCaptureHost;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -271,18 +269,13 @@ public final class ControllerCalibrationScreen extends Screen implements Control
         if (glyph == null) {
             return;
         }
-        ControllerGlyphTheme theme = GamepadGlyphThemeState.currentTheme();
-        if (!theme.supports(glyph) || theme.texture(glyph) == null) {
-            return;
-        }
-        GlyphTextureBounds metrics = GlyphTextureBoundsCache.get(theme.texture(glyph));
-        float iconHeight = theme.hintHeight(glyph);
-        float iconWidth = metrics.drawWidthForHeight(iconHeight);
-        float x = (width - iconWidth) / 2.0F;
-        Draw.image(theme.texture(glyph), x, y, iconWidth, iconHeight)
-            .uvSize(metrics.sourceWidth(), metrics.sourceHeight())
-            .atlasSize(metrics.sourceWidth(), metrics.sourceHeight())
-            .draw(graphics);
+        Draw.TextBuilder icon = Draw.text(Glyphs.component(
+            Java_reforged.MODID, "controls", glyph.name()
+        ));
+        icon.position(
+            Math.round((width - icon.width()) / 2.0F),
+            y
+        ).draw(graphics);
     }
 
     private void renderWidgets(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {

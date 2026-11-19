@@ -15,6 +15,9 @@ public final class VisualState {
     private float baseAlpha = 1.0F;
     private boolean visible = true;
     private boolean baseVisible = true;
+    private VisualAnchor anchor = VisualAnchor.NONE;
+    private VisualAnchor baseAnchor = VisualAnchor.NONE;
+    private VisualElementsInterface layoutParent;
 
     public VisualState(float x, float y, float width, float height) {
         this.setBounds(x, y, width, height);
@@ -133,6 +136,30 @@ public final class VisualState {
         this.baseVisible = baseVisible;
     }
 
+    public VisualAnchor anchor() {
+        return this.anchor;
+    }
+
+    public void setAnchor(VisualAnchor anchor) {
+        this.anchor = anchor == null ? VisualAnchor.NONE : anchor;
+    }
+
+    public VisualAnchor baseAnchor() {
+        return this.baseAnchor;
+    }
+
+    public void setBaseAnchor(VisualAnchor anchor) {
+        this.baseAnchor = anchor == null ? VisualAnchor.NONE : anchor;
+    }
+
+    public VisualElementsInterface layoutParent() {
+        return this.layoutParent;
+    }
+
+    public void setLayoutParent(VisualElementsInterface layoutParent) {
+        this.layoutParent = layoutParent;
+    }
+
     public void setPosition(float x, float y) {
         this.setX(x);
         this.setY(y);
@@ -171,6 +198,7 @@ public final class VisualState {
         this.setRotation(this.baseRotation());
         this.setAlpha(this.baseAlpha());
         this.setVisible(this.baseVisible());
+        this.setAnchor(this.baseAnchor());
     }
 
     public void captureBaseState() {
@@ -181,6 +209,7 @@ public final class VisualState {
         this.setBaseRotation(this.rotation());
         this.setBaseAlpha(this.alpha());
         this.setBaseVisible(this.visible());
+        this.setBaseAnchor(this.anchor());
     }
 
     private static float clampAlpha(float alpha) {

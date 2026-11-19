@@ -1,16 +1,25 @@
 package net.jr.client.components.widgets.item;
 
 import net.jr.client.components.navigation.UiAction;
+import net.jr.client.components.interfaces.IWidgetSoundHandler;
 import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.components.widgets.ScrollPanelElement;
 import net.jr.client.ui.cursor.CursorMagnetTarget;
 import net.jr.client.ui.navigation.UiInputModeController;
+import net.jr.registry.ModSounds;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class AbstractItemGridElement<T> extends ScrollPanelElement {
+    private static final IWidgetSoundHandler SOUND_HANDLER = (handler, widget, event) -> {
+        if (event == IWidgetSoundHandler.Event.PRESS) {
+            handler.play(SimpleSoundInstance.forUI(ModSounds.UI_CLICK.get(), 1.0F, 1.0F));
+        }
+    };
+
     private final int visibleRows;
     private final int columns;
     private int cellWidth;
@@ -19,6 +28,7 @@ public abstract class AbstractItemGridElement<T> extends ScrollPanelElement {
 
     protected AbstractItemGridElement(int x, int y, int width, int height, int visibleRows, int columns) {
         super(x, y, width, height);
+        this.setSoundHandler(SOUND_HANDLER);
         this.visibleRows = Math.max(1, visibleRows);
         this.columns = Math.max(1, columns);
         this.cellWidth = Math.max(1, width / this.columns);
@@ -251,7 +261,9 @@ public abstract class AbstractItemGridElement<T> extends ScrollPanelElement {
 
         this.clearChildren();
         for (int i = 0; i < this.entries.size(); i++) {
-            this.addChild(this.createCell(this.entries.get(i), i, this.cellWidth, this.cellHeight));
+            JavaBaseWidget cell = this.createCell(this.entries.get(i), i, this.cellWidth, this.cellHeight);
+            cell.setSoundHandler(this.soundHandler);
+            this.addChild(cell);
         }
 
         this.scrollToImmediately(previousScrollX, previousScrollY);

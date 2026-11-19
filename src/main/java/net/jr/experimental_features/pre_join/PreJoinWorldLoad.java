@@ -6,14 +6,16 @@ import javax.annotation.Nullable;
 import net.jr.api.client.input.IGamepad;
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
+import net.jr.client.user.UserProfile;
+import net.jr.client.runtime.ui.SlotScreenTransitionHandler;
 import net.jr.client.runtime.client.ReadinessPolicy;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
 
-/** Holds the selected local players while vanilla opens the primary world. */
+
 public final class PreJoinWorldLoad {
-    private static final Map<Integer, IGamepad> PENDING_PLAYERS = new TreeMap<>();
+    private static final Map<Integer, PendingPlayer> PENDING_PLAYERS = new TreeMap<>();
 
     private static boolean active;
     private static boolean loadingObserved;
@@ -23,7 +25,11 @@ public final class PreJoinWorldLoad {
     private PreJoinWorldLoad() {
     }
 
-    public static void begin(Screen source, Map<Integer, IGamepad> pendingPlayers, Runnable openWorld) {
+    public static void begin(
+        Screen source,
+        Map<Integer, PendingPlayer> pendingPlayers,
+        Runnable openWorld
+    ) {
         reset();
         sourceScreen = source;
         PENDING_PLAYERS.putAll(pendingPlayers);
@@ -47,7 +53,7 @@ public final class PreJoinWorldLoad {
         } else if (!loadingObserved && screen != sourceScreen) {
             leftSourceScreen = true;
         } else if (!loadingObserved && leftSourceScreen && screen == sourceScreen) {
-            // A vanilla warning/backup flow left the list and was then cancelled.
+
             reset();
             return;
         }
@@ -76,12 +82,7 @@ public final class PreJoinWorldLoad {
         return active;
     }
 
-    /**
-     * Vanilla clears the previous client state while it starts a new world. That
-     * transition must not discard the players selected by the pre-join overlay.
-     * Once loading has actually been observed, however, a disconnect is a real
-     * interruption and the pending operation must be released.
-     */
+
     public static void onMinecraftDisconnect() {
         if (!active || loadingObserved) {
             reset();
@@ -99,7 +100,7 @@ public final class PreJoinWorldLoad {
     private static boolean joinNextPlayerInOrder(Minecraft minecraft) {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         try {
-            for (Map.Entry<Integer, IGamepad> entry : PENDING_PLAYERS.entrySet()) {
+            for (Map.Entry<Integer, PendingPlayer> entry : PENDING_PLAYERS.entrySet()) {
                 int slotId = entry.getKey();
                 if (runtime.clients().hasClient(slotId)
                     || runtime.clients().sessionOrNull(slotId) != null) {
@@ -109,10 +110,12 @@ public final class PreJoinWorldLoad {
                     continue;
                 }
 
+                PendingPlayer pending = entry.getValue();
                 runtime.input().join().joinWithoutPresenting(
                     minecraft,
-                    entry.getValue(),
-                    slotId
+                    pending.gamepad(),
+                    slotId,
+                    pending.user()
                 );
                 return false;
             }
@@ -127,13 +130,20 @@ public final class PreJoinWorldLoad {
 
     private static void rollbackPreparedPlayers() {
         ClientRuntime runtime = ClientRuntime.INSTANCE;
-        for (Map.Entry<Integer, IGamepad> entry : PENDING_PLAYERS.entrySet()) {
+        for (Map.Entry<Integer, PendingPlayer> entry : PENDING_PLAYERS.entrySet()) {
             int slotId = entry.getKey();
             if (runtime.clients().hasClient(slotId)
                 || runtime.clients().sessionOrNull(slotId) != null) {
                 runtime.clients().disconnectSecondary(slotId);
             }
-            runtime.input().mutableAssignments().unassign(entry.getValue());
+            SlotScreenTransitionHandler.clearSecondaryJoiningScreen(
+                Minecraft.getInstance(),
+                slotId
+            );
+            runtime.input().mutableAssignments().unassign(entry.getValue().gamepad());
         }
+    }
+
+    public record PendingPlayer(IGamepad gamepad, UserProfile user) {
     }
 }

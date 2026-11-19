@@ -5,6 +5,7 @@ import net.jr.api.client.resource.Asset;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ImageElement implements VisualElementsInterface {
@@ -13,7 +14,8 @@ public class ImageElement implements VisualElementsInterface {
     private GuiGraphicsExtractor guiGraphics;
 
     private boolean useMeta;
-    private String metaConfigId;
+    private Asset metaResource;
+    private List<String> metaConfigIds = List.of();
 
     private boolean hasUvCord;
     private int u;
@@ -81,16 +83,38 @@ public class ImageElement implements VisualElementsInterface {
     }
 
     public void setUseMeta(boolean useMeta) {
+        this.setMeta(useMeta);
+    }
+
+    public void setMeta(boolean useMeta) {
         this.useMeta = useMeta;
+        this.metaResource = null;
+    }
+
+    public void setMeta(Asset metaResource) {
+        this.useMeta = true;
+        this.metaResource = java.util.Objects.requireNonNull(metaResource, "metaResource");
     }
 
     public void setConfig(String configId) {
         this.useMeta = true;
-        this.metaConfigId = configId;
+        this.metaConfigIds = configId == null || configId.isBlank()
+            ? List.of()
+            : List.of(configId);
+    }
+
+    public void setConfigs(List<String> configIds) {
+        this.useMeta = true;
+        this.metaConfigIds = configIds == null
+            ? List.of()
+            : configIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(id -> !id.isBlank())
+                .toList();
     }
 
     public void clearConfig() {
-        this.metaConfigId = null;
+        this.metaConfigIds = List.of();
     }
 
     public void setUvCord(int u, int v) {
@@ -251,11 +275,15 @@ public class ImageElement implements VisualElementsInterface {
         }
 
         Draw.ImageBuilder builder = this.useMeta
-                ? Draw.imageFromMeta(this.texture, this.x(), this.y(), this.width(), this.height())
-                : Draw.image(this.texture, this.x(), this.y(), this.width(), this.height());
+                ? Draw.imageFromMeta(this.texture, this.resolvedX(), this.resolvedY(), this.width(), this.height())
+                : Draw.image(this.texture, this.resolvedX(), this.resolvedY(), this.width(), this.height());
 
-        if (this.metaConfigId != null) {
-            builder.config(this.metaConfigId);
+        if (this.metaResource != null) {
+            builder.meta(this.metaResource);
+        }
+
+        if (!this.metaConfigIds.isEmpty()) {
+            builder.configs(this.metaConfigIds);
         }
         if (this.hasUvCord) {
             builder.uvCord(this.u, this.v);

@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Server-owned chest placement. Vanilla loot tables generate the stacks; Battle chooses the options. */
+
 public final class BattleChestLoot {
     private static final String ROOT = "loot_table/battle/normal/";
     private static final int REFILL_CHEST_COUNT = 4;
@@ -46,7 +46,7 @@ public final class BattleChestLoot {
     public static void fillInitial(MinecraftServer server, ServerLevel level) {
         fillGroup(server, level, PointGroup.CHEST_CENTRAL, "start", true);
         fillGroup(server, level, PointGroup.CHEST_SECONDARY, "outer", true);
-        // Maps without high-value chest points simply have nothing to fill.
+
         fillGroup(server, level, PointGroup.CHEST_SPECIAL, "high_value", true);
     }
 

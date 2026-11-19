@@ -5,15 +5,25 @@ import net.jr.client.components.interfaces.IWidgetSoundHandler;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.ui.dsl.DslNode;
 import net.jr.client.ui.dsl.UiDslKind;
+import net.jr.registry.ModSounds;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 public class Button extends JavaBaseWidget {
 
     public static final UiDslKind<Button> DSL = new UiDslKind<>("button", Button.class);
+    private static final IWidgetSoundHandler DEFAULT_SOUND_HANDLER = (handler, widget, event) -> {
+        if (event == IWidgetSoundHandler.Event.PRESS) {
+            handler.play(SimpleSoundInstance.forUI(ModSounds.UI_CLICK.get(), 1.0F, 1.0F));
+        }
+        if (event == IWidgetSoundHandler.Event.FOCUS) {
+            handler.play(SimpleSoundInstance.forUI(ModSounds.UI_HOVER.get(), 1.0F, 1.0F));
+        }
+    };
 
     public OnPress onPress;
     private IWidgetRenderer renderer;
@@ -21,12 +31,14 @@ public class Button extends JavaBaseWidget {
 
     protected Button(int x, int y, int width, int height, OnPress onPress, IWidgetRenderer renderer) {
         super(x, y, width, height, Component.empty());
+        this.setSoundHandler(DEFAULT_SOUND_HANDLER);
         this.onPress = onPress;
         this.renderer = renderer;
     }
 
     public Button(DslNode dsl) {
         super(dsl, Component.empty());
+        this.setSoundHandler(DEFAULT_SOUND_HANDLER);
         this.onPress = button -> {
         };
         this.completeDslConstruction(DSL);
@@ -142,7 +154,9 @@ public class Button extends JavaBaseWidget {
 
             Button button = new Button(x, y, width, height, onPress, renderer);
             button.setActive(this.active);
-            button.setSoundHandler(this.soundHandler);
+            if (this.soundHandler != null) {
+                button.setSoundHandler(this.soundHandler);
+            }
             return button;
         }
     }

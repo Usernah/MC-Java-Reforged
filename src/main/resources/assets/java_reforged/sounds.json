@@ -63,6 +63,36 @@
       { "name": "java_reforged:ui/toast_rem", "pitch": 1.05 }
     ]
   },
+  "system_ui.overlay_open": {
+    "category": "master",
+    "sounds": [
+      "java_reforged:system_ui/overlay_open"
+    ]
+  },
+  "system_ui.overlay_close": {
+    "category": "master",
+    "sounds": [
+      "java_reforged:system_ui/overlay_close"
+    ]
+  },
+  "system_ui.focus": {
+    "category": "master",
+    "sounds": [
+      "java_reforged:system_ui/focus"
+    ]
+  },
+  "system_ui.select_btn": {
+    "category": "master",
+    "sounds": [
+      "java_reforged:system_ui/select_btn"
+    ]
+  },
+  "system_ui.select_char": {
+    "category": "master",
+    "sounds": [
+      "java_reforged:system_ui/select_char"
+    ]
+  },
   "gameplay.item_pop": {
     "category": "master",
     "sounds": [

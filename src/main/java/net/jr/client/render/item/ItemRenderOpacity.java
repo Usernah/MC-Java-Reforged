@@ -2,12 +2,13 @@ package net.jr.client.render.item;
 
 import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
 
-import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class ItemRenderOpacity {
     private static final ThreadLocal<Float> ACTIVE_ALPHA = ThreadLocal.withInitial(() -> 1.0F);
-    private static final Map<GuiItemRenderState, Integer> STATE_COLORS = new IdentityHashMap<>();
+    private static final ThreadLocal<Map<GuiItemRenderState, Integer>> STATE_COLORS =
+        ThreadLocal.withInitial(WeakHashMap::new);
 
     private ItemRenderOpacity() {}
 
@@ -26,7 +27,7 @@ public final class ItemRenderOpacity {
         if (alpha < 1.0F) {
             int alphaByte = Math.round(alpha * 255.0F);
 
-            STATE_COLORS.put(
+            STATE_COLORS.get().put(
                     state,
                     (alphaByte << 24) | (alphaByte << 16) | (alphaByte << 8) | alphaByte
             );
@@ -35,11 +36,18 @@ public final class ItemRenderOpacity {
     }
 
     public static int consumeColor(GuiItemRenderState state) {
-        Integer color = STATE_COLORS.remove(state);
+        Map<GuiItemRenderState, Integer> colors = STATE_COLORS.get();
+        Integer color = colors.remove(state);
+        if (colors.isEmpty()) {
+            STATE_COLORS.remove();
+        }
         return color == null ? -1 : color;
     }
 
     public static void clearFrame() {
-        STATE_COLORS.clear();
+        Map<GuiItemRenderState, Integer> colors = STATE_COLORS.get();
+        if (colors.isEmpty()) {
+            STATE_COLORS.remove();
+        }
     }
 }

@@ -22,18 +22,18 @@ public abstract class ServerRecipeBookMixin {
 
     @Inject(method = "sendInitialRecipeBook", at = @At("HEAD"))
     private void javaReforged$provideCompleteRecipeBook(ServerPlayer player, CallbackInfo ci) {
-        // Vanilla calls this on login and after datapack reloads. Rebuild from
-        // the current manager so removed recipes and obsolete display IDs vanish.
+
+
         this.known.clear();
         this.highlight.clear();
         for (RecipeHolder<?> recipe : player.level().getServer().getRecipeManager().getRecipes()) {
-            // Special recipes (e.g. repairs) have no normal recipe-book entry.
+
             if (!recipe.value().isSpecial()) {
                 this.known.add(recipe.id());
             }
         }
-        // The original method sends one replacement packet with notifications
-        // disabled. No advancement triggers or incremental unlock packets run.
+
+
     }
 
     @Inject(method = {"addRecipes", "removeRecipes"}, at = @At("HEAD"), cancellable = true)

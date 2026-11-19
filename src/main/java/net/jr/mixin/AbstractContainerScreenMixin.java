@@ -34,6 +34,11 @@ public abstract class AbstractContainerScreenMixin implements DslContainerBridge
     }
 
     @Override
+    public DslContainerContext javaReforged$peekDslContainerContext() {
+        return this.javaReforged$dslContainerContext;
+    }
+
+    @Override
     public void javaReforged$closeDslContainerContext() {
         if (this.javaReforged$dslContainerContext != null) {
             this.javaReforged$dslContainerContext.close();

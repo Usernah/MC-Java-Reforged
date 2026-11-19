@@ -1,16 +1,13 @@
 package net.jr.client.runtime.render.pass;
 
 import net.jr.api.client.local.Client;
-import net.jr.api.client.render.gui.BottomHudRenderContext;
 import net.jr.api.client.render.gui.GuiRenderObjects;
 import net.jr.api.client.render.gui.HudRenderContext;
-import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.render.state.HudCameraOverlayScope;
 import net.jr.client.runtime.render.state.HudStateScope;
 import net.jr.client.runtime.ui.ChatRouter;
-import net.jr.screens.SecondaryWorldLoadingScreen;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
 import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.Minecraft;
@@ -34,7 +31,7 @@ public final class HudRenderPass {
             }
         });
 
-        for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
+        for (var client : Client.all()) {
             if (client.isPrimary() || !ReadinessPolicy.worldBound(client)) {
                 continue;
             }
@@ -65,66 +62,145 @@ public final class HudRenderPass {
         if (!ReadinessPolicy.currentGameplayReady()) {
             return;
         }
-        GuiGraphicsExtractor graphics = context.graphics();
-        var deltaTracker = context.deltaTracker();
         Screen screen = Client.current().screen();
-        if (screen != null) {
-            try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-                ((HudAccessor) hud).javaReforged$extractCameraEffects(
-                        graphics,
-                        deltaTracker
-                );
-            }
+        ControlHintRenderPass.PreparedHud preparedHints =
+            screen == null && !hud.isHidden()
+                ? ControlHintRenderPass.prepareHud(context.graphics())
+                : null;
+        HudFramebufferPass.extract(context, compositionContext ->
+            extractFramebufferContents(
+                hud,
+                compositionContext,
+                screen,
+                preparedHints
+            )
+        );
+        if (screen == null && !hud.isHidden()) {
+            FullHdHudFramebufferPass.extract(
+                context,
+                GuiRenderObjects::renderHudFullHdFramebuffer
+            );
+        }
+        if (preparedHints != null) {
+            ControlHintRenderPass.renderHud(
+                preparedHints,
+                context.graphics(),
+                hudOpacity(context)
+            );
+        }
+    }
+
+    private static void extractFramebufferContents(
+        Hud hud,
+        HudRenderContext context,
+        Screen screen,
+        ControlHintRenderPass.PreparedHud preparedHints
+    ) {
+        if (hud.isHidden()) {
             return;
         }
 
+        if (screen != null) {
+            extractCameraEffects(
+                hud,
+                context.graphics(),
+                context.deltaTracker()
+            );
+            return;
+        }
+
+        extractCameraEffects(
+            hud,
+            context.graphics(),
+            context.deltaTracker()
+        );
+        extractHudContents(hud, context, preparedHints);
+    }
+
+    private static void extractCameraEffects(
+            Hud hud,
+            GuiGraphicsExtractor graphics,
+            net.minecraft.client.DeltaTracker deltaTracker
+    ) {
         try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-            ControlHintRenderPass.PreparedHud preparedHints =
-                    ControlHintRenderPass.prepareHud(graphics);
+            ((HudAccessor) hud).javaReforged$extractCameraEffects(
+                    graphics,
+                    deltaTracker
+            );
+        }
+    }
+
+    private static void extractHudContents(
+        Hud hud,
+        HudRenderContext context,
+        ControlHintRenderPass.PreparedHud preparedHints
+    ) {
+        HudTransparencyFramebufferPass.extract(
+            context,
+            transparentContext -> extractTransparentHudContents(
+                hud,
+                transparentContext,
+                preparedHints
+            )
+        );
+        GuiRenderObjects.renderHudFramebuffer(context);
+    }
+
+    private static void extractTransparentHudContents(
+        Hud hud,
+        HudRenderContext context,
+        ControlHintRenderPass.PreparedHud preparedHints
+    ) {
+        GuiGraphicsExtractor graphics = context.graphics();
+        var deltaTracker = context.deltaTracker();
+        try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
             float bottomInset = preparedHints != null
                     ? preparedHints.bottomInset()
                     : 0.0F;
             try (
                     ViewportHudLayout.BottomInsetScope ignoredInset =
-                            ViewportHudLayout.pushBottomInset(bottomInset)
+                            ViewportHudLayout.pushBottomInset(bottomInset);
+                    HudCameraOverlayScope ignoredCameraEffects =
+                            HudCameraOverlayScope.suppress();
+                    BottomHudFramebufferPass.SuppressionScope ignoredBottomHud =
+                            BottomHudFramebufferPass.suppressVanillaExtraction()
             ) {
                 hud.extractRenderState(graphics, deltaTracker);
-            }
-            if (preparedHints != null) {
-                ControlHintRenderPass.renderHud(preparedHints, graphics);
             }
             try (
                     ViewportHudLayout.BottomInsetScope ignoredInset =
                             ViewportHudLayout.pushBottomInset(bottomInset)
             ) {
                 GuiRenderObjects.renderHud(context);
-                int availableHeight = Math.max(
-                        0,
-                        Math.round(context.viewport().guiHeight() - bottomInset)
-                );
-                BottomHudRenderContext bottomContext =
-                        BottomHudRenderContext.from(context, availableHeight);
-                ViewportHudLayout.pushBottomScaleTransform(
-                        graphics,
-                        availableHeight
-                );
-                try {
-                    GuiRenderObjects.renderBottomHud(bottomContext);
-                } finally {
-                    ViewportHudLayout.popBottomTransform(graphics);
-                }
             }
+            BottomHudFramebufferPass.extract(hud, context, bottomInset);
         }
     }
 
+    private static float hudOpacity(HudRenderContext context) {
+        double transparency = context.slot()
+            .optionsState()
+            .hudTransparency()
+            .get();
+        return 1.0F - (float)Math.clamp(transparency, 0.0D, 1.0D);
+    }
+
     public static void extractTail(Hud hud, HudRenderContext context) {
-        if (SecondaryWorldLoadingScreen.shouldPresent(context.slot())) {
+        if (!ReadinessPolicy.currentGameplayReady()) {
             return;
         }
 
         if (!(Client.current().screen() instanceof DebugOptionsScreen)) {
             hud.extractDebugOverlay(context.graphics());
-            GuiRenderObjects.renderHudTail(context);
+            if (!hud.isHidden()) {
+                HudFramebufferPass.extractTail(
+                    context,
+                    framebufferContext -> HudTransparencyFramebufferPass.extractTail(
+                        framebufferContext,
+                        GuiRenderObjects::renderHudTail
+                    )
+                );
+            }
         }
 
         hud.extractDeferredSubtitles();
