@@ -1,7 +1,7 @@
 package net.jr.mixin.runtime;
 
 import net.jr.client.runtime.render.state.ParticleStateRouter;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class ParticleEngineMixin {
     @Inject(method = "setLevel", at = @At("HEAD"), cancellable = true)
     private void javaReforged$setGlobalParticleLevel(ClientLevel level, CallbackInfo callback) {
-        if (SlotScope.idOrNull() == null) {
+        if (SlotExecution.currentSlotIdOrNull() == null) {
             ParticleStateRouter.setGlobalLevel((ParticleEngine)(Object)this, level);
             callback.cancel();
         }
@@ -23,7 +23,7 @@ public abstract class ParticleEngineMixin {
 
     @Inject(method = "clearParticles", at = @At("HEAD"), cancellable = true)
     private void javaReforged$clearGlobalParticleStates(CallbackInfo callback) {
-        if (SlotScope.idOrNull() == null) {
+        if (SlotExecution.currentSlotIdOrNull() == null) {
             ParticleStateRouter.clearAll((ParticleEngine)(Object)this);
             callback.cancel();
         }

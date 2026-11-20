@@ -7,7 +7,6 @@ import net.jr.client.compat.CompatHudDimensions;
 import net.jr.client.compat.jade.JadeHudRenderRoute;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.platform.Window;
@@ -25,8 +24,7 @@ abstract class ClientProxyMixin {
     @WrapMethod(method = "onClientTick")
     private static void javaReforged$tickEveryClient(Post event, Operation<Void> original) {
         for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
-            InstanceExecution.runForClient(
-                client.slotId(),
+            client.slot().runForSlot(
                 () -> JadeRuntimeState.run(() -> original.call(event))
             );
         }

@@ -3,9 +3,8 @@ package net.jr.api.client.ui;
 import javax.annotation.Nullable;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.viewport.ViewportArea;
-import net.jr.client.runtime.viewport.ViewportScope;
 import net.jr.client.runtime.viewport.WindowMetrics;
 
 public final class Viewport {
@@ -14,10 +13,11 @@ public final class Viewport {
 
     @Nullable
     public static ViewportArea currentOrNull() {
-        if (ViewportScope.isBound()) {
-            return ViewportScope.currentOrNull();
+        ViewportArea viewport = SlotExecution.currentViewportOrNull();
+        if (viewport != null) {
+            return viewport;
         }
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
 
         return slotId != null
                 ? ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId)
@@ -25,10 +25,11 @@ public final class Viewport {
     }
 
     public static ViewportArea current() {
-        if (ViewportScope.isBound()) {
-            return ViewportScope.current();
+        ViewportArea viewport = SlotExecution.currentViewportOrNull();
+        if (viewport != null) {
+            return viewport;
         }
-        return get(SlotScope.requireId());
+        return get(SlotExecution.currentSlotId());
     }
 
     @Nullable

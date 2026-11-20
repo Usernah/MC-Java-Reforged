@@ -16,14 +16,9 @@ public final class ViewportRenderScope {
     public static Scope enter(ViewportArea viewport) {
         Objects.requireNonNull(viewport, "viewport");
         RenderFrame previousRender = ACTIVE_RENDER.get();
-        RenderFrame render = new RenderFrame();
+        RenderFrame render = new RenderFrame(viewport);
         ACTIVE_RENDER.set(render);
-        try {
-            return new Scope(render, previousRender, ViewportScope.enter(viewport));
-        } catch (RuntimeException | Error error) {
-            restore(previousRender);
-            throw error;
-        }
+        return new Scope(render, previousRender);
     }
 
     public static Scope enterGui(ViewportArea viewport) {
@@ -62,7 +57,8 @@ public final class ViewportRenderScope {
     }
 
     public static @Nullable ViewportArea activeViewportOrNull() {
-        return ACTIVE_RENDER.get() != null ? ViewportScope.currentOrNull() : null;
+        RenderFrame render = ACTIVE_RENDER.get();
+        return render != null ? render.viewport() : null;
     }
 
     public static ViewportArea activeViewport() {
@@ -93,17 +89,14 @@ public final class ViewportRenderScope {
     public static final class Scope implements AutoCloseable {
         private final RenderFrame render;
         private final RenderFrame previousRender;
-        private final ViewportScope.Scope delegate;
         private boolean closed;
 
         private Scope(
             RenderFrame render,
-            @Nullable RenderFrame previousRender,
-            ViewportScope.Scope delegate
+            @Nullable RenderFrame previousRender
         ) {
             this.render = render;
             this.previousRender = previousRender;
-            this.delegate = delegate;
         }
 
         @Override
@@ -115,11 +108,7 @@ public final class ViewportRenderScope {
                 throw new IllegalStateException("Viewport render scope is unbalanced");
             }
             this.closed = true;
-            try {
-                this.delegate.close();
-            } finally {
-                restore(this.previousRender);
-            }
+            restore(this.previousRender);
         }
     }
 
@@ -131,6 +120,6 @@ public final class ViewportRenderScope {
         }
     }
 
-    private static final class RenderFrame {
+    private record RenderFrame(ViewportArea viewport) {
     }
 }

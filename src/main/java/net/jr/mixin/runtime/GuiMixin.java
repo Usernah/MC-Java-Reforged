@@ -108,7 +108,7 @@ public abstract class GuiMixin {
 
         this.javaReforged$hasLoggedScreen = true;
         this.javaReforged$lastLoggedScreen = currentScreen;
-        Integer slotId = net.jr.client.runtime.context.SlotScope.idOrNull();
+        Integer slotId = net.jr.client.runtime.context.SlotExecution.currentSlotIdOrNull();
         if (currentScreen == null) {
             net.jr.Java_reforged.LOGGER.info(
                     "Current screen [slot {}]: <none>",

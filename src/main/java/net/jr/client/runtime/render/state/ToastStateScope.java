@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.state.GlobalToastState;
 import net.jr.client.runtime.state.ToastState;
 import net.minecraft.client.gui.components.toasts.Toast;
@@ -71,7 +71,7 @@ public final class ToastStateScope {
         if (mode == PassMode.GLOBAL) {
             return GLOBAL_PASS_STATE;
         }
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId != null) {
             return ClientRuntime.INSTANCE.slots().slot(slotId).toastState();
         }

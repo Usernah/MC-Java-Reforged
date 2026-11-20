@@ -7,7 +7,7 @@ import net.jr.client.ui.container.slots.VanillaItemSlotLayer;
 import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.jr.client.runtime.state.UiNavigationState;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.ui.navigation.UiInputModeController;
 import net.jr.mixin.accessors.AbstractContainerScreenAccessor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -254,7 +254,7 @@ public final class ContainerItemSlotFocusController {
     }
 
     private static UiNavigationState state() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0).inputState().uiNavigation();
     }
 

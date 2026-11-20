@@ -3,7 +3,6 @@ package net.jr.client.runtime.render.state;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import net.jr.api.client.local.Client;
 import net.jr.client.runtime.state.HandState;
 import net.jr.mixin.accessors.ItemInHandRendererAccessor;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -14,24 +13,17 @@ public final class HandStateScope implements AutoCloseable {
     private final ItemInHandRenderer renderer;
     private boolean closed;
 
-    private HandStateScope(ItemInHandRenderer renderer) {
+    private HandStateScope(ItemInHandRenderer renderer, HandState slotState) {
         this.renderer = renderer;
         ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor)renderer;
         HandState previousEngineState = new HandState();
         previousEngineState.capture(accessor);
-        HandState clientState = Client.current().render().hands();
-        clientState.install(accessor);
-        BINDINGS.get().push(new Binding(renderer, clientState, previousEngineState));
+        slotState.install(accessor);
+        BINDINGS.get().push(new Binding(renderer, slotState, previousEngineState));
     }
 
-    public static HandStateScope enter(ItemInHandRenderer renderer) {
-        return new HandStateScope(renderer);
-    }
-
-    public static void run(ItemInHandRenderer renderer, Runnable action) {
-        try (HandStateScope ignored = enter(renderer)) {
-            action.run();
-        }
+    public static HandStateScope enter(ItemInHandRenderer renderer, HandState slotState) {
+        return new HandStateScope(renderer, slotState);
     }
 
     @Override
@@ -46,13 +38,13 @@ public final class HandStateScope implements AutoCloseable {
         }
         Binding binding = bindings.pop();
         ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor)this.renderer;
-        binding.clientState().capture(accessor);
+        binding.slotState().capture(accessor);
         binding.previousEngineState().install(accessor);
         if (bindings.isEmpty()) {
             BINDINGS.remove();
         }
     }
 
-    private record Binding(ItemInHandRenderer renderer, HandState clientState, HandState previousEngineState) {
+    private record Binding(ItemInHandRenderer renderer, HandState slotState, HandState previousEngineState) {
     }
 }

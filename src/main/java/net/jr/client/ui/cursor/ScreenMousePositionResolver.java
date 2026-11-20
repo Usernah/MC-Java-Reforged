@@ -1,17 +1,17 @@
 package net.jr.client.ui.cursor;
 
 import net.jr.client.runtime.input.GamepadInputHandler;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 
 public final class ScreenMousePositionResolver {
     private ScreenMousePositionResolver() {
     }
 
     public static int x(int vanillaX) {
-        return SlotScope.idOrNull() != null ? vanillaX : GamepadInputHandler.resolveScreenMouseX(vanillaX);
+        return SlotExecution.currentSlotIdOrNull() != null ? vanillaX : GamepadInputHandler.resolveScreenMouseX(vanillaX);
     }
 
     public static int y(int vanillaY) {
-        return SlotScope.idOrNull() != null ? vanillaY : GamepadInputHandler.resolveScreenMouseY(vanillaY);
+        return SlotExecution.currentSlotIdOrNull() != null ? vanillaY : GamepadInputHandler.resolveScreenMouseY(vanillaY);
     }
 }

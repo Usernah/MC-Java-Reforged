@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -26,7 +26,7 @@ public final class ClientPacketHandler {
         }
 
         Integer mappedSlotId = ClientRuntime.INSTANCE.connections().slotOrNull(connection);
-        Integer activeSlotId = SlotScope.idOrNull();
+        Integer activeSlotId = SlotExecution.currentSlotIdOrNull();
         int slotId = mappedSlotId != null
                 ? mappedSlotId
                 : activeSlotId != null
@@ -36,7 +36,7 @@ public final class ClientPacketHandler {
     }
 
     public static void closeDeathScreenAfterRespawn(Minecraft minecraft) {
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
         if (screen instanceof DeathScreen || screen instanceof DeathScreen.TitleConfirmScreen) {
             minecraft.gui.setScreen(null);
@@ -48,14 +48,14 @@ public final class ClientPacketHandler {
     }
 
     public static void setIntegratedServerOwner(IntegratedServer server, UUID uuid) {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId == null || slotId == 0) {
             server.setUUID(uuid);
         }
     }
 
     public static ClientPacketListener loginListener(Minecraft minecraft, ClientPacketListener current) {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return slotId != null && slotId != 0 ? current : minecraft.getConnection();
     }
 
@@ -67,7 +67,7 @@ public final class ClientPacketHandler {
     public static ClientPacketListener activeConnection() {
         ClientInstance client = Client.currentOrNull();
         if (client == null) {
-            Integer slotId = SlotScope.idOrNull();
+            Integer slotId = SlotExecution.currentSlotIdOrNull();
             client = ClientRuntime.INSTANCE.clients().clientOrNull(slotId != null ? slotId : 0);
         }
         LocalPlayer player = client != null ? client.player() : null;

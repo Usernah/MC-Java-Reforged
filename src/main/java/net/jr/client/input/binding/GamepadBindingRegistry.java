@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.util.JsonFileStore;
 import net.jr.api.client.input.GamepadDigitalInput;
@@ -353,7 +353,7 @@ public final class GamepadBindingRegistry {
     }
 
     private GamepadBindingEvaluator evaluator() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return this.evaluators[slotId != null ? slotId : 0];
     }
 
@@ -408,7 +408,7 @@ public final class GamepadBindingRegistry {
     }
 
     private PlayerBindings currentPlayerBindings() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return this.playerBindings[slotId != null ? slotId : 0];
     }
 

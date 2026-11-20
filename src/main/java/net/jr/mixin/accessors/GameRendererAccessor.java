@@ -6,12 +6,16 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.GlobalSettingsUniform;
 import net.minecraft.client.renderer.Lightmap;
 import net.minecraft.client.renderer.LightmapRenderStateExtractor;
+import net.minecraft.client.renderer.ItemInHandRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(GameRenderer.class)
 public interface GameRendererAccessor {
+    @Accessor("itemInHandRenderer")
+    ItemInHandRenderer javaReforged$getItemInHandRenderer();
+
     @Accessor("lightmap")
     Lightmap javaReforged$getLightmap();
 

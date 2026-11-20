@@ -12,7 +12,8 @@ import javax.annotation.Nullable;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.mixin.accessors.SoundEngineAccessor;
 import net.jr.mixin.accessors.SoundManagerAccessor;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.ScheduledSlot;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.resources.sounds.Sound;
@@ -168,11 +169,11 @@ public final class SlotSoundRouter {
 
     @Nullable
     private static Integer currentSlotId() {
-        Integer activeSlotId = SlotScope.idOrNull();
+        Integer activeSlotId = SlotExecution.currentSlotIdOrNull();
 
         return activeSlotId != null
                 ? activeSlotId
-                : SlotScope.scheduledIdOrNull();
+                : ScheduledSlot.currentOrNull();
     }
 
     @Nullable

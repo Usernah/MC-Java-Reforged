@@ -2,7 +2,7 @@ package net.jr.client.runtime.render.pass;
 
 import com.mojang.blaze3d.textures.FilterMode;
 import net.jr.api.client.render.gui.GuiRenderContext;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.ui.render.composition.GuiCompositionTarget;
 import net.jr.client.ui.dsl.ScreenEditorHooks;
@@ -27,7 +27,7 @@ public final class ScreenCompositionPass {
         GuiRenderContext parentContext,
         float partialTick
     ) {
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         UiFramebufferLayout layout =
             ScreenFramebufferSpace.layout(parentContext.viewport());
         int mouseX = ScreenPass.mouseX(

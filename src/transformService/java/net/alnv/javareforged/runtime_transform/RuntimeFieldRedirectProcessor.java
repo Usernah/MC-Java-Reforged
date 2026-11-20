@@ -27,6 +27,7 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
     private static final String GAME_RENDERER_OWNER = "net/minecraft/client/renderer/GameRenderer";
     private static final String LEVEL_RENDERER_OWNER = "net/minecraft/client/renderer/LevelRenderer";
     private static final String PARTICLE_ENGINE_OWNER = "net/minecraft/client/particle/ParticleEngine";
+    private static final String INTEGRATED_SERVER_OWNER = "net/minecraft/client/server/IntegratedServer";
     private static final String PARTICLE_ENGINE_FIELDS_OWNER =
         "net/jr/client/runtime/render/state/ParticleStateRouter";
     private static final String TOAST_MANAGER_OWNER =
@@ -473,7 +474,12 @@ public final class RuntimeFieldRedirectProcessor implements ClassProcessor {
             FieldRedirect redirect;
 
             if (fieldInsn.getOpcode() == Opcodes.GETFIELD) {
-                redirect = GETFIELD_REDIRECTS.get(key);
+                redirect = INTEGRATED_SERVER_OWNER.equals(classNode.name)
+                    && MINECRAFT_OWNER.equals(key.owner())
+                    && "player".equals(key.name())
+                    && "Lnet/minecraft/client/player/LocalPlayer;".equals(key.desc())
+                        ? new FieldRedirect(MINECRAFT_ACCESS_OWNER, "primaryPlayer")
+                        : GETFIELD_REDIRECTS.get(key);
 
                 if (redirect == null) {
                     insn = nextInsn;

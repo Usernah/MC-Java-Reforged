@@ -8,7 +8,7 @@ import java.lang.reflect.Method;
 import net.jr.client.compat.xaero.XaeroMinimapPipState;
 import net.jr.client.compat.xaero.XaeroMinimapPipRenderers;
 import net.jr.client.compat.xaero.XaeroMinimapRuntimeState;
-import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.ClientRuntime;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
@@ -79,8 +79,7 @@ abstract class MinimapPipRendererMixin {
             );
             return;
         }
-        InstanceExecution.runForClient(
-            slotId,
+        ClientRuntime.INSTANCE.slots().slot(slotId).runForSlot(
             () -> XaeroMinimapRuntimeState.run(
                 () -> XaeroMinimapPipRenderers.render(
                     state,

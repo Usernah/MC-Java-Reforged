@@ -332,7 +332,9 @@ public final class OptionsState {
                     this.save();
                     var client = ClientRuntime.INSTANCE.clients().clientOrNull(this.slotId);
                     if (client != null && client.player() != null) {
-                        SlotExecution.runForSlot(this.slotId, Minecraft.getInstance().options::broadcastOptions);
+                        ClientRuntime.INSTANCE.slots().slot(this.slotId).runForSlot(
+                            Minecraft.getInstance().options::broadcastOptions
+                        );
                     }
                 }
         );

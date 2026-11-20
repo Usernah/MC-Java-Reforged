@@ -2,9 +2,8 @@ package net.jr.client.runtime.ui;
 
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.context.SlotResolver;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
@@ -19,7 +18,7 @@ public final class SlotScreenManager {
     }
 
     public static void bootstrapPrimary(Minecraft minecraft, Screen screen) {
-        SlotExecution.runPrimary(minecraft, () -> minecraft.gui.setScreen(screen));
+        ClientRuntime.INSTANCE.slots().primary().runForSlot(() -> minecraft.gui.setScreen(screen));
     }
 
     public static void initialize(
@@ -28,8 +27,7 @@ public final class SlotScreenManager {
         int vanillaWidth,
         int vanillaHeight
     ) {
-        Integer activeSlotId = SlotScope.idOrNull();
-        int slotId = activeSlotId != null ? activeSlotId : 0;
+        int slotId = SlotExecution.currentSlotId();
         ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewportOrNull(slotId);
         int width = viewport != null
             ? ScreenFramebufferSpace.width(
@@ -62,11 +60,7 @@ public final class SlotScreenManager {
 
             if (layoutChanged && screen instanceof PresentationRebuildableScreen rebuildable) {
                 Screen rebuilt = rebuildable.rebuildForPresentation();
-                SlotExecution.runForSlot(
-                    minecraft,
-                    slot.id(),
-                    () -> minecraft.gui.setScreen(rebuilt)
-                );
+                slot.runForSlot(() -> minecraft.gui.setScreen(rebuilt));
                 continue;
             }
 
@@ -81,9 +75,7 @@ public final class SlotScreenManager {
                 continue;
             }
 
-            SlotExecution.runForSlot(
-                minecraft,
-                slot.id(),
+            slot.runForSlot(
                 () -> ScreenEventRunner.run(
                         screen,
                         "Resizing screen",
@@ -100,9 +92,7 @@ public final class SlotScreenManager {
                 continue;
             }
 
-            SlotExecution.runForSlot(
-                minecraft,
-                slot.id(),
+            slot.runForSlot(
                 () -> {
                     SleepScreenController.synchronize(minecraft);
                     Screen screen = slot.screenState().screen();
@@ -127,7 +117,7 @@ public final class SlotScreenManager {
 
     @Nullable
     public static Screen activeScreenOrNull() {
-        Integer activeSlotId = SlotScope.idOrNull();
+        Integer activeSlotId = SlotExecution.currentSlotIdOrNull();
         Slots slot = activeSlotId != null
             ? ClientRuntime.INSTANCE.slots().slot(activeSlotId)
             : SlotResolver.requirePrimary();

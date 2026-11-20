@@ -3,7 +3,6 @@ package net.jr.client.runtime.render.tick;
 import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.world.entity.Entity;
@@ -17,7 +16,7 @@ public final class FovTicker {
             if (client.level() == null || client.player() == null) {
                 continue;
             }
-            InstanceExecution.runForClient(client.slotId(), FovTicker::tickCurrentClient);
+            client.slot().runForSlot(FovTicker::tickCurrentClient);
         }
     }
 

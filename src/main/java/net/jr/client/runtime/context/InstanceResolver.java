@@ -21,7 +21,7 @@ public final class InstanceResolver {
     }
 
     public static ClientInstance requireActive() {
-        return requireClient(SlotScope.requireId());
+        return requireClient(SlotExecution.currentSlotId());
     }
 
     public static ClientInstance requireConnection(Connection connection) {
@@ -39,7 +39,7 @@ public final class InstanceResolver {
     }
 
     public static SessionToken captureScheduledTokenOrNull() {
-        Integer scheduledSlotId = SlotScope.scheduledIdOrNull();
+        Integer scheduledSlotId = ScheduledSlot.currentOrNull();
         if (scheduledSlotId != null) {
             return ClientRuntime.INSTANCE.clients().hasClient(scheduledSlotId)
                 ? tokenForSlot(scheduledSlotId)

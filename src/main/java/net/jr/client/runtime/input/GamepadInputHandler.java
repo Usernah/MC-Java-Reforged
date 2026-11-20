@@ -3,9 +3,7 @@ package net.jr.client.runtime.input;
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotExecution;
-import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.options.OptionsStateResolver;
@@ -86,7 +84,7 @@ public final class GamepadInputHandler {
             if (event.getEntity() != client.player() || !client.input().hasGamepad()) {
                 continue;
             }
-            InstanceExecution.runForClient(slotId, () -> {
+            client.slot().runForSlot(() -> {
                 if (ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen() == null) {
                     GamepadGameplayInputHandler.applyMovement(event, client.input());
                 }
@@ -128,16 +126,12 @@ public final class GamepadInputHandler {
                 processCurrentClientFrame(minecraft);
             };
 
-            if (runtime.clients().hasClient(slotId)) {
-                InstanceExecution.runForClient(slotId, drawable.viewport(), frame);
-            } else {
-                SlotExecution.runForSlot(minecraft, slot, drawable.viewport(), frame);
-            }
+            slot.runForSlot(drawable.viewport(), frame);
         }
     }
 
     private static void processCurrentClientFrame(Minecraft minecraft) {
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         LocalCursorState state = cursorState(slotId);
         Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
         if (screen != null) {
@@ -856,7 +850,7 @@ public final class GamepadInputHandler {
     }
 
     private static ViewportArea viewportForSlot(int slotId) {
-        Integer currentSlotId = SlotScope.idOrNull();
+        Integer currentSlotId = SlotExecution.currentSlotIdOrNull();
         if (currentSlotId != null && currentSlotId == slotId) {
             return Viewport.currentOrNull();
         }
@@ -926,7 +920,7 @@ public final class GamepadInputHandler {
     }
 
     private static int currentCursorSlotId() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return slotId != null ? slotId : InputApi.keyboardMouseSlotId();
     }
 

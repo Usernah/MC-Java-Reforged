@@ -1,7 +1,7 @@
 package net.jr.mixin.compat.xaeroworldmap;
 
 import net.jr.client.compat.xaero.XaeroWorldMapRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -15,7 +15,7 @@ abstract class WorldMapSessionMixin {
         CallbackInfoReturnable<WorldMapSession> cir
     ) {
 
-        if (SlotScope.idOrNull() != null) {
+        if (SlotExecution.currentSlotIdOrNull() != null) {
             cir.setReturnValue(XaeroWorldMapRuntime.currentSessionOrNull());
         }
     }

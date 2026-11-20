@@ -3,7 +3,7 @@ package net.jr.client.runtime.input;
 import net.jr.api.client.local.Client;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.Minecraft;
 import net.jr.client.runtime.client.ClientInstance;
@@ -38,7 +38,6 @@ public final class ScreenInputHandler {
     }
 
     private static int activeSlotId() {
-        Integer slotId = SlotScope.idOrNull();
-        return slotId != null ? slotId : 0;
+        return SlotExecution.currentSlotId();
     }
 }

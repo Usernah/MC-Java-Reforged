@@ -5,8 +5,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import org.jetbrains.annotations.Nullable;
 import xaero.map.MapRunner;
@@ -87,7 +86,7 @@ public final class XaeroWorldMapRuntime {
 
     @Nullable
     public static WorldMapSession currentSessionOrNull() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId != null && slotId.equals(CORE_LIFECYCLE_SLOT.get())) {
             return XaeroWorldMapCore.currentSession;
         }
@@ -112,8 +111,7 @@ public final class XaeroWorldMapRuntime {
         return new CoreSessionScope(
                 slotId,
                 previous,
-                previousLifecycleSlot,
-                SlotScope.enter(slotId)
+                previousLifecycleSlot
         );
     }
 
@@ -132,7 +130,7 @@ public final class XaeroWorldMapRuntime {
 
     @Nullable
     public static XaeroWorldMapViewState currentViewStateOrNull() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
 
         if (slotId == null) {
             return null;
@@ -158,8 +156,7 @@ public final class XaeroWorldMapRuntime {
 
             ran[0] = true;
 
-            InstanceExecution.runForClient(
-                    binding.slotId(),
+            ClientRuntime.INSTANCE.slots().slot(binding.slotId()).runForSlot(
                     () -> session.getMapProcessor().run(runner)
             );
         }
@@ -172,8 +169,7 @@ public final class XaeroWorldMapRuntime {
                 ClientRuntime.INSTANCE.clients().all()) {
 
             if (client.player() != null) {
-                InstanceExecution.runForClient(
-                        client.slotId(),
+                client.slot().runForSlot(
                         action
                 );
             }
@@ -188,8 +184,7 @@ public final class XaeroWorldMapRuntime {
                 ClientRuntime.INSTANCE.clients().all()) {
 
             if (client.player() == player) {
-                InstanceExecution.runForClient(
-                        client.slotId(),
+                client.slot().runForSlot(
                         () -> action.run(player)
                 );
                 return;
@@ -231,19 +226,16 @@ public final class XaeroWorldMapRuntime {
         private final WorldMapSession previous;
         @Nullable
         private final Integer previousLifecycleSlot;
-        private final SlotScope.Scope activeSlotScope;
         private boolean closed;
 
         private CoreSessionScope(
             int slotId,
             @Nullable WorldMapSession previous,
-            @Nullable Integer previousLifecycleSlot,
-            SlotScope.Scope activeSlotScope
+            @Nullable Integer previousLifecycleSlot
         ) {
             this.slotId = slotId;
             this.previous = previous;
             this.previousLifecycleSlot = previousLifecycleSlot;
-            this.activeSlotScope = activeSlotScope;
         }
 
         @Override
@@ -265,14 +257,10 @@ public final class XaeroWorldMapRuntime {
                 XaeroWorldMapCore.currentSession =
                         primarySession != null ? primarySession : this.previous;
             } finally {
-                try {
-                    this.activeSlotScope.close();
-                } finally {
-                    if (this.previousLifecycleSlot == null) {
-                        CORE_LIFECYCLE_SLOT.remove();
-                    } else {
-                        CORE_LIFECYCLE_SLOT.set(this.previousLifecycleSlot);
-                    }
+                if (this.previousLifecycleSlot == null) {
+                    CORE_LIFECYCLE_SLOT.remove();
+                } else {
+                    CORE_LIFECYCLE_SLOT.set(this.previousLifecycleSlot);
                 }
             }
         }

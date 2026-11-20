@@ -1,7 +1,8 @@
 package net.jr.api.client.render.world;
 
 import javax.annotation.Nullable;
-import net.jr.client.runtime.render.world.WorldRenderContextAccess;
+import net.jr.client.runtime.context.ExecutionFrame;
+import net.jr.client.runtime.context.SlotExecution;
 
 public final class WorldRenderContexts {
     private WorldRenderContexts() {
@@ -16,6 +17,7 @@ public final class WorldRenderContexts {
     }
 
     public static @Nullable WorldRenderContext currentOrNull() {
-        return WorldRenderContextAccess.currentOrNull();
+        ExecutionFrame frame = SlotExecution.currentFrameOrNull();
+        return frame != null ? frame.worldView() : null;
     }
 }

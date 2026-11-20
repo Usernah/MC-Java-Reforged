@@ -6,14 +6,13 @@ import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import javax.annotation.Nullable;
 import net.jr.client.compat.create.CreateFlywheelLifecycle;
-import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.context.ExecutionPhase;
 import net.jr.client.compat.create.CreateRuntimeState;
 import net.jr.client.runtime.audio.SlotSoundRouter;
 import net.jr.client.runtime.network.ConnectionSlotRegistry;
 import net.jr.client.runtime.player.PositionSync;
 import net.jr.client.runtime.player.SecondaryProfile;
 import com.mojang.authlib.GameProfile;
-import net.jr.client.runtime.render.state.WorldEngineStateScope;
 import net.jr.client.runtime.session.ClientSession;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
@@ -294,14 +293,14 @@ public final class InstanceManager {
         Slots slot = client.slot();
         Connection connection = session.connection();
         if (connection != null) {
-            InstanceExecution.runForClient(client.slotId(), connection::tick);
+            slot.runForSlot(connection::tick);
             if (!connection.isConnected()) {
                 session.disconnect(this.connections);
                 return;
             }
         }
 
-        InstanceExecution.runForClient(client.slotId(), () -> {
+        slot.runForSlot(ExecutionPhase.WORLD_TICK, () -> {
             boolean gameplayBound = ReadinessPolicy.gameplayBound(client);
             LocalPlayer candidatePlayer = client.player();
             boolean connectionBound = candidatePlayer != null
@@ -321,7 +320,6 @@ public final class InstanceManager {
             session.markWorldReady();
             session.setJoiningInProgress(false);
 
-            try (WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bind(minecraft, slot)) {
                 ClientLevel level = client.level();
                 MultiPlayerGameMode gameMode = client.gameMode();
                 LocalPlayer player = client.player();
@@ -347,7 +345,6 @@ public final class InstanceManager {
                     minecraft.particleEngine.tick();
                 }
                 PositionSync.forcePosition(player);
-            }
         });
     }
 

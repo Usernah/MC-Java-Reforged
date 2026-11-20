@@ -8,7 +8,7 @@ import java.util.List;
 import com.mojang.blaze3d.platform.Window;
 import net.jr.api.client.ui.Viewport;
 import net.jr.client.runtime.input.InputActionHandler;
-import net.jr.client.runtime.context.SlotExecution;
+import net.jr.client.runtime.context.SlotResolver;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.sound.action.WidgetSoundRouter;
 import net.jr.client.ui.render.composition.ScreenFramebufferSpace;
@@ -30,7 +30,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class MouseHandlerMixin {
     @WrapMethod(method = "onButton")
     private void javaReforged$mouseButtonForInputOwner(long windowPointer, MouseButtonInfo buttonInfo, int action, Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             Screen editorScreen = SlotScreenManager.activeScreenOrNull();
             if (editorScreen != null && ScreenEditorHooks.activeFor(editorScreen)) {
                 Minecraft mc = Minecraft.getInstance();
@@ -48,7 +48,7 @@ public abstract class MouseHandlerMixin {
 
     @WrapMethod(method = "onScroll")
     private void javaReforged$mouseScrollForInputOwner(long windowPointer, double xOffset, double yOffset, Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             Screen editorScreen = SlotScreenManager.activeScreenOrNull();
             if (editorScreen != null && ScreenEditorHooks.activeFor(editorScreen)) {
                 Minecraft mc = Minecraft.getInstance();
@@ -66,7 +66,7 @@ public abstract class MouseHandlerMixin {
 
     @WrapMethod(method = "onMove")
     private void javaReforged$mouseMoveForInputOwner(long windowPointer, double xpos, double ypos, Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             Screen editorScreen = SlotScreenManager.activeScreenOrNull();
             if (editorScreen != null && ScreenEditorHooks.activeFor(editorScreen)) {
                 ViewportArea area = net.jr.api.client.ui.Viewport.current();
@@ -92,7 +92,7 @@ public abstract class MouseHandlerMixin {
 
     @WrapMethod(method = "onDrop")
     private void javaReforged$fileDropForInputOwner(long windowPointer, List<Path> files, int failedCount, Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             if (!SystemUI.blocksKeyboardMouse()) {
                 original.call(windowPointer, files, failedCount);
             }
@@ -101,7 +101,7 @@ public abstract class MouseHandlerMixin {
 
     @WrapMethod(method = "handleAccumulatedMovement")
     private void javaReforged$mouseMovementForInputOwner(Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             if (!SystemUI.blocksKeyboardMouse()) {
                 original.call();
             }

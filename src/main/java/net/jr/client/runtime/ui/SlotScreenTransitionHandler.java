@@ -9,7 +9,6 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.experimental_features.pre_join.PreJoinWorldLoad;
 import net.jr.client.runtime.context.SlotExecution;
-import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.screens.MessageScreen;
 import net.minecraft.client.Minecraft;
@@ -22,7 +21,7 @@ public final class SlotScreenTransitionHandler {
     }
 
     public static boolean shouldCancelSetScreen(@Nullable Screen screen) {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId == null || slotId == 0) {
             return false;
         }
@@ -58,7 +57,7 @@ public final class SlotScreenTransitionHandler {
             return;
         }
         if (ReadinessPolicy.gameplayBound(0)) {
-            SlotExecution.runPrimary(minecraft, () -> minecraft.gui.setScreen(null));
+            ClientRuntime.INSTANCE.slots().primary().runForSlot(() -> minecraft.gui.setScreen(null));
         }
     }
 
@@ -75,9 +74,7 @@ public final class SlotScreenTransitionHandler {
             if (screen instanceof MessageScreen messageScreen
                     && messageScreen.closesWhenGameplayReady()
                     && ReadinessPolicy.gameplayReady(slotId)) {
-                SlotExecution.runForSlot(
-                    minecraft,
-                    slotId,
+                ClientRuntime.INSTANCE.slots().slot(slotId).runForSlot(
                     () -> minecraft.gui.setScreen(null)
                 );
             }
@@ -88,9 +85,7 @@ public final class SlotScreenTransitionHandler {
         Screen screen = ClientRuntime.INSTANCE.slots().slot(slotId).screenState().screen();
         if (screen instanceof MessageScreen messageScreen
                 && messageScreen.closesWhenGameplayReady()) {
-            SlotExecution.runForSlot(
-                minecraft,
-                slotId,
+            ClientRuntime.INSTANCE.slots().slot(slotId).runForSlot(
                 () -> minecraft.gui.setScreen(null)
             );
         }

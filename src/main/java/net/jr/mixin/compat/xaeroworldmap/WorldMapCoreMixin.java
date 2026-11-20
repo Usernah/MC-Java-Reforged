@@ -1,6 +1,7 @@
 package net.jr.mixin.compat.xaeroworldmap;
 
 import net.jr.client.compat.xaero.XaeroWorldMapRuntime;
+import net.jr.client.runtime.context.InstanceResolver;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
@@ -19,10 +20,12 @@ abstract class WorldMapCoreMixin {
         ClientboundLoginPacket packet,
         Operation<Void> original
     ) {
-        try (XaeroWorldMapRuntime.CoreSessionScope ignored =
-                 XaeroWorldMapRuntime.bindCoreSessionForJoin(listener)) {
-            original.call(listener, packet);
-        }
+        InstanceResolver.requireListener(listener).slot().runForSlot(() -> {
+            try (XaeroWorldMapRuntime.CoreSessionScope ignored =
+                     XaeroWorldMapRuntime.bindCoreSessionForJoin(listener)) {
+                original.call(listener, packet);
+            }
+        });
     }
 
     @WrapMethod(method = "onPlayNetHandlerCleanup")
@@ -30,10 +33,12 @@ abstract class WorldMapCoreMixin {
         ClientPacketListener listener,
         Operation<Void> original
     ) {
-        try (XaeroWorldMapRuntime.CoreSessionScope ignored =
-                 XaeroWorldMapRuntime.bindCoreSessionForCleanup(listener)) {
-            original.call(listener);
-        }
+        InstanceResolver.requireListener(listener).slot().runForSlot(() -> {
+            try (XaeroWorldMapRuntime.CoreSessionScope ignored =
+                     XaeroWorldMapRuntime.bindCoreSessionForCleanup(listener)) {
+                original.call(listener);
+            }
+        });
     }
 
     @Inject(method = "onPlayNetHandler", at = @At("RETURN"))

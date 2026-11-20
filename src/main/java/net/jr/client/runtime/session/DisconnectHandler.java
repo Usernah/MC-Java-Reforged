@@ -3,7 +3,6 @@ package net.jr.client.runtime.session;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.context.SlotExecution;
-import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.Connection;
@@ -14,7 +13,7 @@ public final class DisconnectHandler {
     }
 
     public static boolean disconnectCurrentSecondary(Minecraft minecraft) {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId == null || slotId == 0) {
             return false;
         }
@@ -42,7 +41,7 @@ public final class DisconnectHandler {
         }
         runtime.inputFocus().clampToSlots(runtime.viewports().presentedSlotIds());
         runtime.viewportResize().applyLayoutTransition(minecraft);
-        SlotExecution.runForSlot(minecraft, 0, minecraft::updateTitle);
+        ClientRuntime.INSTANCE.slots().primary().runForSlot(minecraft::updateTitle);
     }
 
     public static void disconnectSecondaryConnection(
@@ -75,6 +74,6 @@ public final class DisconnectHandler {
         runtime.viewports().presentPrimaryOnly();
         runtime.inputFocus().clampToSlots(runtime.viewports().presentedSlotIds());
         runtime.viewportResize().applyLayoutTransition(minecraft);
-        SlotExecution.runForSlot(minecraft, 0, minecraft::updateTitle);
+        ClientRuntime.INSTANCE.slots().primary().runForSlot(minecraft::updateTitle);
     }
 }

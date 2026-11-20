@@ -1,7 +1,7 @@
 package net.jr.client.runtime.input;
 
 import net.jr.client.input.InputApi;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.ui.cursor.SystemCursorController;
 
@@ -73,8 +73,7 @@ public final class CursorVisibility {
     }
 
     private static int currentSlotId() {
-        Integer slotId = SlotScope.idOrNull();
-        return slotId != null ? slotId : 0;
+        return SlotExecution.currentSlotId();
     }
 
     private static int normalizeSlotId(int slotId) {

@@ -6,7 +6,6 @@ import net.jr.client.compat.xaero.XaeroMinimapRuntimeState;
 import net.jr.client.compat.xaero.XaeroMinimapWorldMatrices;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import xaero.common.events.ClientEvents;
@@ -24,8 +23,7 @@ abstract class ClientEventsMixin {
     private void javaReforged$tickEveryClient(Operation<Void> original) {
         for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             if (client.player() != null) {
-                InstanceExecution.runForClient(
-                    client.slotId(),
+                client.slot().runForSlot(
                     () -> XaeroMinimapRuntimeState.run(original::call)
                 );
             }
@@ -36,8 +34,7 @@ abstract class ClientEventsMixin {
     private void javaReforged$renderTickEveryClient(Operation<Void> original) {
         for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             if (client.player() != null) {
-                InstanceExecution.runForClient(
-                    client.slotId(),
+                client.slot().runForSlot(
                     () -> XaeroMinimapRuntimeState.run(original::call)
                 );
             }
@@ -48,8 +45,7 @@ abstract class ClientEventsMixin {
     private void javaReforged$playerTickCurrentClient(Player player, Operation<Void> original) {
         for (ClientInstance client : ClientRuntime.INSTANCE.clients().all()) {
             if (client.player() == player) {
-                InstanceExecution.runForClient(
-                    client.slotId(),
+                client.slot().runForSlot(
                     () -> XaeroMinimapRuntimeState.run(() -> original.call(player))
                 );
                 return;

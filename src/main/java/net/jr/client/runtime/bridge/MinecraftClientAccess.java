@@ -2,7 +2,7 @@ package net.jr.client.runtime.bridge;
 
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -26,7 +26,16 @@ public final class MinecraftClientAccess {
 
     @Nullable
     public static LocalPlayer player(Minecraft minecraft) {
+        if (SlotExecution.isMinecraftBootstrapping()) {
+            return minecraft.player;
+        }
         return slot().gameplayState().player();
+    }
+
+    @Nullable
+    public static LocalPlayer primaryPlayer(Minecraft minecraft) {
+        LocalPlayer player = ClientRuntime.INSTANCE.slots().primary().gameplayState().player();
+        return player != null && !player.isRemoved() ? player : null;
     }
 
     public static void setPlayer(Minecraft minecraft, @Nullable LocalPlayer player) {
@@ -76,8 +85,7 @@ public final class MinecraftClientAccess {
     }
 
     private static Slots slot() {
-        Integer slotId = SlotScope.idOrNull();
-        return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0);
+        return SlotExecution.currentSlot();
     }
 
     @Nullable

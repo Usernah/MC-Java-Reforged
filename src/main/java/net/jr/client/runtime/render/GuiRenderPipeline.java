@@ -10,8 +10,7 @@ import net.jr.api.client.render.gui.HudRenderContext;
 import net.jr.api.client.ui.FramebufferScreen;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
-import net.jr.client.runtime.context.SlotExecution;
+import net.jr.client.runtime.context.ExecutionPhase;
 import net.jr.client.runtime.render.pass.HudPass;
 import net.jr.client.runtime.render.pass.ControlHintPass;
 import net.jr.client.runtime.render.pass.ScreenOverlayRenderPass;
@@ -21,7 +20,6 @@ import net.jr.client.runtime.render.pass.ScreenPass;
 import net.jr.client.runtime.render.pass.ToastRenderPass;
 import net.jr.client.runtime.render.pass.SystemUiRenderPass;
 import net.jr.client.runtime.slot.Slots;
-import net.jr.client.runtime.viewport.GuiViewportScope;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
 import net.jr.api.client.systemui.SystemUI;
@@ -226,30 +224,11 @@ public final class GuiRenderPipeline {
             if (hasFullWindowEditor && !fullWindowEditor) {
                 continue;
             }
-            Runnable extraction = () -> {
-                try (
-                        GuiViewportScope ignoredViewport = GuiViewportScope.enter(
-                            context.graphics(), context.viewport()
-                        )
-                ) {
-                    phase.extract(frame);
-                }
-            };
-
-            if (frame.client() != null) {
-                InstanceExecution.runForClient(
-                        context.slot().id(),
-                        context.viewport(),
-                        extraction
-                );
-            } else {
-                SlotExecution.runForSlot(
-                        minecraft,
-                        context.slot(),
-                        context.viewport(),
-                        extraction
-                );
-            }
+            context.slot().runForSlot(
+                context,
+                ExecutionPhase.GUI,
+                () -> phase.extract(frame)
+            );
         }
     }
 

@@ -4,7 +4,7 @@ import javax.annotation.Nullable;
 
 import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.slot.Slots;
@@ -22,11 +22,11 @@ public final class TerrainSectionUpdateRouter {
         int sectionZ,
         boolean playerChanged
     ) {
-        ClientInstance activeClient = Client.currentOrNull();
-        Slots owner = activeClient != null
-            ? activeClient.slot()
-            : ClientRuntime.INSTANCE.slots().primary();
-        ClientLevel ownerLevel = owner.renderState().level();
+        ClientLevel ownerLevel = sourceLevel;
+        if (ownerLevel == null) {
+            ClientInstance activeClient = Client.currentOrNull();
+            ownerLevel = activeClient != null ? activeClient.level() : null;
+        }
         if (ownerLevel == null) {
             return false;
         }
@@ -47,7 +47,7 @@ public final class TerrainSectionUpdateRouter {
         if (level == null) {
             return true;
         }
-        Integer activeSlot = SlotScope.idOrNull();
+        Integer activeSlot = SlotExecution.currentSlotIdOrNull();
         if (activeSlot == null) {
             return true;
         }

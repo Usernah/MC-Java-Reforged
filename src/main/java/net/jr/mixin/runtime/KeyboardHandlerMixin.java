@@ -2,7 +2,7 @@ package net.jr.mixin.runtime;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import net.jr.client.runtime.context.SlotExecution;
+import net.jr.client.runtime.context.SlotResolver;
 import net.jr.client.runtime.ui.SlotScreenManager;
 import org.lwjgl.glfw.GLFW;
 import net.jr.client.ui.dsl.ScreenEditorHooks;
@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.Mixin;
 public abstract class KeyboardHandlerMixin {
     @WrapMethod(method = "keyPress")
     private void javaReforged$keyPressForPrimaryClient(long windowPointer, int action, KeyEvent event, Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             Screen screen = SlotScreenManager.activeScreenOrNull();
             // A Screen receives raw keyboard events, but its key mappings may
             // never enqueue consumeClick(). F10 must work with menus open.
@@ -35,7 +35,7 @@ public abstract class KeyboardHandlerMixin {
 
     @WrapMethod(method = "charTyped")
     private void javaReforged$charTypedForPrimaryClient(long windowPointer, CharacterEvent event, Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             Screen screen = SlotScreenManager.activeScreenOrNull();
             if (screen != null && ScreenEditorHooks.charTyped(screen, event)) return;
             if (!SystemUI.charTyped(event)) {
@@ -46,7 +46,7 @@ public abstract class KeyboardHandlerMixin {
 
     @WrapMethod(method = "preeditCallback")
     private void javaReforged$preeditForPrimaryClient(long windowPointer, @Nullable PreeditEvent event, Operation<Void> original) {
-        SlotExecution.runForKeyboardMouse(() -> {
+        SlotResolver.requireKeyboardMouseOwner().runForSlot(() -> {
             if (!SystemUI.blocksKeyboardMouse()) {
                 original.call(windowPointer, event);
             }

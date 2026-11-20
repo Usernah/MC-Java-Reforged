@@ -12,11 +12,10 @@ import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.mixin.accessors.LevelRendererAccessor;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.client.ReadinessPolicy;
-import net.jr.client.runtime.context.InstanceExecution;
-import net.jr.client.runtime.render.state.WorldEngineStateScope;
+import net.jr.client.runtime.context.ExecutionPhase;
 import net.jr.client.runtime.render.experimental.TerrainMultiDraw;
 import net.jr.client.runtime.state.TerrainState;
 import net.minecraft.client.Minecraft;
@@ -82,7 +81,7 @@ public final class TerrainCoordinator {
     }
 
     public static boolean resetActiveSlotTerrainIfScoped() {
-        if (SlotScope.idOrNull() == null) {
+        if (SlotExecution.currentSlotIdOrNull() == null) {
             return false;
         }
         resetActiveSlotTerrain();
@@ -177,7 +176,7 @@ public final class TerrainCoordinator {
     }
 
     public static boolean routeGlobalAllChanged() {
-        if (SlotScope.idOrNull() != null) {
+        if (SlotExecution.currentSlotIdOrNull() != null) {
             return false;
         }
 
@@ -246,7 +245,7 @@ public final class TerrainCoordinator {
         Minecraft minecraft = Minecraft.getInstance();
 
         Map<TerrainKey, SectionUpdateRenderState> selectedUpdates = selectUniqueUpdates();
-        int driverSlotId = SlotScope.requireId();
+        int driverSlotId = SlotExecution.currentSlotId();
         var driverCamera = ClientRuntime.INSTANCE.slots().slot(driverSlotId)
             .renderState().levelRenderState().cameraRenderState.pos;
         try {
@@ -261,15 +260,12 @@ public final class TerrainCoordinator {
                     continue;
                 }
 
-                try (
-                        InstanceExecution.Scope ignoredClient = InstanceExecution.enterForClient(minecraft, slot.id());
-                        WorldEngineStateScope ignoredEngines = WorldEngineStateScope.bindTerrainOnly(minecraft, slot)
-                ) {
+                slot.runForSlot(ExecutionPhase.TERRAIN, () -> {
                     var cameraState = slot.renderState().levelRenderState().cameraRenderState;
                     slot.renderState().terrain().setCameraPosition(cameraState.pos);
                     renderer.javaReforged$repositionCamera(cameraState);
                     renderer.javaReforged$compileSections(cameraState);
-                }
+                });
             }
         } finally {
             dispatcher.setCameraPosition(driverCamera);
@@ -381,7 +377,7 @@ public final class TerrainCoordinator {
     }
 
     private static int activeSlotId() {
-        Integer active = SlotScope.idOrNull();
+        Integer active = SlotExecution.currentSlotIdOrNull();
 
         return active != null
                 ? active

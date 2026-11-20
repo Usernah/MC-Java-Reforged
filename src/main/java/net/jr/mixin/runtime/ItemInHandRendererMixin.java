@@ -5,7 +5,9 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.jr.api.client.split.SplitScreen;
-import net.jr.client.runtime.render.state.HandStateScope;
+import net.jr.client.runtime.context.ExecutionFrame;
+import net.jr.client.runtime.context.ExecutionPhase;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.viewport.ViewportLayout;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -29,28 +31,14 @@ public abstract class ItemInHandRendererMixin {
     @Unique
     private boolean javaReforged$centerBaseHandTransform;
 
-    @WrapMethod(method = "tick")
-    private void javaReforged$tickWithClientHandState(Operation<Void> original) {
-        this.javaReforged$runWithClientState(() -> original.call());
-    }
-
     @WrapMethod(method = "itemUsed")
-    private void javaReforged$itemUsedWithClientHandState(InteractionHand hand, Operation<Void> original) {
-        this.javaReforged$runWithClientState(() -> original.call(hand));
-    }
-
-    @WrapMethod(method = "submitHandsWithItems")
-    private void javaReforged$renderWithClientHandState(
-        float partialTick,
-        com.mojang.blaze3d.vertex.PoseStack poseStack,
-        net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector,
-        net.minecraft.client.player.LocalPlayer player,
-        int packedLight,
-        Operation<Void> original
-    ) {
-        this.javaReforged$runWithClientState(
-            () -> original.call(partialTick, poseStack, submitNodeCollector, player, packedLight)
-        );
+    private void javaReforged$itemUsedForSlot(InteractionHand hand, Operation<Void> original) {
+        ExecutionFrame frame = SlotExecution.currentFrameOrNull();
+        if (frame != null && (frame.phase() == ExecutionPhase.HAND || frame.phase() == ExecutionPhase.WORLD_RENDER)) {
+            original.call(hand);
+            return;
+        }
+        SlotExecution.currentSlot().runForSlot(ExecutionPhase.HAND, () -> original.call(hand));
     }
 
     @WrapOperation(
@@ -199,7 +187,4 @@ public abstract class ItemInHandRendererMixin {
             && player.getOffhandItem().isEmpty());
     }
 
-    private void javaReforged$runWithClientState(Runnable action) {
-        HandStateScope.run((ItemInHandRenderer) (Object) this, action);
-    }
 }

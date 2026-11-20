@@ -2,7 +2,6 @@ package net.jr.client.runtime.render.tick;
 
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.minecraft.world.entity.Entity;
 
 public final class CameraTicker {
@@ -14,7 +13,7 @@ public final class CameraTicker {
             if (!canTick(client)) {
                 continue;
             }
-            InstanceExecution.runForClient(client.slotId(), () -> client.camera().tick());
+            client.slot().runForSlot(() -> client.camera().tick());
         }
     }
 

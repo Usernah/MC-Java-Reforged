@@ -3,8 +3,8 @@ package net.jr.api.client.local;
 import java.util.List;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
+import net.jr.client.runtime.context.ExecutionFrame;
 import net.jr.client.runtime.context.SlotExecution;
-import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
 import net.minecraft.client.player.LocalPlayer;
@@ -17,14 +17,8 @@ public final class Client {
 
     @Nullable
     public static ClientInstance currentOrNull() {
-        Slots slot = SlotExecution.currentSlotOrNull();
-        if (slot != null) {
-            return ClientRuntime.INSTANCE.clients().clientOrNull(slot.id());
-        }
-        Integer slotId = SlotScope.idOrNull();
-        return slotId != null
-                ? ClientRuntime.INSTANCE.clients().clientOrNull(slotId)
-                : null;
+        ExecutionFrame frame = SlotExecution.currentFrameOrNull();
+        return frame != null ? frame.client() : null;
     }
 
 

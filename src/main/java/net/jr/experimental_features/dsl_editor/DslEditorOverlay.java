@@ -2,7 +2,7 @@ package net.jr.experimental_features.dsl_editor;
 
 import net.jr.api.client.resource.Asset;
 import net.jr.client.ui.container.DslContainerBridge;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.ui.dsl.DslUiContext;
 import net.jr.client.ui.dsl.ScreenEditorHooks;
 import net.jr.client.ui.dsl.UiCompiledDocument;
@@ -97,13 +97,13 @@ final class DslEditorOverlay implements ScreenEditorHooks.Listener {
 
     DslEditorOverlay(Screen screen) {
         this.screen = screen;
-        Integer activeSlot = SlotScope.idOrNull();
+        Integer activeSlot = SlotExecution.currentSlotIdOrNull();
         this.slotId = activeSlot == null ? 0 : activeSlot;
     }
 
     @Override
     public boolean matches(Screen current) {
-        Integer activeSlot = SlotScope.idOrNull();
+        Integer activeSlot = SlotExecution.currentSlotIdOrNull();
         if (activeSlot != null && activeSlot != slotId) return false;
         // A resource override may rebuild the original Screen instance. Follow an equivalent
         // replacement, but never silently start editing a completely unrelated screen.

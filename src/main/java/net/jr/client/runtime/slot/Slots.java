@@ -1,6 +1,13 @@
 package net.jr.client.runtime.slot;
 
+import java.util.function.Supplier;
+import net.jr.api.client.render.gui.GuiRenderContext;
+import net.jr.client.runtime.context.ExecutionPhase;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.input.SlotCursorView;
+import net.jr.client.runtime.render.world.WorldRenderView;
+import net.jr.client.runtime.viewport.ViewportArea;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.jr.client.runtime.input.SlotInput;
 import net.jr.client.runtime.state.ChatState;
 import net.jr.client.runtime.state.ClientRenderState;
@@ -81,6 +88,39 @@ public final class Slots {
 
     public boolean isSecondary() {
         return ClientSlots.isSecondary(this.id);
+    }
+
+    public void runForSlot(Runnable action) {
+        SlotExecution.run(this, action);
+    }
+
+    public <T> T runForSlot(Supplier<T> action) {
+        return SlotExecution.run(this, action);
+    }
+
+    public void runForSlot(ExecutionPhase phase, Runnable action) {
+        SlotExecution.run(this, phase, action);
+    }
+
+    public void runForSlot(ViewportArea viewport, Runnable action) {
+        SlotExecution.run(this, viewport, action);
+    }
+
+    public void runForSlot(WorldRenderView view, ExecutionPhase phase, Runnable action) {
+        SlotExecution.run(this, view, phase, action);
+    }
+
+    public void runForSlot(GuiRenderContext context, ExecutionPhase phase, Runnable action) {
+        SlotExecution.run(this, context, phase, action);
+    }
+
+    public void runForSlot(
+        GuiGraphicsExtractor graphics,
+        ViewportArea viewport,
+        ExecutionPhase phase,
+        Runnable action
+    ) {
+        SlotExecution.run(this, graphics, viewport, phase, action);
     }
 
     public void clearWorldBinding() {

@@ -8,7 +8,7 @@ import net.jr.api.client.render.world.WorldRenderContexts;
 import net.jr.client.runtime.render.world.WorldRenderBackend;
 import net.jr.client.runtime.render.world.WorldRenderView;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -163,7 +163,7 @@ public final class SodiumWorldRenderBackend implements WorldRenderBackend {
         if (localClient != null) {
             return localClient.level();
         }
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId != null) {
             return ClientRuntime.INSTANCE.slots().slot(slotId).renderState().level();
         }

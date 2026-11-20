@@ -29,7 +29,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import javax.annotation.Nullable;
 import net.jr.client.render.pipeline.ModRenderPipelines;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.mixin.accessors.LevelRendererAccessor;
 import net.minecraft.SharedConstants;
@@ -134,7 +134,7 @@ public final class TerrainMultiDraw {
             return null;
         }
 
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         SlotBuffers buffers = buffers(slotId);
         GpuTextureView blockAtlas = Minecraft.getInstance()
             .getTextureManager()

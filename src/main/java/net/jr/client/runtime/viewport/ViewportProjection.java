@@ -2,7 +2,7 @@ package net.jr.client.runtime.viewport;
 
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 
 public final class ViewportProjection {
     private ViewportProjection() {
@@ -10,7 +10,7 @@ public final class ViewportProjection {
 
     @Nullable
     public static Size activeSizeOrNull() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId == null || !ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
             return null;
         }

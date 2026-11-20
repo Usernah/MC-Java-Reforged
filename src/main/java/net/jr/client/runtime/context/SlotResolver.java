@@ -26,12 +26,7 @@ public final class SlotResolver {
     }
 
     public static Slots requireActive() {
-        return ClientRuntime.INSTANCE.slots().slot(SlotScope.requireId());
-    }
-
-    public static Slots requireActiveOrPrimary() {
-        Integer slotId = SlotScope.idOrNull();
-        return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0);
+        return SlotExecution.currentSlot();
     }
 
     public static Slots requireScreen(Screen screen) {

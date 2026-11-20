@@ -3,7 +3,7 @@ package net.jr.client.runtime.input;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.api.client.input.InputMode;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.input.binding.KeyMappingState;
 import net.jr.client.runtime.state.InputState;
 import net.minecraft.client.KeyMapping;
@@ -49,7 +49,7 @@ public final class InputContext {
     }
 
     public static int currentSlotId() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return slotId != null ? slotId : InputAssignment.KEYBOARD_MOUSE_SLOT;
     }
 
@@ -94,7 +94,7 @@ public final class InputContext {
     }
 
     public static void resetSlot(int slotId) {
-        SlotScope.run(slotId, () -> {
+        ClientRuntime.INSTANCE.slots().slot(slotId).runForSlot(() -> {
             GamepadBindingRegistry.get().resetAppliedBindings();
             inputState(slotId).clear();
         });

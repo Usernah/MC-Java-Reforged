@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Queue;
 import javax.annotation.Nullable;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.state.ParticleState;
@@ -78,14 +78,13 @@ public final class ParticleStateRouter {
     }
 
     private static ParticleState state() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return slotId != null
             ? ClientRuntime.INSTANCE.slots().slot(slotId).renderState().particles()
             : BOOTSTRAP_STATE;
     }
 
     private static Slots activeSlot() {
-        Integer slotId = SlotScope.idOrNull();
-        return ClientRuntime.INSTANCE.slots().slot(slotId != null ? slotId : 0);
+        return SlotExecution.currentSlot();
     }
 }

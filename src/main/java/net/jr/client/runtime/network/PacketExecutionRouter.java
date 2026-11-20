@@ -2,7 +2,9 @@ package net.jr.client.runtime.network;
 
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.context.InstanceExecution;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.InstanceResolver;
+import net.jr.client.runtime.context.ScheduledSlot;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.session.DisconnectHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -19,11 +21,11 @@ public final class PacketExecutionRouter {
         int slotId = resolveAndBindSlot(connection);
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft != null && minecraft.isSameThread()) {
-            InstanceExecution.runForConnection(connection, () -> handle(packet, listener));
+            InstanceResolver.requireConnection(connection).slot().runForSlot(() -> handle(packet, listener));
             return;
         }
 
-        try (SlotScope.Scheduling ignored = SlotScope.schedule(slotId)) {
+        try (ScheduledSlot.Binding ignored = ScheduledSlot.bind(slotId)) {
             handle(packet, listener);
         }
     }
@@ -31,7 +33,7 @@ public final class PacketExecutionRouter {
     public static void handleQueued(Packet<?> packet, PacketListener listener) {
         if (listener instanceof ClientPacketListener clientListener
                 && ClientRuntime.INSTANCE.connections().has(clientListener.getConnection())) {
-            InstanceExecution.runForListener(clientListener, () -> handle(packet, listener));
+            InstanceResolver.requireListener(clientListener).slot().runForSlot(() -> handle(packet, listener));
             return;
         }
         handle(packet, listener);
@@ -64,7 +66,7 @@ public final class PacketExecutionRouter {
             action.run();
             return;
         }
-        InstanceExecution.runForListener(listener, action);
+        InstanceResolver.requireListener(listener).slot().runForSlot(action);
     }
 
     public static Runnable wrapScheduled(Runnable task) {
@@ -76,7 +78,7 @@ public final class PacketExecutionRouter {
         if (boundSlotId != null) {
             return boundSlotId;
         }
-        Integer activeSlotId = SlotScope.idOrNull();
+        Integer activeSlotId = SlotExecution.currentSlotIdOrNull();
         int slotId = activeSlotId != null ? activeSlotId : 0;
         ClientRuntime.INSTANCE.connections().bind(connection, slotId);
         return slotId;

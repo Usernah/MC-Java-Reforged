@@ -7,7 +7,6 @@ import net.jr.client.runtime.render.pass.BottomHudPass;
 import net.jr.client.runtime.render.pass.HudPass;
 import net.jr.client.runtime.render.state.HudCameraOverlayScope;
 import net.jr.client.runtime.render.state.HudStateRouter;
-import net.jr.client.runtime.render.state.HudStateScope;
 import net.jr.client.runtime.ui.ChatRouter;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
 import net.jr.client.ui.presentation.UiPresentation;
@@ -44,26 +43,6 @@ public abstract class HudMixin {
     ) {
         if (HudCameraOverlayScope.isSuppressed()) {
             ci.cancel();
-        }
-    }
-
-    @Inject(
-            method = {"resetTitleTimes", "setNowPlaying", "setOverlayMessage", "setTimes", "setSubtitle", "setTitle", "clearTitles"},
-            at = @At("HEAD")
-    )
-    private void javaReforged$installHudState(CallbackInfo callback) {
-        if (Client.currentOrNull() != null) {
-            HudStateScope.begin((Hud)(Object)this);
-        }
-    }
-
-    @Inject(
-            method = {"resetTitleTimes", "setNowPlaying", "setOverlayMessage", "setTimes", "setSubtitle", "setTitle", "clearTitles"},
-            at = @At("RETURN")
-    )
-    private void javaReforged$captureHudState(CallbackInfo callback) {
-        if (Client.currentOrNull() != null) {
-            HudStateScope.end((Hud)(Object)this);
         }
     }
 

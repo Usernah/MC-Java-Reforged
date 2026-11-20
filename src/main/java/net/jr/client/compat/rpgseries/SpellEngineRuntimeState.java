@@ -6,7 +6,6 @@ import java.util.WeakHashMap;
 import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.mixin.compat.rpgseries.HudMessagesAccessor;
 import net.spell_engine.client.gui.HudMessages;
 import net.spell_engine.client.input.SpellHotbar;
@@ -40,7 +39,7 @@ public final class SpellEngineRuntimeState {
             if (client.isPrimary()) {
                 continue;
             }
-            InstanceExecution.runForClient(client.slotId(), () -> messages().tick());
+            client.slot().runForSlot(() -> messages().tick());
         }
     }
 

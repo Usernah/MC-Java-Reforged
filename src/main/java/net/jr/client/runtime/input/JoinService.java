@@ -7,7 +7,6 @@ import net.jr.api.client.input.IGamepad;
 import net.jr.api.client.input.IPreJoin;
 import net.jr.api.client.split.SplitScreen;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.ui.SlotScreenTransitionHandler;
 import net.jr.screens.MessageScreen;
@@ -143,9 +142,7 @@ public final class JoinService {
             MessageScreen loadingScreen = new MessageScreen(
                 Component.translatable("menu.java_reforged.split.loading_world")
             ).closeWhenGameplayReady();
-            SlotExecution.runForSlot(
-                minecraft,
-                slotId,
+            runtime.slots().slot(slotId).runForSlot(
                 () -> minecraft.gui.setScreen(loadingScreen)
             );
         } catch (RuntimeException | Error error) {
@@ -175,7 +172,7 @@ public final class JoinService {
         }
         if (changed) {
             runtime.viewportResize().applyLayoutTransition(minecraft);
-            SlotExecution.runForSlot(minecraft, 0, minecraft::updateTitle);
+            runtime.slots().primary().runForSlot(minecraft::updateTitle);
         }
         runtime.inputFocus().clampToSlots(runtime.viewports().presentedSlotIds());
     }
@@ -199,7 +196,7 @@ public final class JoinService {
             runtime.viewports().hide(slotId);
             runtime.viewportResize().applyLayoutTransition(Minecraft.getInstance());
             Minecraft minecraft = Minecraft.getInstance();
-            SlotExecution.runForSlot(minecraft, 0, minecraft::updateTitle);
+            runtime.slots().primary().runForSlot(minecraft::updateTitle);
         }
         SlotScreenTransitionHandler.clearSecondaryJoiningScreen(
             Minecraft.getInstance(),

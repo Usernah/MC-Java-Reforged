@@ -6,7 +6,6 @@ import net.jr.client.compat.bettercombat.BetterCombatInteractors;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.client.InstanceManager;
 import net.jr.client.runtime.client.ReadinessPolicy;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.session.ClientSession;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,15 +20,13 @@ abstract class LocalClientManagerMixin {
         Operation<Void> original
     ) {
         if (ReadinessPolicy.gameplayReady(client)) {
-            InstanceExecution.runForClient(
-                client.slotId(),
+            client.slot().runForSlot(
                 () -> BetterCombatInteractors.current(minecraft).preTick()
             );
         }
         original.call(minecraft, client, session);
         if (ReadinessPolicy.gameplayReady(client)) {
-            InstanceExecution.runForClient(
-                client.slotId(),
+            client.slot().runForSlot(
                 () -> BetterCombatInteractors.current(minecraft).postTick()
             );
         }

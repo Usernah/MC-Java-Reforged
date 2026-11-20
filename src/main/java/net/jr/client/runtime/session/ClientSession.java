@@ -1,9 +1,9 @@
 package net.jr.client.runtime.session;
 
+import net.jr.client.runtime.ClientRuntime;
 import com.mojang.authlib.GameProfile;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
-import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.network.ConnectionSlotRegistry;
 import net.jr.client.runtime.network.SecondaryClientConnector;
 import net.minecraft.client.Minecraft;
@@ -101,7 +101,7 @@ public final class ClientSession {
             this.worldReadyValidationTicks = 0;
         }
         if (closingConnection != null) {
-            SlotScope.run(this.slotId, () ->
+            ClientRuntime.INSTANCE.slots().slot(this.slotId).runForSlot(() ->
                 closingConnection.disconnect(Component.literal("Closing local client session"))
             );
             connections.unbind(closingConnection);

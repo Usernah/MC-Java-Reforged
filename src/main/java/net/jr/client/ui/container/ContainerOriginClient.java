@@ -1,6 +1,6 @@
 package net.jr.client.ui.container;
 
-import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.context.InstanceResolver;
 import net.jr.network.ContainerOriginNetwork;
 import net.jr.screens.GenericContainerScreen;
 import net.minecraft.client.Minecraft;
@@ -17,7 +17,7 @@ public final class ContainerOriginClient {
             || !(clientContext.listener() instanceof ClientPacketListener listener)) {
             return;
         }
-        InstanceExecution.runForListener(listener, () -> {
+        InstanceResolver.requireListener(listener).slot().runForSlot(() -> {
             if (Minecraft.getInstance().gui.screen() instanceof GenericContainerScreen screen) {
                 screen.setBlockOrigin(origin.containerId(), origin.blockId());
             }

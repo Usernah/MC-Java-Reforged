@@ -12,9 +12,7 @@ import net.jr.api.client.ui.Cursor;
 import net.jr.client.components.navigation.UiAction;
 import net.jr.client.components.widgets.EditBoxElement;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.context.SlotExecution;
-import net.jr.client.runtime.context.SlotScope;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.input.InputApi;
@@ -88,11 +86,7 @@ public final class InputActionHandler {
             Slots slot = drawable.slot();
             int slotId = slot.id();
             Runnable action = () -> processCurrentSlot(minecraft, InputApi.isGamepadConnected());
-            if (runtime.clients().hasClient(slotId)) {
-                InstanceExecution.runForClient(slotId, drawable.viewport(), action);
-            } else {
-                SlotExecution.runForSlot(minecraft, slot, drawable.viewport(), action);
-            }
+            slot.runForSlot(drawable.viewport(), action);
         }
     }
 
@@ -205,7 +199,7 @@ public final class InputActionHandler {
     }
 
     private static void processCurrentSlot(Minecraft minecraft, boolean gamepadInput) {
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         ActionState state = state();
         Screen currentScreen = minecraft.gui.screen();
         if (SystemUI.blocksSlot(slotId)) {
@@ -1040,8 +1034,7 @@ public final class InputActionHandler {
     }
 
     private static ActionState state() {
-        Integer slotId = SlotScope.idOrNull();
-        return STATES[slotId != null ? slotId : 0];
+        return STATES[SlotExecution.currentSlotId()];
     }
 
     private static void closeScreenWithBackFeedback(ActionState state, Screen screen) {

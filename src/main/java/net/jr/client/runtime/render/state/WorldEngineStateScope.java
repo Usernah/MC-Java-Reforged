@@ -2,9 +2,7 @@ package net.jr.client.runtime.render.state;
 
 import javax.annotation.Nullable;
 import net.jr.bootstrap.OptionalModPresence;
-import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.slot.Slots;
-import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.runtime.state.ClientRenderState;
 import net.jr.client.runtime.state.LevelExtractionState;
 import net.jr.mixin.accessors.GameRenderStateAccessor;
@@ -81,14 +79,6 @@ public final class WorldEngineStateScope implements AutoCloseable {
         return new WorldEngineStateScope(minecraft, slot, true);
     }
 
-    public static WorldEngineStateScope bind(Minecraft minecraft, ClientLevel level) {
-        int slotId = slotIdForLevel(level);
-        if (slotId < 0) {
-            throw new IllegalStateException("ClientLevel is not owned by a local player slot");
-        }
-        return bind(minecraft, ClientRuntime.INSTANCE.slots().slot(slotId));
-    }
-
     public static WorldEngineStateScope bindTerrainOnly(Minecraft minecraft, Slots slot) {
         return new WorldEngineStateScope(minecraft, slot, false);
     }
@@ -133,15 +123,6 @@ public final class WorldEngineStateScope implements AutoCloseable {
         if (this.bindCompleteState) {
             ((ParticleEngineAccessor)this.minecraft.particleEngine).javaReforged$setLevel(this.previousParticleLevel);
         }
-    }
-
-    private static int slotIdForLevel(ClientLevel level) {
-        for (int slotId = 0; slotId < ClientSlots.MAX_SLOTS; slotId++) {
-            if (ClientRuntime.INSTANCE.slots().slot(slotId).renderState().level() == level) {
-                return slotId;
-            }
-        }
-        return -1;
     }
 
     private static LevelExtractionState captureExtractionState(LevelExtractorAccessor extractor) {

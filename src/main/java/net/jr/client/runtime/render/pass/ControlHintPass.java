@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.api.client.local.Client;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.ClientSlots;
 import net.jr.client.ui.hint.ControlHintContext;
 import net.jr.client.ui.hint.ControlHintPipeline;
@@ -42,7 +42,7 @@ public final class ControlHintPass {
             return null;
         }
 
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         float hudScale = UiFramebufferLayout.resolve(
             ClientRuntime.INSTANCE.viewports().viewport(slotId)
         ).scale();
@@ -129,7 +129,7 @@ public final class ControlHintPass {
     private static HintFramebufferLayout resolveLayout(
         GuiGraphicsExtractor parentGraphics
     ) {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId == null || !ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
             return null;
         }
@@ -149,7 +149,7 @@ public final class ControlHintPass {
         HintFramebufferLayout layout,
         int compositeColor
     ) {
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         int targetKind = context.isHud() ? HUD_TARGET : MENU_TARGET;
         GuiCompositionTarget target = target(slotId, targetKind);
         Consumer<GuiGraphicsExtractor> extractor = compositionGraphics ->

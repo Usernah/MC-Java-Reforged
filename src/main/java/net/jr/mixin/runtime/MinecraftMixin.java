@@ -2,6 +2,7 @@ package net.jr.mixin.runtime;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ReadinessPolicy;
 import net.jr.client.runtime.context.*;
@@ -41,14 +42,19 @@ public abstract class MinecraftMixin {
     @Shadow
     private boolean pause;
 
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void javaReforged$completeMinecraftBootstrap(CallbackInfo ci) {
+        SlotExecution.completeMinecraftBootstrap();
+    }
+
     @Inject(method = "getLastInputType", at = @At("HEAD"), cancellable = true)
     private void javaReforged$getSlotLastInputType(CallbackInfoReturnable<InputType> cir) {
-        cir.setReturnValue(SlotResolver.requireActiveOrPrimary().inputState().uiNavigation().lastInputType());
+        cir.setReturnValue(SlotResolver.requireActive().inputState().uiNavigation().lastInputType());
     }
 
     @Inject(method = "setLastInputType", at = @At("HEAD"), cancellable = true)
     private void javaReforged$setSlotLastInputType(InputType inputType, CallbackInfo ci) {
-        SlotResolver.requireActiveOrPrimary().inputState().uiNavigation().setLastInputType(inputType);
+        SlotResolver.requireActive().inputState().uiNavigation().setLastInputType(inputType);
         ci.cancel();
     }
 
@@ -57,7 +63,7 @@ public abstract class MinecraftMixin {
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;missTime:I", opcode = Opcodes.GETFIELD)
     )
     private int javaReforged$readSlotMissTime(Minecraft minecraft) {
-        return SlotResolver.requireActiveOrPrimary().gameplayState().missTime();
+        return SlotResolver.requireActive().gameplayState().missTime();
     }
 
     @Redirect(
@@ -65,7 +71,7 @@ public abstract class MinecraftMixin {
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;missTime:I", opcode = Opcodes.PUTFIELD)
     )
     private void javaReforged$writeSlotMissTime(Minecraft minecraft, int missTime) {
-        SlotResolver.requireActiveOrPrimary().gameplayState().setMissTime(missTime);
+        SlotResolver.requireActive().gameplayState().setMissTime(missTime);
     }
 
     @Redirect(
@@ -73,7 +79,7 @@ public abstract class MinecraftMixin {
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;rightClickDelay:I", opcode = Opcodes.GETFIELD)
     )
     private int javaReforged$readSlotRightClickDelay(Minecraft minecraft) {
-        return SlotResolver.requireActiveOrPrimary().gameplayState().rightClickDelay();
+        return SlotResolver.requireActive().gameplayState().rightClickDelay();
     }
 
     @Redirect(
@@ -81,7 +87,7 @@ public abstract class MinecraftMixin {
         at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;rightClickDelay:I", opcode = Opcodes.PUTFIELD)
     )
     private void javaReforged$writeSlotRightClickDelay(Minecraft minecraft, int rightClickDelay) {
-        SlotResolver.requireActiveOrPrimary().gameplayState().setRightClickDelay(rightClickDelay);
+        SlotResolver.requireActive().gameplayState().setRightClickDelay(rightClickDelay);
     }
 
     @Inject(method = "getConnection", at = @At("HEAD"), cancellable = true)
@@ -89,15 +95,11 @@ public abstract class MinecraftMixin {
         cir.setReturnValue(ClientPacketHandler.activeConnection());
     }
 
-    @Inject(method = "runTick", at = @At("HEAD"))
-    private void javaReforged$enterPrimaryRunTick(boolean renderLevel, CallbackInfo ci) {
+    @WrapMethod(method = "runTick")
+    private void javaReforged$runPrimaryTick(boolean renderLevel, Operation<Void> original) {
         Minecraft minecraft = (Minecraft)(Object)this;
-        PrimaryTickScope.begin(minecraft);
-    }
-
-    @Inject(method = "runTick", at = @At("RETURN"))
-    private void javaReforged$exitPrimaryRunTick(boolean renderLevel, CallbackInfo ci) {
-        PrimaryTickScope.end();
+        ClientRuntime.INSTANCE.viewportResize().refreshWindow(minecraft);
+        ClientRuntime.INSTANCE.slots().primary().runForSlot(() -> original.call(renderLevel));
     }
 
     @WrapOperation(
@@ -118,10 +120,7 @@ public abstract class MinecraftMixin {
             return;
         }
 
-        try (InstanceExecution.Scope ignored =
-                     InstanceExecution.enterForClient(minecraft, ownerSlotId)) {
-            original.call(minecraft);
-        }
+        ClientRuntime.INSTANCE.slots().slot(ownerSlotId).runForSlot(() -> original.call(minecraft));
     }
 
     @Redirect(method = "renderFrame", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;pick(F)V"))
@@ -237,6 +236,15 @@ public abstract class MinecraftMixin {
     private void javaReforged$resizeScreensThroughLocalClients(Screen screen, int width, int height) {
     }
 
+    @WrapMethod(method = "resizeGui")
+    private void javaReforged$resizeGuiForPrimary(Operation<Void> original) {
+        if (SlotExecution.isMinecraftBootstrapping() || SlotExecution.currentSlotOrNull() != null) {
+            original.call();
+            return;
+        }
+        ClientRuntime.INSTANCE.slots().primary().runForSlot(() -> original.call());
+    }
+
     @Inject(method = "resizeGui", at = @At("RETURN"))
     private void javaReforged$refreshViewportsAfterResize(CallbackInfo ci) {
         ClientRuntime.INSTANCE.viewportResize().refreshWindow((Minecraft)(Object)this);
@@ -252,7 +260,7 @@ public abstract class MinecraftMixin {
             boolean stopSound,
             CallbackInfo ci
     ) {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId != null && slotId != 0) {
             return;
         }

@@ -4,9 +4,8 @@ import net.jr.api.client.local.Client;
 import net.jr.api.client.render.gui.GuiRenderObjects;
 import net.jr.api.client.render.gui.HudRenderContext;
 import net.jr.client.runtime.client.ReadinessPolicy;
-import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.context.ExecutionPhase;
 import net.jr.client.runtime.render.state.HudCameraOverlayScope;
-import net.jr.client.runtime.render.state.HudStateScope;
 import net.jr.client.runtime.ui.ChatRouter;
 import net.jr.client.runtime.viewport.ViewportHudLayout;
 import net.jr.mixin.accessors.HudAccessor;
@@ -25,27 +24,26 @@ public final class HudPass {
 
     public static void tick(Gui gui) {
         Hud hud = gui.hud;
-        InstanceExecution.runPrimary(() -> {
-            try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-                gui.tick();
-            }
-        });
+        Client.all().stream()
+            .filter(client -> client.isPrimary())
+            .findFirst()
+            .orElseThrow()
+            .slot()
+            .runForSlot(ExecutionPhase.HUD_TICK, gui::tick);
 
         for (var client : Client.all()) {
             if (client.isPrimary() || !ReadinessPolicy.worldBound(client)) {
                 continue;
             }
-            InstanceExecution.runForClient(client.slotId(), () -> {
-                try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-                    gui.chatListener().tick();
-                    hud.tick(Minecraft.getInstance().isPaused());
-                    LocalPlayer player = client.player();
+            client.slot().runForSlot(ExecutionPhase.HUD_TICK, () -> {
+                gui.chatListener().tick();
+                hud.tick(Minecraft.getInstance().isPaused());
+                LocalPlayer player = client.player();
 
-                    if (client.screen() == null
-                            && player != null
-                            && player.isDeadOrDying()) {
-                        gui.setScreen(null);
-                    }
+                if (client.screen() == null
+                        && player != null
+                        && player.isDeadOrDying()) {
+                    gui.setScreen(null);
                 }
             });
         }
@@ -122,12 +120,10 @@ public final class HudPass {
             GuiGraphicsExtractor graphics,
             net.minecraft.client.DeltaTracker deltaTracker
     ) {
-        try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-            ((HudAccessor) hud).javaReforged$extractCameraEffects(
-                    graphics,
-                    deltaTracker
-            );
-        }
+        ((HudAccessor) hud).javaReforged$extractCameraEffects(
+                graphics,
+                deltaTracker
+        );
     }
 
     private static void extractHudContents(
@@ -153,28 +149,26 @@ public final class HudPass {
     ) {
         GuiGraphicsExtractor graphics = context.graphics();
         var deltaTracker = context.deltaTracker();
-        try (HudStateScope ignoredHud = HudStateScope.enter(hud)) {
-            float bottomInset = preparedHints != null
-                    ? preparedHints.bottomInset()
-                    : 0.0F;
-            try (
-                    ViewportHudLayout.BottomInsetScope ignoredInset =
-                            ViewportHudLayout.pushBottomInset(bottomInset);
-                    HudCameraOverlayScope ignoredCameraEffects =
-                            HudCameraOverlayScope.suppress();
-                    BottomHudPass.SuppressionScope ignoredBottomHud =
-                            BottomHudPass.suppressVanillaExtraction()
-            ) {
-                hud.extractRenderState(graphics, deltaTracker);
-            }
-            try (
-                    ViewportHudLayout.BottomInsetScope ignoredInset =
-                            ViewportHudLayout.pushBottomInset(bottomInset)
-            ) {
-                GuiRenderObjects.renderHud(context);
-            }
-            BottomHudPass.extract(hud, context, bottomInset);
+        float bottomInset = preparedHints != null
+                ? preparedHints.bottomInset()
+                : 0.0F;
+        try (
+                ViewportHudLayout.BottomInsetScope ignoredInset =
+                        ViewportHudLayout.pushBottomInset(bottomInset);
+                HudCameraOverlayScope ignoredCameraEffects =
+                        HudCameraOverlayScope.suppress();
+                BottomHudPass.SuppressionScope ignoredBottomHud =
+                        BottomHudPass.suppressVanillaExtraction()
+        ) {
+            hud.extractRenderState(graphics, deltaTracker);
         }
+        try (
+                ViewportHudLayout.BottomInsetScope ignoredInset =
+                        ViewportHudLayout.pushBottomInset(bottomInset)
+        ) {
+            GuiRenderObjects.renderHud(context);
+        }
+        BottomHudPass.extract(hud, context, bottomInset);
     }
 
     private static float hudOpacity(HudRenderContext context) {

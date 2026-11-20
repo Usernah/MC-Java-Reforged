@@ -6,7 +6,7 @@ import net.jr.api.client.render.Draw;
 import net.jr.api.client.render.glyph.Glyphs;
 import net.jr.Java_reforged;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.input.binding.GamepadBindingRegistry;
 import net.jr.client.input.binding.GamepadInputChord;
@@ -117,7 +117,7 @@ public class ControllerBindingsList extends ContainerObjectSelectionList<Control
         UiResolution resolution = UiPresentation.resolution();
         int referenceWidth = resolution.referenceWidth();
         int referenceHeight = resolution.referenceHeight();
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId != null && ClientRuntime.INSTANCE.viewports().hasViewport(slotId)) {
             ViewportArea viewport = ClientRuntime.INSTANCE.viewports().viewport(slotId);
             referenceWidth = switch (viewport.layout()) {

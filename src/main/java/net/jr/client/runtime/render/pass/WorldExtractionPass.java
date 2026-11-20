@@ -2,15 +2,12 @@ package net.jr.client.runtime.render.pass;
 
 import java.util.List;
 
-import net.jr.api.client.local.Client;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.client.ReadinessPolicy;
-import net.jr.client.runtime.context.InstanceExecution;
-import net.jr.client.runtime.render.state.WorldEngineStateScope;
+import net.jr.client.runtime.context.ExecutionPhase;
 import net.jr.client.runtime.render.world.WorldRenderBackend;
 import net.jr.client.runtime.render.world.WorldRenderBackends;
-import net.jr.client.runtime.render.world.WorldRenderContextAccess;
 import net.jr.client.runtime.render.world.WorldRenderView;
 import net.jr.client.runtime.render.world.WorldRenderViews;
 import net.jr.client.runtime.slot.Slots;
@@ -34,9 +31,7 @@ public final class WorldExtractionPass {
             if (!canExtract(slot)) {
                 continue;
             }
-            try (InstanceExecution.Scope ignored = InstanceExecution.enterForClient(minecraft, slot.id())) {
-                Client.current().camera().update(deltaTracker);
-            }
+            slot.runForSlot(() -> slot.renderState().camera().update(deltaTracker));
         }
     }
 
@@ -46,9 +41,7 @@ public final class WorldExtractionPass {
             if (!canExtract(slot)) {
                 continue;
             }
-            try (InstanceExecution.Scope ignored = InstanceExecution.enterForClient(minecraft, slot.id())) {
-                actions.javaReforged$pick(partialTicks);
-            }
+            slot.runForSlot(() -> actions.javaReforged$pick(partialTicks));
         }
     }
 
@@ -68,33 +61,14 @@ public final class WorldExtractionPass {
         WorldRenderBackend backend = WorldRenderBackends.active();
         backend.beginExtractionFrame(views);
         for (WorldRenderView view : views) {
-            Slots slot = view.slot();
-            try (
-                    InstanceExecution.Scope ignoredClient =
-                        InstanceExecution.enterForClient(minecraft, slot.id());
-                    WorldRenderContextAccess.Scope ignoredContext =
-                        WorldRenderContextAccess.enter(view);
-                    WorldRenderBackend.Scope ignoredBackend =
-                        backend.enterExtractionView(view);
-                    WorldEngineStateScope ignoredEngines =
-                        WorldEngineStateScope.bind(minecraft, slot)
-            ) {
-                    var optionsRenderState =
-                        gameRenderer.gameRenderState().optionsRenderState;
-
-                    optionsRenderState.cameraType =
-                        slot.optionsState().cameraType();
-
-                    optionsRenderState.fov =
-                        slot.optionsState().fov().get();
-
+            view.slot().runForSlot(view, ExecutionPhase.WORLD_EXTRACTION, () -> {
                     Camera camera = view.camera();
 
                     ((LightmapRenderStateExtractorAccessor)(Object)lightmapExtractor)
                         .javaReforged$setNeedsUpdate(true);
 
                     lightmapExtractor.extract(
-                        slot.renderState().lightmapRenderState(),
+                        view.renderState().lightmapRenderState(),
                         1.0F
                     );
 
@@ -112,7 +86,7 @@ public final class WorldExtractionPass {
                         camera,
                         worldPartialTicks
                     );
-            }
+            });
         }
     }
 

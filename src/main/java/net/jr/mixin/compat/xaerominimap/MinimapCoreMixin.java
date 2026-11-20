@@ -5,7 +5,6 @@ import net.jr.client.compat.xaero.XaeroMinimapWorldMatrices;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.client.ReadinessPolicy;
-import net.jr.client.runtime.context.InstanceExecution;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportRenderScope;
@@ -86,8 +85,8 @@ abstract class MinimapCoreMixin {
             if (client == null || !ReadinessPolicy.gameplayReady(client)) {
                 continue;
             }
-            InstanceExecution.runForClient(slot.id(), () -> {
-                ViewportArea viewport = runtime.viewports().viewport(slot.id());
+            ViewportArea viewport = runtime.viewports().viewport(slot.id());
+            slot.runForSlot(viewport, () -> {
                 ViewportRenderScope.run(viewport, action);
             });
         }

@@ -3,46 +3,26 @@ package net.jr.client.runtime.render.state;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import net.jr.api.client.local.Client;
 import net.jr.client.runtime.state.HudState;
 import net.jr.mixin.accessors.HudAccessor;
 import net.minecraft.client.gui.Hud;
 
 public final class HudStateScope implements AutoCloseable {
     private static final ThreadLocal<Deque<Binding>> BINDINGS = ThreadLocal.withInitial(ArrayDeque::new);
-    private static final ThreadLocal<Deque<HudStateScope>> ACTIVE_SCOPES = ThreadLocal.withInitial(ArrayDeque::new);
-
     private final Hud hud;
     private boolean closed;
 
-    private HudStateScope(Hud hud) {
+    private HudStateScope(Hud hud, HudState slotState) {
         this.hud = hud;
         HudAccessor accessor = (HudAccessor)hud;
         HudState previousEngineState = new HudState();
         previousEngineState.capture(accessor);
-        HudState clientState = Client.current().render().hud();
-        clientState.install(accessor);
-        BINDINGS.get().push(new Binding(hud, clientState, previousEngineState));
+        slotState.install(accessor);
+        BINDINGS.get().push(new Binding(hud, slotState, previousEngineState));
     }
 
-    public static HudStateScope enter(Hud hud) {
-        return new HudStateScope(hud);
-    }
-
-    public static void begin(Hud hud) {
-        ACTIVE_SCOPES.get().push(enter(hud));
-    }
-
-    public static void end(Hud hud) {
-        Deque<HudStateScope> scopes = ACTIVE_SCOPES.get();
-        if (scopes.isEmpty() || scopes.peek().hud != hud) {
-            throw new IllegalStateException("Hud state scope is unbalanced");
-        }
-        HudStateScope scope = scopes.pop();
-        scope.close();
-        if (scopes.isEmpty()) {
-            ACTIVE_SCOPES.remove();
-        }
+    public static HudStateScope enter(Hud hud, HudState slotState) {
+        return new HudStateScope(hud, slotState);
     }
 
     @Override
@@ -57,13 +37,13 @@ public final class HudStateScope implements AutoCloseable {
         }
         Binding binding = bindings.pop();
         HudAccessor accessor = (HudAccessor)this.hud;
-        binding.clientState().capture(accessor);
+        binding.slotState().capture(accessor);
         binding.previousEngineState().install(accessor);
         if (bindings.isEmpty()) {
             BINDINGS.remove();
         }
     }
 
-    private record Binding(Hud hud, HudState clientState, HudState previousEngineState) {
+    private record Binding(Hud hud, HudState slotState, HudState previousEngineState) {
     }
 }

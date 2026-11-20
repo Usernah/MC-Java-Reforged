@@ -2,7 +2,7 @@ package net.jr.client.compat.xaero;
 
 import com.mojang.blaze3d.platform.Window;
 import net.jr.api.client.ui.Viewport;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.runtime.viewport.ViewportArea;
 import net.jr.client.runtime.viewport.ViewportGuiScale;
@@ -55,7 +55,7 @@ public final class XaeroWorldMapViewport {
 
 
         ViewportArea viewport = XaeroViewport.currentOrNull();
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
 
         if (viewport == null || slotId == null) {
             return null;
@@ -75,7 +75,7 @@ public final class XaeroWorldMapViewport {
 
     public static Double mousePixelYOrNull(Minecraft minecraft) {
         ViewportArea viewport = XaeroViewport.currentOrNull();
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
 
         if (viewport == null || slotId == null) {
             return null;

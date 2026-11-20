@@ -3,7 +3,7 @@ package net.jr.client.runtime.terrain;
 import javax.annotation.Nullable;
 
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.state.TerrainState;
 import net.jr.client.runtime.terrain.SharedTerrainStore;
 
@@ -16,7 +16,7 @@ public final class TerrainStateStore {
     }
 
     public static TerrainState terrain() {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         return slotId != null
             ? ClientRuntime.INSTANCE.slots().slot(slotId).renderState().terrain()
             : BOOTSTRAP_TERRAIN;

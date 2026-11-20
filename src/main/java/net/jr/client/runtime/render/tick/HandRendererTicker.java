@@ -3,7 +3,7 @@ package net.jr.client.runtime.render.tick;
 import net.jr.client.runtime.ClientRuntime;
 import net.jr.client.runtime.client.ClientInstance;
 import net.jr.client.runtime.client.ReadinessPolicy;
-import net.jr.client.runtime.context.InstanceExecution;
+import net.jr.client.runtime.context.ExecutionPhase;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 
 public final class HandRendererTicker {
@@ -15,7 +15,7 @@ public final class HandRendererTicker {
             if (!ReadinessPolicy.worldBound(client)) {
                 continue;
             }
-            InstanceExecution.runForClient(client.slotId(), renderer::tick);
+            client.slot().runForSlot(ExecutionPhase.HAND, renderer::tick);
         }
     }
 }

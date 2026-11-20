@@ -4,7 +4,7 @@ import java.util.Stack;
 import net.jr.client.input.InputApi;
 import net.jr.client.runtime.input.GamepadInputHandler;
 import net.jr.client.runtime.ClientRuntime;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.runtime.slot.Slots;
 import net.jr.client.runtime.ui.ScreenEventRunner;
 import net.jr.client.runtime.viewport.ViewportArea;
@@ -28,7 +28,7 @@ public final class ScreenRenderPass {
         GuiGraphicsExtractor graphics,
         float partialTick
     ) {
-        int slotId = SlotScope.requireId();
+        int slotId = SlotExecution.currentSlotId();
         ClientRuntime runtime = ClientRuntime.INSTANCE;
         if (minecraft.gui.overlay() != null || !runtime.viewports().hasViewport(slotId)) {
             return null;

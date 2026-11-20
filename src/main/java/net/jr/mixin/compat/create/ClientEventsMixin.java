@@ -2,7 +2,7 @@ package net.jr.mixin.compat.create;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import net.jr.client.runtime.context.SlotScope;
+import net.jr.client.runtime.context.SlotExecution;
 import net.jr.client.compat.create.CreateClientEventDispatch;
 import net.jr.client.compat.create.CreateRuntimeState;
 import net.jr.client.compat.create.CreateHudRenderObjects;
@@ -56,7 +56,7 @@ abstract class ClientEventsMixin {
     private static void javaReforged$tickContraptionsInWorldOrder(
         Level level
     ) {
-        Integer slotId = SlotScope.idOrNull();
+        Integer slotId = SlotExecution.currentSlotIdOrNull();
         if (slotId != null && slotId > 0) {
             return;
         }
