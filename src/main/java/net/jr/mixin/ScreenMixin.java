@@ -1,10 +1,13 @@
 package net.jr.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.jr.api.client.ui.UiScreenFile;
 import net.jr.client.components.widgets.JavaBaseWidget;
 import net.jr.client.ui.cursor.ScreenMousePositionResolver;
 import net.jr.client.ui.container.DslContainerBridge;
 import net.jr.client.ui.dsl.DslHostBridge;
+import net.jr.client.ui.dsl.DslUiContext;
 import net.jr.client.ui.screen.DslScreenBridge;
 import net.jr.client.ui.screen.DslScreenContext;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -72,6 +75,20 @@ public abstract class ScreenMixin implements DslScreenBridge, DslHostBridge {
         if ((Object)this instanceof DslContainerBridge containerBridge) {
             containerBridge.javaReforged$closeDslContainerContext();
         }
+    }
+
+    @WrapMethod(method = "extractRenderStateWithTooltipAndSubtitles")
+    private void javaReforged$extractDslScreen(
+        GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick, Operation<Void> original
+    ) {
+        DslUiContext<?> context = (Object)this instanceof DslContainerBridge containerBridge
+            ? containerBridge.javaReforged$peekDslContainerContext()
+            : this.javaReforged$dslContext;
+        if (context == null) {
+            original.call(graphics, mouseX, mouseY, partialTick);
+            return;
+        }
+        context.extractScreen(() -> original.call(graphics, mouseX, mouseY, partialTick));
     }
 
     @ModifyVariable(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("HEAD"), argsOnly = true, ordinal = 0)

@@ -48,6 +48,8 @@ public abstract class DslUiContext<F extends UiFile> implements AutoCloseable {
     private final Map<String, GridPhase> gridPhases = new LinkedHashMap<>();
     private final Set<String> invalidRenderables = new HashSet<>();
     private final Set<String> invalidGrids = new HashSet<>();
+    private boolean extractingScreen;
+    private boolean layoutsPrepared;
 
     protected DslUiContext(Screen host, F file) {
         this.host = Objects.requireNonNull(host, "host");
@@ -230,6 +232,19 @@ public abstract class DslUiContext<F extends UiFile> implements AutoCloseable {
         }
     }
 
+    public final void extractScreen(Runnable extraction) {
+        boolean previousExtraction = this.extractingScreen;
+        boolean previousPreparation = this.layoutsPrepared;
+        this.extractingScreen = true;
+        this.layoutsPrepared = false;
+        try {
+            extraction.run();
+        } finally {
+            this.extractingScreen = previousExtraction;
+            this.layoutsPrepared = previousPreparation;
+        }
+    }
+
     public final void extract(
         UiRenderLayer layer,
         GuiGraphicsExtractor graphics,
@@ -237,7 +252,10 @@ public abstract class DslUiContext<F extends UiFile> implements AutoCloseable {
         int mouseY,
         float partialTick
     ) {
-        this.prepareLayouts(this.data, this.originX(), this.originY());
+        if (!this.extractingScreen || !this.layoutsPrepared) {
+            this.prepareLayouts(this.data, this.originX(), this.originY());
+            this.layoutsPrepared = this.extractingScreen;
+        }
         this.extractEntries(
             this.document.entries(layer), graphics, this.data, mouseX, mouseY, partialTick,
             this.originX(), this.originY(), null
@@ -548,12 +566,7 @@ public abstract class DslUiContext<F extends UiFile> implements AutoCloseable {
             } else if (entry instanceof GridDefinition definition) {
                 this.prepareGrid(definition, context, originX, originY, layoutParent);
             } else if (entry instanceof RenderableDefinition definition) {
-                UiElement.ElementRenderable renderable = this.prepareRenderable(
-                    definition, context, originX, originY, layoutParent
-                );
-                if (renderable != null) {
-                    renderable.prepare(null, context, originX, originY);
-                }
+                this.prepareRenderable(definition, context, originX, originY, layoutParent);
             } else if (entry instanceof DslNodeDefinition) {
                 DslElement element = this.elements.get(entry.id());
                 if (element instanceof VisualElementsInterface visual) {
