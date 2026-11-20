@@ -1,7 +1,6 @@
 package net.jr.client.ui.navigation;
 
 import net.jr.Java_reforged;
-import net.jr.client.ui.container.slots.CustomItemSlotLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.neoforged.api.distmarker.Dist;
@@ -35,35 +34,10 @@ public final class UiNavigationEvents {
             boolean handled = UiInputModeController.applyUnifiedContainerFocusNavigation(
                 screen, event.getKeyCode()
             );
-            if (!handled && CustomItemSlotLayout.active(screen) != null) {
-                handled = UiInputModeController.applyContainerItemSlotFocusFallback(
-                    screen, event.getKeyCode()
-                );
-            }
             event.setCanceled(true);
             if (handled) {
                 screen.afterKeyboardAction();
             }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onScreenKeyPressedPost(ScreenEvent.KeyPressed.Post event) {
-        if (!UiInputModeController.hasCurrentSlot()
-            || !UiInputModeController.isFocusNavigationKey(event.getKeyCode())) {
-            return;
-        }
-
-        Screen screen = UiInputModeController.currentEventScreen(event.getScreen());
-        if (screen == null) {
-            return;
-        }
-        if (screen instanceof AbstractContainerScreen<?>
-            && UiInputModeController.isContainerSlotNavigationKey(event.getKeyCode())) {
-            return;
-        }
-        if (UiInputModeController.applyContainerItemSlotFocusFallback(screen, event.getKeyCode())) {
-            screen.afterKeyboardAction();
         }
     }
 

@@ -97,12 +97,6 @@ final class ScreenFocusController {
         if (!DirectionalFocusResolver.supportsKey(keyCode)) {
             return false;
         }
-        if (CustomItemSlotLayout.active(screen) != null
-            && ContainerItemSlotFocusController.hasFocusedItemSlot(containerScreen)
-            && ContainerItemSlotFocusController.moveFocus(containerScreen, keyCode)) {
-            return true;
-        }
-
         List<FocusNavigationTarget> targets = resolveContainerFocusTargets(containerScreen);
         if (targets.isEmpty()) {
             return false;
@@ -117,6 +111,10 @@ final class ScreenFocusController {
                 targets, origin, FocusNavigationTarget::rectangle, keyCode
             );
         if (target == null && origin != null) {
+            CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
+            if (origin.slot() != null && layout != null && layout.handleItemSlotNavigationBoundary(keyCode)) {
+                return true;
+            }
             List<FocusNavigationTarget> carouselTargets = screen instanceof FocusCarouselHost host
                 ? host.focusCarouselTargets(origin, List.copyOf(targets), keyCode)
                 : targets;
@@ -240,6 +238,9 @@ final class ScreenFocusController {
         AbstractContainerScreen<?> screen,
         FocusNavigationTarget target
     ) {
+        if (target.slot() != null) {
+            return ContainerItemSlotFocusController.focusItemSlot(screen, target.slot());
+        }
         CustomItemSlotLayout layout = CustomItemSlotLayout.active(screen);
         if (layout != null) {
             ScreenRectangle rectangle = target.rectangle();
@@ -249,9 +250,6 @@ final class ScreenFocusController {
                     && layout.seedFocusFromPointer(centerX, centerY)) {
                 return true;
             }
-        }
-        if (target.slot() != null) {
-            return ContainerItemSlotFocusController.focusItemSlot(screen, target.slot());
         }
         ContainerItemSlotFocusController.clearFocusedItemSlot(screen);
         applyFocusPath(screen, target.path());

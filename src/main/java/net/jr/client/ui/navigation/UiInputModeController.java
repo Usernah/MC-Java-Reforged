@@ -296,11 +296,6 @@ public final class UiInputModeController {
             || keyCode == GLFW.GLFW_KEY_RIGHT;
     }
 
-    public static boolean applyContainerItemSlotFocusFallback(Screen screen, int keyCode) {
-        return screen instanceof AbstractContainerScreen<?> containerScreen
-            && ContainerItemSlotFocusController.moveFocus(containerScreen, keyCode);
-    }
-
     public static boolean applyUnifiedContainerFocusNavigation(Screen screen, int keyCode) {
         return ScreenFocusController.moveUnifiedContainerFocus(screen, keyCode);
     }
